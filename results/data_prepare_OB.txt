@@ -1,0 +1,68 @@
+getting alphas...
+data/AAL_orderbooks/AAL_orderbook_2019-01-17.csv
+data/AAL_orderbooks/AAL_orderbook_2019-01-18.csv
+data/AAL_orderbooks/AAL_orderbook_2019-01-22.csv
+data/AAL_orderbooks/AAL_orderbook_2019-01-23.csv
+data/AAL_orderbooks/AAL_orderbook_2019-01-24.csv
+data/AAL_orderbooks/AAL_orderbook_2019-01-25.csv
+data/AAL_orderbooks/AAL_orderbook_2019-01-28.csv
+data/AAL_orderbooks/AAL_orderbook_2019-01-29.csv
+data/AAL_orderbooks/AAL_orderbook_2019-01-30.csv
+data/AAL_orderbooks/AAL_orderbook_2019-01-31.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-01.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-04.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-05.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-06.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-07.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-08.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-11.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-12.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-13.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-14.csv
+train class distributions
+         10        20        30        50       100
+0  0.121552  0.194825  0.245483  0.314996  0.334330
+1  0.752556  0.604704  0.504695  0.368647  0.330456
+2  0.125893  0.200471  0.249821  0.316357  0.335214
+alphas =  [0.0000000e+00 0.0000000e+00 0.0000000e+00 0.0000000e+00 3.2942814e-05]
+val class distributions
+         10        20        30        50       100
+0  0.146740  0.231774  0.284895  0.349627  0.367436
+1  0.705629  0.535492  0.428292  0.295169  0.255373
+2  0.147630  0.232734  0.286812  0.355204  0.377191
+test class distributions
+         10        20        30        50       100
+0  0.070261  0.117858  0.153121  0.207883  0.232063
+1  0.858585  0.765625  0.698171  0.593399  0.536338
+2  0.071154  0.116517  0.148709  0.198717  0.231599
+processing files to batches...
+data/AAL_orderbooks/AAL_orderbook_2019-01-10.csv
+data/AAL_orderbooks/AAL_orderbook_2019-01-11.csv
+data/AAL_orderbooks/AAL_orderbook_2019-01-14.csv
+data/AAL_orderbooks/AAL_orderbook_2019-01-15.csv
+data/AAL_orderbooks/AAL_orderbook_2019-01-16.csv
+data/AAL_orderbooks/AAL_orderbook_2019-01-17.csv
+data/AAL_orderbooks/AAL_orderbook_2019-01-18.csv
+data/AAL_orderbooks/AAL_orderbook_2019-01-22.csv
+data/AAL_orderbooks/AAL_orderbook_2019-01-23.csv
+data/AAL_orderbooks/AAL_orderbook_2019-01-24.csv
+data/AAL_orderbooks/AAL_orderbook_2019-01-25.csv
+data/AAL_orderbooks/AAL_orderbook_2019-01-28.csv
+data/AAL_orderbooks/AAL_orderbook_2019-01-29.csv
+data/AAL_orderbooks/AAL_orderbook_2019-01-30.csv
+data/AAL_orderbooks/AAL_orderbook_2019-01-31.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-01.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-04.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-05.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-06.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-07.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-08.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-11.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-12.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-13.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-14.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-15.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-19.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-20.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-21.csv
+data/AAL_orderbooks/AAL_orderbook_2019-02-22.csv

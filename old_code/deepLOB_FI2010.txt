@@ -1,0 +1,67 @@
+[PhysicalDevice(name='/physical_device:GPU:0', device_type='GPU'), PhysicalDevice(name='/physical_device:GPU:1', device_type='GPU'), PhysicalDevice(name='/physical_device:GPU:2', device_type='GPU')]
+3 Physical GPUs, 3 Logical GPUs
+Prediction horizon: 10 order book updates.
+
+accuracy_score: 0.8338064923147511
+              precision    recall  f1-score   support
+
+           0     0.7345    0.5618    0.6366     21127
+           1     0.8579    0.9510    0.9021     98602
+           2     0.7603    0.5401    0.6315     19759
+
+    accuracy                         0.8338    139488
+   macro avg     0.7842    0.6843    0.7234    139488
+weighted avg     0.8254    0.8338    0.8235    139488
+
+Prediction horizon: 20 order book updates.
+
+accuracy_score: 0.7441858797889425
+              precision    recall  f1-score   support
+
+           0     0.6636    0.4712    0.5511     27425
+           1     0.7844    0.9004    0.8384     86588
+           2     0.6264    0.5072    0.5605     25475
+
+    accuracy                         0.7442    139488
+   macro avg     0.6915    0.6263    0.6500    139488
+weighted avg     0.7318    0.7442    0.7312    139488
+
+Prediction horizon: 30 order book updates.
+
+accuracy_score: 0.7700805804083506
+              precision    recall  f1-score   support
+
+           0     0.7429    0.5956    0.6611     31888
+           1     0.8023    0.8930    0.8452     78297
+           2     0.6911    0.6314    0.6599     29303
+
+    accuracy                         0.7701    139488
+   macro avg     0.7454    0.7067    0.7221    139488
+weighted avg     0.7654    0.7701    0.7642    139488
+
+Prediction horizon: 50 order book updates.
+
+accuracy_score: 0.7883617228722184
+              precision    recall  f1-score   support
+
+           0     0.8013    0.6779    0.7344     38408
+           1     0.8208    0.8756    0.8473     65996
+           2     0.7145    0.7452    0.7295     35084
+
+    accuracy                         0.7884    139488
+   macro avg     0.7789    0.7662    0.7704    139488
+weighted avg     0.7887    0.7884    0.7866    139488
+
+Prediction horizon: 100 order book updates.
+
+accuracy_score: 0.7794505620555173
+              precision    recall  f1-score   support
+
+           0     0.7543    0.7909    0.7722     47915
+           1     0.8776    0.7544    0.8113     48050
+           2     0.7213    0.7945    0.7561     43523
+
+    accuracy                         0.7795    139488
+   macro avg     0.7844    0.7799    0.7799    139488
+weighted avg     0.7865    0.7795    0.7807    139488
+

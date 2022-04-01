@@ -1,0 +1,66 @@
+Prediction horizon = 0
+accuracy_score = 0.8302147855012617
+classification_report =               precision    recall  f1-score   support
+
+           0     0.7276    0.5502    0.6266     21127
+           1     0.8489    0.9577    0.9000     98602
+           2     0.7946    0.4932    0.6087     19759
+
+    accuracy                         0.8302    139488
+   macro avg     0.7904    0.6671    0.7118    139488
+weighted avg     0.8228    0.8302    0.8173    139488
+
+-------------------------------
+Prediction horizon = 1
+accuracy_score = 0.7473546111493462
+classification_report =               precision    recall  f1-score   support
+
+           0     0.6741    0.4617    0.5481     27425
+           1     0.7695    0.9277    0.8413     86588
+           2     0.6899    0.4417    0.5386     25475
+
+    accuracy                         0.7474    139488
+   macro avg     0.7112    0.6104    0.6426    139488
+weighted avg     0.7362    0.7474    0.7283    139488
+
+-------------------------------
+Prediction horizon = 2
+accuracy_score = 0.7693780110116999
+classification_report =               precision    recall  f1-score   support
+
+           0     0.7234    0.5988    0.6552     31888
+           1     0.7899    0.9119    0.8465     78297
+           2     0.7412    0.5742    0.6471     29303
+
+    accuracy                         0.7694    139488
+   macro avg     0.7515    0.6950    0.7163    139488
+weighted avg     0.7645    0.7694    0.7609    139488
+
+-------------------------------
+Prediction horizon = 3
+accuracy_score = 0.7867988644184446
+classification_report =               precision    recall  f1-score   support
+
+           0     0.7526    0.7161    0.7339     38408
+           1     0.8195    0.8803    0.8488     65996
+           2     0.7535    0.6883    0.7195     35084
+
+    accuracy                         0.7868    139488
+   macro avg     0.7752    0.7616    0.7674    139488
+weighted avg     0.7845    0.7868    0.7846    139488
+
+-------------------------------
+Prediction horizon = 4
+accuracy_score = 0.7931793415921082
+classification_report =               precision    recall  f1-score   support
+
+           0     0.7455    0.8110    0.7768     47915
+           1     0.8793    0.8019    0.8388     48050
+           2     0.7636    0.7640    0.7638     43523
+
+    accuracy                         0.7932    139488
+   macro avg     0.7961    0.7923    0.7932    139488
+weighted avg     0.7972    0.7932    0.7941    139488
+
+-------------------------------
+
