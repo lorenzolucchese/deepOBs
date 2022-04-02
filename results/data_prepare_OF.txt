@@ -1,4 +1,5 @@
 getting alphas...
+
 data/AAL_orderflows/AAL_orderflow_2019-01-17.csv
 data/AAL_orderflows/AAL_orderflow_2019-01-18.csv
 data/AAL_orderflows/AAL_orderflow_2019-01-22.csv
@@ -19,23 +20,29 @@ data/AAL_orderflows/AAL_orderflow_2019-02-11.csv
 data/AAL_orderflows/AAL_orderflow_2019-02-12.csv
 data/AAL_orderflows/AAL_orderflow_2019-02-13.csv
 data/AAL_orderflows/AAL_orderflow_2019-02-14.csv
+
 train class distributions
-         10        20        30        50       100
-0  0.121552  0.194825  0.245483  0.314996  0.334330
-1  0.752557  0.604705  0.504696  0.368648  0.330457
-2  0.125892  0.200470  0.249821  0.316356  0.335213
+                  10        20        30        50       100
+down        0.121552  0.194825  0.245483  0.314996  0.334330
+stationary  0.752557  0.604705  0.504696  0.368648  0.330457
+up          0.125892  0.200470  0.249821  0.316356  0.335213
+
 alphas =  [0.0000000e+00 0.0000000e+00 0.0000000e+00 0.0000000e+00 3.2942814e-05]
+
 val class distributions
-        10        20        30        50       100
-0  0.14674  0.231773  0.284894  0.349626  0.367434
-1  0.70563  0.535493  0.428293  0.295170  0.255374
-2  0.14763  0.232734  0.286813  0.355205  0.377192
+                 10        20        30        50       100
+down        0.14674  0.231773  0.284894  0.349626  0.367434
+stationary  0.70563  0.535493  0.428293  0.295170  0.255374
+up          0.14763  0.232734  0.286813  0.355205  0.377192
+
 test class distributions
-         10        20        30        50       100
-0  0.070259  0.117856  0.153119  0.207882  0.232062
-1  0.858588  0.765627  0.698173  0.593401  0.536339
-2  0.071153  0.116517  0.148708  0.198717  0.231599
+                  10        20        30        50       100
+down        0.070259  0.117856  0.153119  0.207882  0.232062
+stationary  0.858588  0.765627  0.698173  0.593401  0.536339
+up          0.071153  0.116517  0.148708  0.198717  0.231599
+
 processing files to batches...
+
 data/AAL_orderflows/AAL_orderflow_2019-01-10.csv
 data/AAL_orderflows/AAL_orderflow_2019-01-11.csv
 data/AAL_orderflows/AAL_orderflow_2019-01-14.csv
