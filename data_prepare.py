@@ -145,7 +145,7 @@ def process_data(files, T, NF, dir, type, alphas=None, samples_per_file=1, XYspl
 if __name__ == '__main__':
 
     #################################### SETTINGS ########################################
-
+    
     data = "LOBSTER"                            # "LOBSTER" or "FI2010"
 
     raw_data_dir = r"data/AAL_orderflows"       # r"data/AAL_orderbooks", r"data/AAL_orderflows" or r"data/FI2010"
