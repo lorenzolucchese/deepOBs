@@ -47,9 +47,8 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
              "ASKp1", "ASKs1", "BIDp1",  "BIDs1", ..., "ASKpN", "ASKsN", "BIDpN",  "BIDsN", "horizons[0]", ..., "horizons[-1]"
              where N is the number of levels.
     """
-    os.chdir(input_path)
     extension = "csv"
-    csv_file_list = glob.glob("*.{}".format(extension))
+    csv_file_list = glob.glob(os.path.join(input_path, "*.{}".format(extension)))
 
     # # get a list of all subdirectories and search for csv files in these subdirectories
     # for dir_path in dir_paths:
@@ -242,9 +241,42 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
                 for i in range(1, levels + 1):
                     feature_names += [feature_name + str(i)]
             df_orderbook[feature_names] = np.concatenate([ASK_OF, BID_OF], axis=1)
+
         elif features == "volumes":
-            # add code
-            pass
+            # first ten ticks on each side of the mid, exclude mid
+            # print("min bid-ask spread:", np.min(df_orderbook["ASKp1"] - df_orderbook["BIDp1"]))
+            # print("average bid-ask spread:", np.mean(df_orderbook["ASKp1"] - df_orderbook["BIDp1"]))
+            # print("max bid-ask spread:", np.max(df_orderbook["ASKp1"] - df_orderbook["BIDp1"]))
+
+            # print("min 10-level spread:", np.min(df_orderbook["ASKp10"] - df_orderbook["BIDp10"]))
+            # print("average 10-level spread:", np.mean(df_orderbook["ASKp10"] - df_orderbook["BIDp10"]))
+            # print("max 10-level spread:", np.max(df_orderbook["ASKp10"] - df_orderbook["BIDp10"]))
+
+            ticks = np.hstack((np.outer(np.round((df_orderbook["mid price"] - 25) / 100) * 100, np.ones(20)) + 100 * np.outer(np.ones(len(df_orderbook)), np.arange(-19, 1)),
+                np.outer(np.round((df_orderbook["mid price"] + 25) / 100) * 100, np.ones(20)) + 100 * np.outer(np.ones(len(df_orderbook)), np.arange(20))))
+            
+            volumes = np.zeros((len(df_orderbook), 40))
+
+            orderbook_states = df_orderbook[feature_names]
+
+            for i in range(40):
+                flags = (orderbook_states.values == np.repeat(ticks[:, i].reshape((len(orderbook_states), 1)), orderbook_states.shape[1], axis=1))
+                flags = np.hstack((np.repeat(False, flags.shape[0]).reshape((flags.shape[0], 1)), flags[:, :-1]))
+                volumes[flags.sum(axis=1) > 0, i] = orderbook_states.values[flags]
+            
+            # remove all price-volume features and add in orderflow
+            df_orderbook = df_orderbook.drop(feature_names, axis=1).iloc[:, :]
+            feature_names_raw = ["BIDs", "ASKs"]
+            feature_names = []
+            for feature_name in feature_names_raw:
+                if feature_name == "BIDs":
+                    for i in range(20, 0, -1):
+                        feature_names += [feature_name + str(i)]
+                else:
+                    for i in range(1, 21):
+                        feature_names += [feature_name + str(i)]
+            df_orderbook[feature_names] = volumes
+
         else:
             raise ValueError('features must be one of "orderbook", "orderflow" or "volumes".')
 
@@ -304,7 +336,7 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
         elif output_extension == "csv":
             df_orderbook.to_csv(output_name, header=True, index=False)
         else:
-            raise Exception("output_extension must be hdf5 or csv")
+            raise ValueError("output_extension must be hdf5 or csv")
 
     print("finished loop")
 
@@ -364,16 +396,18 @@ if __name__ == "__main__":
     # set parameters
     TICKER = "AAL"
     input_path = r"E:\_data_dwn_16_85__AAL_2019-01-01_2020-01-31_10"
-    output_path = r"E:\AAL_OB"
-    index = "seconds"
+    output_path = r"E:\AAL_volumes"
+    index = "seconds"    
+
+    # In E:\AAL_OB need to use make_it_better on order books after 2019-08-26 to remove seconds and mid-prices
+    # In E:\AAL_volumes need to use make_it_better to adjust feature names
 
     startTime = time.time()
-    make_it_better(output_path)
-    # process_data(TICKER=TICKER, 
-    #              input_path=input_path, 
-    #              output_path=output_path, 
-    #              output_extension="csv", 
-    #              orderflow=False)
+    process_data(TICKER=TICKER, 
+                 input_path=input_path, 
+                 output_path=output_path, 
+                 output_extension="csv", 
+                 features="volumes")
     executionTime = (time.time() - startTime)
 
     print("Execution time in seconds: " + str(executionTime))
