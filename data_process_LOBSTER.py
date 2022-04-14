@@ -13,6 +13,7 @@ import datetime
 import time
 import numpy as np
 import pickle
+from data_prepare import prepare_x_y, prepare_decoder_input
 # import h5py
 
 def process_data(TICKER, input_path, output_path, time_index="seconds", output_extension="csv",
@@ -43,9 +44,14 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
     :param features: whether to return order book, order flow or volume features
            if volume: return the volumes of the first 10 ticks on each side of the mid, even if these are empty. 
                       Apply horizontal normalisation in data preparation step.
-    :return: saves the processed order books in output_path, each orderbook contains the following columns:
+    :return: saves the processed features in output_path, each file consists of:
+             if orderbook:
              "ASKp1", "ASKs1", "BIDp1",  "BIDs1", ..., "ASKpN", "ASKsN", "BIDpN",  "BIDsN", "horizons[0]", ..., "horizons[-1]"
+             if orderflow:
+             "aOF1", "bOF1", "aOF2",  "bOF2", ..., "aOFN", "bOFN", "horizons[0]", ..., "horizons[-1]"
              where N is the number of levels.
+             if volumes:
+             "BIDvol20", ...,  "BIDvol1", "ASKvol1", ..., "ASKvol20", "horizons[0]", ..., "horizons[-1]".
     """
     extension = "csv"
     csv_file_list = glob.glob(os.path.join(input_path, "*.{}".format(extension)))
@@ -243,7 +249,8 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
             df_orderbook[feature_names] = np.concatenate([ASK_OF, BID_OF], axis=1)
 
         elif features == "volumes":
-            # first ten ticks on each side of the mid, exclude mid
+            # first ten ticks on each side of the mid, exclude mid. Assumes tick_size = 0.01 $
+            # gets 20 ticks on eack side of mid.
             # print("min bid-ask spread:", np.min(df_orderbook["ASKp1"] - df_orderbook["BIDp1"]))
             # print("average bid-ask spread:", np.mean(df_orderbook["ASKp1"] - df_orderbook["BIDp1"]))
             # print("max bid-ask spread:", np.max(df_orderbook["ASKp1"] - df_orderbook["BIDp1"]))
@@ -360,6 +367,145 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
 
     print("please check supplementary files before performing analysis")
 
+
+def process_simulated_data(input_path, output_path, T = 100, NF = 40, output_extension="csv", horizons=np.array([10, 20, 30, 50, 100]), features = "orderbook"):
+    """
+    Function for pre-processing simulated data. The data must be stored in the input_path
+    directory as daily order book files. The data is treated in the following way:
+    - order book states with crossed quotes are removed.
+    - each state in the orderbook is time-stamped, with states occurring at the same time collapsed
+      onto the last state.
+    - the first and last 10 minutes of market activity are dropped.
+    - rolling z-score normalisation is applied to the data, i.e. the mean and standard deviation of the previous 5 days
+      is used to normalise current day's data. Hence drop first 5 days. 
+      If volume features are selected data is normalised in the preparation phase ("horizontal" normalisation).
+    - the smoothed returns at the requested horizons (in order book changes) are returned
+      l = (m+ - m)/m, where m+ denotes the mean of the next k mid-prices, m is current mid price.
+    :param input_path: the path where the order book and message book files are stores in monthly
+                       directories
+    :param output_path: the path where we wish to save the processed datasets
+    :param output_extension: the extension of the saved files ("hdf5" or "csv")
+    :param horizons: forecasting horizons for labels
+    :param features: whether to return order book, order flow or volume features
+           if volume: return the volumes of the first 10 ticks on each side of the mid, even if these are empty. 
+                      Apply horizontal normalisation in data preparation step.
+    :return: saves the processed features in output_path, each file consists of:
+             if orderbook:
+             "ASKp1", "ASKs1", "BIDp1",  "BIDs1", ..., "ASKpN", "ASKsN", "BIDpN",  "BIDsN", "horizons[0]", ..., "horizons[-1]"
+             if orderflow:
+             "aOF1", "bOF1", "aOF2",  "bOF2", ..., "aOFN", "bOFN", "horizons[0]", ..., "horizons[-1]"
+             where N is the number of levels.
+             if volumes:
+             "BIDvol20", ...,  "BIDvol1", "ASKvol1", ..., "ASKvol20", "horizons[0]", ..., "horizons[-1]".
+            
+    """
+    # currently implemented for 4 days -> three days training, half day val and half day test
+    train = slice(0, 3)
+
+    extension = "csv"
+
+    csv_orderbooks = glob.glob(os.path.join(input_path, "*.{}".format(extension)))
+    csv_orderbooks.sort()
+
+    print("started loop")
+
+    df_orderbooks = []
+
+    for orderbook_name in csv_orderbooks:
+        df_orderbook = pd.read_csv(orderbook_name, index_col=0)
+        df_orderbook = df_orderbook.drop(["date"], axis=1)
+
+        df_orderbook["mid price"] = (df_orderbook["Ask Price 1"] + df_orderbook["Bid Price 1"])/2
+
+        # create labels for returns with smoothing labelling method
+        for h in horizons:
+            rolling_mid = df_orderbook["mid price"].rolling(h).mean().dropna()[1:]
+            rolling_mid = rolling_mid.to_numpy().reshape(len(rolling_mid),)
+            smooth_pct_change = rolling_mid/df_orderbook["mid price"][0:-h] - 1
+            df_orderbook[str(h)] = np.concatenate((smooth_pct_change,
+                                                   np.repeat(np.NaN, int(h))))
+
+        # drop seconds and mid price columns
+        df_orderbook = df_orderbook.drop(["mid price"], axis=1)
+
+        # drop elements with na predictions at the end which cannot be used for training
+        df_orderbook = df_orderbook.iloc[:-max(horizons), :]
+
+        df_orderbooks += [df_orderbook]
+    
+    # normalise features by mean and sd of training set
+    train_df = pd.concat(df_orderbooks[train])
+    train_means = train_df.iloc[:, :-len(horizons)].mean()
+    train_stds = train_df.iloc[:, :-len(horizons)].std()
+
+    # find alphas to split into classes
+    returns = train_df.iloc[:, -len(horizons):].to_numpy()
+    alphas = (np.abs(np.quantile(returns, 0.33, axis = 0)) + np.quantile(returns, 0.66, axis = 0))/2
+    
+    class0 = np.array([sum(returns[:, i] < -alphas[i])/returns.shape[0] for i in range(5)])
+    class2 = np.array([sum(returns[:, i] > alphas[i])/returns.shape[0] for i in range(5)])
+    class1 = 1 - (class0 + class2)
+    print("train class distributions")
+    distributions = pd.DataFrame(np.vstack([class0, class1, class2]), 
+                                index=["down", "stationary", "up"], 
+                                columns=["10", "20", "30", "50", "100"])
+    print(distributions)
+    
+    returns = df_orderbooks[-1].iloc[:len(df_orderbooks)//2, -len(horizons):].to_numpy()
+    
+    class0 = np.array([sum(returns[:, i] < -alphas[i])/returns.shape[0] for i in range(5)])
+    class2 = np.array([sum(returns[:, i] > alphas[i])/returns.shape[0] for i in range(5)])
+    class1 = 1 - (class0 + class2)
+    print("val class distributions")
+    distributions = pd.DataFrame(np.vstack([class0, class1, class2]), 
+                                index=["down", "stationary", "up"], 
+                                columns=["10", "20", "30", "50", "100"])
+    print(distributions)
+
+    returns = df_orderbooks[-1].iloc[len(df_orderbooks)//2:, -len(horizons):].to_numpy()
+    
+    class0 = np.array([sum(returns[:, i] < -alphas[i])/returns.shape[0] for i in range(5)])
+    class2 = np.array([sum(returns[:, i] > alphas[i])/returns.shape[0] for i in range(5)])
+    class1 = 1 - (class0 + class2)
+    print("test class distributions")
+    distributions = pd.DataFrame(np.vstack([class0, class1, class2]), 
+                                index=["down", "stationary", "up"], 
+                                columns=["10", "20", "30", "50", "100"])
+    print(distributions)
+
+    Xs = []
+
+    for df_orderbook in df_orderbooks:
+        # normalise features
+        df_orderbook.iloc[:, :-len(horizons)] = (df_orderbook.iloc[:, :-len(horizons)] - train_means)/train_stds
+        
+        # produce inputs ready for model
+        X, Y = prepare_x_y(df_orderbook.to_numpy(), T, NF, alphas)
+        Xs += [X]
+        Ys += [Y]
+
+    trainX = np.concatenate(X[train], axis=0)
+    trainY = np.concatenate(Y[train], axis=0)
+    valX = X[:len(X)//2, :, :, :]
+    valY = Y[:len(Y)//2, :, :]
+    testX = X[len(X)//2:, :, :, :]
+    testY = Y[len(Y)//2:, :, :]
+
+
+    np.savez(os.path.join(output_path, "train"), X=trainX, Y=trainY)        
+    np.savez(os.path.join(output_path, "val"), X=valX, Y=valY)
+    np.savez(os.path.join(output_path, "test"), X=testX, Y=testY)
+
+    # this sets the initial hidden state of the decoder to be y_0 = [1, 0, 0].
+    train_decoder_input = prepare_decoder_input(trainX, teacher_forcing=False)
+    val_decoder_input = prepare_decoder_input(valX, teacher_forcing=False)
+    test_decoder_input = prepare_decoder_input(testX, teacher_forcing=False)
+
+    np.save(os.path.join(output_path, "train_decoder_input"), train_decoder_input)        
+    np.save(os.path.join(output_path, "val_decoder_input"), val_decoder_input)
+    np.save(os.path.join(output_path, "test_decoder_input"), test_decoder_input)
+
+
 def reconstruct_orderbook_from_hdf5(file):
     """
     Reconstruct a pandas dataframe from saved hdf5 file.
@@ -393,21 +539,34 @@ def make_it_better(path):
 
 
 if __name__ == "__main__":
-    # set parameters
-    TICKER = "AAL"
-    input_path = r"E:\_data_dwn_16_85__AAL_2019-01-01_2020-01-31_10"
-    output_path = r"E:\AAL_volumes"
-    index = "seconds"    
+    # # set parameters
+    # TICKER = "AAL"
+    # input_path = r"E:\_data_dwn_16_85__AAL_2019-01-01_2020-01-31_10"
+    # output_path = r"E:\AAL_volumes"
+    # index = "seconds"    
 
-    # In E:\AAL_OB need to use make_it_better on order books after 2019-08-26 to remove seconds and mid-prices
-    # In E:\AAL_volumes need to use make_it_better to adjust feature names
+    # # In E:\AAL_OB need to use make_it_better on order books after 2019-08-26 to remove seconds and mid-prices
+    # # In E:\AAL_volumes might want to use make_it_better to adjust feature names
+
+    # startTime = time.time()
+    # process_data(TICKER=TICKER, 
+    #              input_path=input_path, 
+    #              output_path=output_path, 
+    #              output_extension="csv", 
+    #              features="volumes")
+    # executionTime = (time.time() - startTime)
+
+    # print("Execution time in seconds: " + str(executionTime))
+
+    # set parameters
+    input_path = r"C:\Users\ll1917\Mathematics of Random Systems CDT\DeepLOB project\simulated_data\cleaned_300000_examples"
+    output_path = r"C:\Users\ll1917\Mathematics of Random Systems CDT\DeepLOB project\simulated_data\processed"
 
     startTime = time.time()
-    process_data(TICKER=TICKER, 
-                 input_path=input_path, 
+    process_simulated_data(input_path=input_path, 
                  output_path=output_path, 
                  output_extension="csv", 
-                 features="volumes")
+                 features="orderbooks")
     executionTime = (time.time() - startTime)
 
     print("Execution time in seconds: " + str(executionTime))
