@@ -49,13 +49,13 @@ class CustomReshape(Layer):
 
 
 class deepLOB:
-    def __init__(self, T, NF, horizon, number_of_lstm, data = "FI2010", data_dir = "data/model/FI2010/horizon10", model_inputs = "order book", task="classification", multihorizon=False, decoder = "seq2seq", n_horizons=5):
+    def __init__(self, T, NF, horizon, number_of_lstm, data = "FI2010", data_dir = "data/model/FI2010", model_inputs = "order book", task="classification", multihorizon=False, decoder = "seq2seq", n_horizons=5):
         """Initialization.
         :param T: time window 
         :param NF: number of features
         :param horizon: when not multihorizon, the horizon to consider
         :param number_of_lstm: number of nodes in lstm
-        :param data: whether the data fits in the RAM and is thus divided in train, val, test datasets (and, if multihorizon, corresponding decoder_input) - "FI2010"
+        :param data: whether the data fits in the RAM and is thus divided in train, val, test datasets (and, if multihorizon, corresponding decoder_input) - "FI2010", "simulated"
                      or if the data is saved by batches in folders train, test, val (and, if multihorizon, corresponding decoder_input) - "LOBSTER".
         :param data_dir: parent directory for data
         :param model_inputs: what type of inputs
@@ -79,7 +79,7 @@ class deepLOB:
         self.data_dir = data_dir
         self.data = data
 
-        if data == "FI2010":
+        if data in ["FI2010", "simulated"]:
             train_data = np.load(os.path.join(data_dir, "train.npz"))
             trainX, trainY = train_data["X"], train_data["Y"]
             val_data = np.load(os.path.join(data_dir, "val.npz"))
@@ -112,7 +112,7 @@ class deepLOB:
             self.test_generator = CustomDataGenerator(os.path.join(data_dir, "test"), self.horizon, multihorizon = multihorizon, batch_size=32, XYsplit=False, samples_per_file=32, shuffle=False)
 
         else:
-            raise ValueError('data must be either FI2010 or LOBSTER.')
+            raise ValueError('data must be either FI2010, simulated or LOBSTER.')
 
 
     def create_model(self):
@@ -337,7 +337,7 @@ class deepLOB:
         # avoid RAM issues
         predY = self.model.predict(self.test_generator)
 
-        if self.data == "FI2010":
+        if self.data in ["FI2010", "simulated"]:
             test_data = np.load(os.path.join(self.data_dir, "test.npz"))
             testY = test_data["Y"]
         if self.data == "LOBSTER":
@@ -393,7 +393,7 @@ if __name__ == '__main__':
     #################################### SETTINGS ########################################
 
     model_inputs = "volumes"                    # options: "order book", "order flow", "volumes"
-    data = "LOBSTER"                            # options: "FI2010", "AAL"
+    data = "LOBSTER"                            # options: "FI2010", "AAL", "simulated"
     data_dir = "data/model/AAL_orderbooks_W1"
     task = "classification"
     multihorizon = False                        # options: True, False
@@ -404,7 +404,7 @@ if __name__ == '__main__':
     n_horizons = 5
     horizon = 0                                 # prediction horizon (0, 1, 2, 3, 4) -> (10, 20, 30, 50, 100) order book events
     epochs = 50
-    batch_size = 256                            # note we use 256 for LOBSTER, 32 for FI2010
+    batch_size = 256                            # note we use 256 for LOBSTER, 32 for FI2010 or simulated
     number_of_lstm = 64
 
     checkpoint_filepath = './model_weights/deepLOB_weights_AAL_W1/weights' + str(orderbook_updates[0])
