@@ -43,6 +43,8 @@ if __name__ == '__main__':
     
     orderbook_updates = [10, 20, 30, 50, 100]
 
+    decoders = ["seq2seq", "attention"]
+
     print("##################### deepOF #####################")
     
     for h in range(0, 5):
@@ -92,4 +94,54 @@ if __name__ == '__main__':
                     load_weights_filepath = load_weights_filepath)
 
         model.evaluate_model(load_weights_filepath = checkpoint_filepath)
-                    
+
+    for dec in decoders:
+        print("##################### deepOF", dec, "#####################")
+
+        #################################### SETTINGS ########################################
+
+        model_inputs = "order flow"                 # options: "order book", "order flow"
+        data = "LOBSTER"                            # options: "FI2010", "AAL"
+        data_dir = "data/model/AAL_orderflows_W1"
+        task = "classification"
+        multihorizon = True                         # options: True, False
+        decoder = dec                               # options: "seq2seq", "attention"
+
+        T = 100
+        NF = 20
+        n_horizons = 5
+        horizon = "NA"                              # prediction horizon (0, 1, 2, 3, 4) -> (10, 20, 30, 50, 100) order book events
+        epochs = 50
+        batch_size = 256
+        number_of_lstm = 64
+
+        checkpoint_filepath = './model_weights/deepOF_weights_AAL_W1/weights' + dec
+        load_weights = False
+        load_weights_filepath = './model_weights/deepOF_weights_AAL_W1/weights' + dec
+
+        #######################################################################################
+
+        model = deepLOB(T, 
+                NF,
+                horizon = horizon, 
+                number_of_lstm = number_of_lstm, 
+                data = data, 
+                data_dir = data_dir, 
+                model_inputs = model_inputs, 
+                task = task, 
+                multihorizon = multihorizon, 
+                decoder = decoder, 
+                n_horizons = n_horizons)
+
+        model.create_model()
+
+        # model.model.summary()
+
+        model.fit_model(epochs = epochs, 
+                    batch_size = batch_size,
+                    checkpoint_filepath = checkpoint_filepath,
+                    load_weights = load_weights,
+                    load_weights_filepath = load_weights_filepath,
+                    patience = 10)
+
+        model.evaluate_model(load_weights_filepath = checkpoint_filepath)

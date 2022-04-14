@@ -85,7 +85,7 @@ if __name__ == '__main__':
 
         model.create_model()
 
-        # model.model.summary()
+        model.model.summary()
 
         model.fit_model(epochs = epochs, 
                     batch_size = batch_size,
