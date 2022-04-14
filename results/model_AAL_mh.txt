@@ -1,186 +1,127 @@
 ##################### deepLOB seq2seq #####################
-Epoch 1/50
-28082/28082 - 3036s - loss: 0.9810 - accuracy10: 0.5212 - accuracy20: 0.5212 - accuracy30: 0.5212 - accuracy50: 0.5212 - accuracy100: 0.5212 - val_loss: 1.0331 - val_accuracy10: 0.4625 - val_accuracy20: 0.4625 - val_accuracy30: 0.4625 - val_accuracy50: 0.4625 - val_accuracy100: 0.4625 - 3036s/epoch - 108ms/step
-Epoch 2/50
-28082/28082 - 2963s - loss: 0.9781 - accuracy10: 0.5210 - accuracy20: 0.5210 - accuracy30: 0.5210 - accuracy50: 0.5210 - accuracy100: 0.5210 - val_loss: 1.0444 - val_accuracy10: 0.4584 - val_accuracy20: 0.4584 - val_accuracy30: 0.4584 - val_accuracy50: 0.4584 - val_accuracy100: 0.4584 - 2963s/epoch - 106ms/step
-Epoch 3/50
-28082/28082 - 3217s - loss: 0.9769 - accuracy10: 0.5224 - accuracy20: 0.5224 - accuracy30: 0.5224 - accuracy50: 0.5224 - accuracy100: 0.5224 - val_loss: 1.0436 - val_accuracy10: 0.4584 - val_accuracy20: 0.4584 - val_accuracy30: 0.4584 - val_accuracy50: 0.4584 - val_accuracy100: 0.4584 - 3217s/epoch - 115ms/step
-Epoch 4/50
-28082/28082 - 3078s - loss: 0.9769 - accuracy10: 0.5218 - accuracy20: 0.5218 - accuracy30: 0.5218 - accuracy50: 0.5218 - accuracy100: 0.5218 - val_loss: 1.0437 - val_accuracy10: 0.4584 - val_accuracy20: 0.4584 - val_accuracy30: 0.4584 - val_accuracy50: 0.4584 - val_accuracy100: 0.4584 - 3078s/epoch - 110ms/step
-Epoch 5/50
-28082/28082 - 3346s - loss: 0.9764 - accuracy10: 0.5218 - accuracy20: 0.5218 - accuracy30: 0.5218 - accuracy50: 0.5218 - accuracy100: 0.5218 - val_loss: 1.0234 - val_accuracy10: 0.4584 - val_accuracy20: 0.4584 - val_accuracy30: 0.4584 - val_accuracy50: 0.4584 - val_accuracy100: 0.4584 - 3346s/epoch - 119ms/step
-Epoch 6/50
-28082/28082 - 3118s - loss: 0.9761 - accuracy10: 0.5223 - accuracy20: 0.5223 - accuracy30: 0.5223 - accuracy50: 0.5223 - accuracy100: 0.5223 - val_loss: 1.0113 - val_accuracy10: 0.4781 - val_accuracy20: 0.4781 - val_accuracy30: 0.4781 - val_accuracy50: 0.4781 - val_accuracy100: 0.4781 - 3118s/epoch - 111ms/step
-Epoch 7/50
-28082/28082 - 3101s - loss: 0.9756 - accuracy10: 0.5231 - accuracy20: 0.5231 - accuracy30: 0.5231 - accuracy50: 0.5231 - accuracy100: 0.5231 - val_loss: 1.0187 - val_accuracy10: 0.4753 - val_accuracy20: 0.4753 - val_accuracy30: 0.4753 - val_accuracy50: 0.4753 - val_accuracy100: 0.4753 - 3101s/epoch - 110ms/step
-Epoch 8/50
-28082/28082 - 3371s - loss: 0.9757 - accuracy10: 0.5225 - accuracy20: 0.5225 - accuracy30: 0.5225 - accuracy50: 0.5225 - accuracy100: 0.5225 - val_loss: 1.0137 - val_accuracy10: 0.4780 - val_accuracy20: 0.4780 - val_accuracy30: 0.4780 - val_accuracy50: 0.4780 - val_accuracy100: 0.4780 - 3371s/epoch - 120ms/step
-Epoch 9/50
-28082/28082 - 2992s - loss: 0.9753 - accuracy10: 0.5230 - accuracy20: 0.5230 - accuracy30: 0.5230 - accuracy50: 0.5230 - accuracy100: 0.5230 - val_loss: 1.0105 - val_accuracy10: 0.4781 - val_accuracy20: 0.4781 - val_accuracy30: 0.4781 - val_accuracy50: 0.4781 - val_accuracy100: 0.4781 - 2992s/epoch - 107ms/step
-Epoch 10/50
-28082/28082 - 2873s - loss: 0.9753 - accuracy10: 0.5229 - accuracy20: 0.5229 - accuracy30: 0.5229 - accuracy50: 0.5229 - accuracy100: 0.5229 - val_loss: 1.0184 - val_accuracy10: 0.4779 - val_accuracy20: 0.4779 - val_accuracy30: 0.4779 - val_accuracy50: 0.4779 - val_accuracy100: 0.4779 - 2873s/epoch - 102ms/step
-Epoch 11/50
-28082/28082 - 2918s - loss: 0.9753 - accuracy10: 0.5229 - accuracy20: 0.5229 - accuracy30: 0.5229 - accuracy50: 0.5229 - accuracy100: 0.5229 - val_loss: 1.0128 - val_accuracy10: 0.4794 - val_accuracy20: 0.4794 - val_accuracy30: 0.4794 - val_accuracy50: 0.4794 - val_accuracy100: 0.4794 - 2918s/epoch - 104ms/step
-Epoch 12/50
-28082/28082 - 2943s - loss: 0.9752 - accuracy10: 0.5232 - accuracy20: 0.5232 - accuracy30: 0.5232 - accuracy50: 0.5232 - accuracy100: 0.5232 - val_loss: 1.0292 - val_accuracy10: 0.4584 - val_accuracy20: 0.4584 - val_accuracy30: 0.4584 - val_accuracy50: 0.4584 - val_accuracy100: 0.4584 - 2943s/epoch - 105ms/step
-Epoch 13/50
-28082/28082 - 2940s - loss: 0.9756 - accuracy10: 0.5223 - accuracy20: 0.5223 - accuracy30: 0.5223 - accuracy50: 0.5223 - accuracy100: 0.5223 - val_loss: 1.0311 - val_accuracy10: 0.4589 - val_accuracy20: 0.4589 - val_accuracy30: 0.4589 - val_accuracy50: 0.4589 - val_accuracy100: 0.4589 - 2940s/epoch - 105ms/step
-Epoch 14/50
-28082/28082 - 2926s - loss: 0.9756 - accuracy10: 0.5224 - accuracy20: 0.5224 - accuracy30: 0.5224 - accuracy50: 0.5224 - accuracy100: 0.5224 - val_loss: 1.0126 - val_accuracy10: 0.4781 - val_accuracy20: 0.4781 - val_accuracy30: 0.4781 - val_accuracy50: 0.4781 - val_accuracy100: 0.4781 - 2926s/epoch - 104ms/step
-Epoch 15/50
-28082/28082 - 2930s - loss: 0.9757 - accuracy10: 0.5228 - accuracy20: 0.5228 - accuracy30: 0.5228 - accuracy50: 0.5228 - accuracy100: 0.5228 - val_loss: 1.0207 - val_accuracy10: 0.4794 - val_accuracy20: 0.4794 - val_accuracy30: 0.4794 - val_accuracy50: 0.4794 - val_accuracy100: 0.4794 - 2930s/epoch - 104ms/step
-Epoch 16/50
-28082/28082 - 2936s - loss: 0.9755 - accuracy10: 0.5228 - accuracy20: 0.5228 - accuracy30: 0.5228 - accuracy50: 0.5228 - accuracy100: 0.5228 - val_loss: 1.0239 - val_accuracy10: 0.4584 - val_accuracy20: 0.4584 - val_accuracy30: 0.4584 - val_accuracy50: 0.4584 - val_accuracy100: 0.4584 - 2936s/epoch - 105ms/step
-Epoch 17/50
-28082/28082 - 2960s - loss: 0.9753 - accuracy10: 0.5231 - accuracy20: 0.5231 - accuracy30: 0.5231 - accuracy50: 0.5231 - accuracy100: 0.5231 - val_loss: 1.0147 - val_accuracy10: 0.4780 - val_accuracy20: 0.4780 - val_accuracy30: 0.4780 - val_accuracy50: 0.4780 - val_accuracy100: 0.4780 - 2960s/epoch - 105ms/step
-Epoch 18/50
-28082/28082 - 2977s - loss: 0.9756 - accuracy10: 0.5226 - accuracy20: 0.5226 - accuracy30: 0.5226 - accuracy50: 0.5226 - accuracy100: 0.5226 - val_loss: 1.0148 - val_accuracy10: 0.4795 - val_accuracy20: 0.4795 - val_accuracy30: 0.4795 - val_accuracy50: 0.4795 - val_accuracy100: 0.4795 - 2977s/epoch - 106ms/step
-Epoch 19/50
-28082/28082 - 3212s - loss: 0.9753 - accuracy10: 0.5232 - accuracy20: 0.5232 - accuracy30: 0.5232 - accuracy50: 0.5232 - accuracy100: 0.5232 - val_loss: 1.0131 - val_accuracy10: 0.4780 - val_accuracy20: 0.4780 - val_accuracy30: 0.4780 - val_accuracy50: 0.4780 - val_accuracy100: 0.4780 - 3212s/epoch - 114ms/step
+
 Prediction horizon: 10  orderbook updates
-accuracy_score: 0.8668156783773292
+accuracy_score: 0.8764739421583851
               precision    recall  f1-score   support
 
-           0     0.0000    0.0000    0.0000    109290
-           1     0.8668    1.0000    0.9287   1429067
-           2     0.0000    0.0000    0.0000    110283
+           0     0.4879    0.1909    0.2744    109290
+           1     0.9010    0.9747    0.9364   1429067
+           2     0.5211    0.2832    0.3670    110283
 
-    accuracy                         0.8668   1648640
-   macro avg     0.2889    0.3333    0.3096   1648640
-weighted avg     0.7514    0.8668    0.8050   1648640
+    accuracy                         0.8765   1648640
+   macro avg     0.6367    0.4829    0.5259   1648640
+weighted avg     0.8482    0.8765    0.8544   1648640
 
 Prediction horizon: 20  orderbook updates
-accuracy_score: 0.7783579192546584
+accuracy_score: 0.8232603843167702
               precision    recall  f1-score   support
 
-           0     0.0000    0.0000    0.0000    184284
-           1     0.7784    1.0000    0.8754   1283232
-           2     0.0000    0.0000    0.0000    181124
+           0     0.5713    0.3355    0.4228    184284
+           1     0.8680    0.9482    0.9063   1283232
+           2     0.5677    0.4346    0.4923    181124
 
-    accuracy                         0.7784   1648640
-   macro avg     0.2595    0.3333    0.2918   1648640
-weighted avg     0.6058    0.7784    0.6813   1648640
+    accuracy                         0.8233   1648640
+   macro avg     0.6690    0.5728    0.6071   1648640
+weighted avg     0.8018    0.8233    0.8068   1648640
 
 Prediction horizon: 30  orderbook updates
-accuracy_score: 0.7134917265139752
+accuracy_score: 0.7725707249611802
               precision    recall  f1-score   support
 
-           0     0.0000    0.0000    0.0000    240566
-           1     0.7135    1.0000    0.8328   1176293
-           2     0.0000    0.0000    0.0000    231781
+           0     0.5724    0.4230    0.4865    240566
+           1     0.8385    0.8998    0.8681   1176293
+           2     0.5442    0.4896    0.5154    231781
 
-    accuracy                         0.7135   1648640
-   macro avg     0.2378    0.3333    0.2776   1648640
-weighted avg     0.5091    0.7135    0.5942   1648640
+    accuracy                         0.7726   1648640
+   macro avg     0.6517    0.6041    0.6233   1648640
+weighted avg     0.7583    0.7726    0.7628   1648640
 
 Prediction horizon: 50  orderbook updates
-accuracy_score: 0.6111710258152174
+accuracy_score: 0.691405036878882
               precision    recall  f1-score   support
 
-           0     0.1702    0.0000    0.0000    329016
-           1     0.6113    0.9998    0.7587   1007768
-           2     0.1364    0.0001    0.0002    311856
+           0     0.5674    0.4736    0.5163    329016
+           1     0.7708    0.8132    0.7914   1007768
+           2     0.5294    0.5275    0.5285    311856
 
-    accuracy                         0.6112   1648640
-   macro avg     0.3059    0.3333    0.2530   1648640
-weighted avg     0.4334    0.6112    0.4638   1648640
+    accuracy                         0.6914   1648640
+   macro avg     0.6225    0.6048    0.6121   1648640
+weighted avg     0.6845    0.6914    0.6868   1648640
 
 Prediction horizon: 100  orderbook updates
-accuracy_score: 0.22468883443322982
+accuracy_score: 0.6072016935170808
               precision    recall  f1-score   support
 
-           0     0.2246    0.9915    0.3663    370345
-           1     0.5401    0.0003    0.0007    910150
-           2     0.2197    0.0080    0.0154    368145
+           0     0.5018    0.5268    0.5140    370345
+           1     0.7205    0.6628    0.6904    910150
+           2     0.4797    0.5505    0.5127    368145
 
-    accuracy                         0.2247   1648640
-   macro avg     0.3282    0.3333    0.1274   1648640
-weighted avg     0.3977    0.2247    0.0861   1648640
+    accuracy                         0.6072   1648640
+   macro avg     0.5673    0.5801    0.5724   1648640
+weighted avg     0.6176    0.6072    0.6111   1648640
 
-##################### deepLOB attention #####################
-Epoch 1/50
-28082/28082 - 3620s - loss: 0.9772 - accuracy10: 0.5221 - accuracy20: 0.5221 - accuracy30: 0.5221 - accuracy50: 0.5221 - accuracy100: 0.5221 - val_loss: 1.0323 - val_accuracy10: 0.4584 - val_accuracy20: 0.4584 - val_accuracy30: 0.4584 - val_accuracy50: 0.4584 - val_accuracy100: 0.4584 - 3620s/epoch - 129ms/step
-Epoch 2/50
-28082/28082 - 3077s - loss: 0.9728 - accuracy10: 0.5235 - accuracy20: 0.5235 - accuracy30: 0.5235 - accuracy50: 0.5235 - accuracy100: 0.5235 - val_loss: 1.0117 - val_accuracy10: 0.4780 - val_accuracy20: 0.4780 - val_accuracy30: 0.4780 - val_accuracy50: 0.4780 - val_accuracy100: 0.4780 - 3077s/epoch - 110ms/step
-Epoch 3/50
-28082/28082 - 4356s - loss: 0.9727 - accuracy10: 0.5233 - accuracy20: 0.5233 - accuracy30: 0.5233 - accuracy50: 0.5233 - accuracy100: 0.5233 - val_loss: 1.0209 - val_accuracy10: 0.4584 - val_accuracy20: 0.4584 - val_accuracy30: 0.4584 - val_accuracy50: 0.4584 - val_accuracy100: 0.4584 - 4356s/epoch - 155ms/step
-Epoch 4/50
-28082/28082 - 4100s - loss: 0.9726 - accuracy10: 0.5239 - accuracy20: 0.5239 - accuracy30: 0.5239 - accuracy50: 0.5239 - accuracy100: 0.5239 - val_loss: 1.0261 - val_accuracy10: 0.4584 - val_accuracy20: 0.4584 - val_accuracy30: 0.4584 - val_accuracy50: 0.4584 - val_accuracy100: 0.4584 - 4100s/epoch - 146ms/step
-Epoch 5/50
-28082/28082 - 3989s - loss: 0.9726 - accuracy10: 0.5239 - accuracy20: 0.5239 - accuracy30: 0.5239 - accuracy50: 0.5239 - accuracy100: 0.5239 - val_loss: 1.0282 - val_accuracy10: 0.4584 - val_accuracy20: 0.4584 - val_accuracy30: 0.4584 - val_accuracy50: 0.4584 - val_accuracy100: 0.4584 - 3989s/epoch - 142ms/step
-Epoch 6/50
-28082/28082 - 3956s - loss: 0.9725 - accuracy10: 0.5237 - accuracy20: 0.5237 - accuracy30: 0.5237 - accuracy50: 0.5237 - accuracy100: 0.5237 - val_loss: 1.0308 - val_accuracy10: 0.4584 - val_accuracy20: 0.4584 - val_accuracy30: 0.4584 - val_accuracy50: 0.4584 - val_accuracy100: 0.4584 - 3956s/epoch - 141ms/step
-Epoch 7/50
-28082/28082 - 3948s - loss: 0.9725 - accuracy10: 0.5242 - accuracy20: 0.5242 - accuracy30: 0.5242 - accuracy50: 0.5242 - accuracy100: 0.5242 - val_loss: 1.0218 - val_accuracy10: 0.4584 - val_accuracy20: 0.4584 - val_accuracy30: 0.4584 - val_accuracy50: 0.4584 - val_accuracy100: 0.4584 - 3948s/epoch - 141ms/step
-Epoch 8/50
-28082/28082 - 3499s - loss: 0.9725 - accuracy10: 0.5240 - accuracy20: 0.5240 - accuracy30: 0.5240 - accuracy50: 0.5240 - accuracy100: 0.5240 - val_loss: 1.0334 - val_accuracy10: 0.4584 - val_accuracy20: 0.4584 - val_accuracy30: 0.4584 - val_accuracy50: 0.4584 - val_accuracy100: 0.4584 - 3499s/epoch - 125ms/step
-Epoch 9/50
-28082/28082 - 3899s - loss: 0.9724 - accuracy10: 0.5242 - accuracy20: 0.5242 - accuracy30: 0.5242 - accuracy50: 0.5242 - accuracy100: 0.5242 - val_loss: 1.0246 - val_accuracy10: 0.4584 - val_accuracy20: 0.4584 - val_accuracy30: 0.4584 - val_accuracy50: 0.4584 - val_accuracy100: 0.4584 - 3899s/epoch - 139ms/step
-Epoch 10/50
-28082/28082 - 4236s - loss: 0.9724 - accuracy10: 0.5241 - accuracy20: 0.5241 - accuracy30: 0.5241 - accuracy50: 0.5241 - accuracy100: 0.5241 - val_loss: 1.0144 - val_accuracy10: 0.4780 - val_accuracy20: 0.4780 - val_accuracy30: 0.4780 - val_accuracy50: 0.4780 - val_accuracy100: 0.4780 - 4236s/epoch - 151ms/step
-Epoch 11/50
-28082/28082 - 4312s - loss: 0.9725 - accuracy10: 0.5239 - accuracy20: 0.5239 - accuracy30: 0.5239 - accuracy50: 0.5239 - accuracy100: 0.5239 - val_loss: 1.0172 - val_accuracy10: 0.4794 - val_accuracy20: 0.4794 - val_accuracy30: 0.4794 - val_accuracy50: 0.4794 - val_accuracy100: 0.4794 - 4312s/epoch - 154ms/step
-Epoch 12/50
-28082/28082 - 4172s - loss: 0.9724 - accuracy10: 0.5234 - accuracy20: 0.5234 - accuracy30: 0.5234 - accuracy50: 0.5234 - accuracy100: 0.5234 - val_loss: 1.0193 - val_accuracy10: 0.4584 - val_accuracy20: 0.4584 - val_accuracy30: 0.4584 - val_accuracy50: 0.4584 - val_accuracy100: 0.4584 - 4172s/epoch - 149ms/step
+################# deepLOB attention ################
+
 Prediction horizon: 10  orderbook updates
-accuracy_score: 0.866799301242236
+accuracy_score: 0.8594841809006211
               precision    recall  f1-score   support
 
-           0     0.0345    0.0000    0.0000    109290
-           1     0.8668    1.0000    0.9286   1429067
-           2     0.0000    0.0000    0.0000    110283
+           0     0.2098    0.0016    0.0033    109290
+           1     0.8665    0.9906    0.9244   1429067
+           2     0.0839    0.0107    0.0190    110283
 
-    accuracy                         0.8668   1648640
-   macro avg     0.3004    0.3333    0.3096   1648640
-weighted avg     0.7537    0.8668    0.8050   1648640
+    accuracy                         0.8595   1648640
+   macro avg     0.3867    0.3343    0.3155   1648640
+weighted avg     0.7706    0.8595    0.8028   1648640
 
 Prediction horizon: 20  orderbook updates
-accuracy_score: 0.7783409355590062
+accuracy_score: 0.7582558957686335
               precision    recall  f1-score   support
 
-           0     0.0312    0.0000    0.0000    184284
-           1     0.7784    1.0000    0.8754   1283232
-           2     0.2857    0.0000    0.0000    181124
+           0     0.3166    0.0055    0.0108    184284
+           1     0.7770    0.9678    0.8620   1283232
+           2     0.1516    0.0394    0.0626    181124
 
-    accuracy                         0.7783   1648640
-   macro avg     0.3651    0.3333    0.2918   1648640
-weighted avg     0.6407    0.7783    0.6813   1648640
+    accuracy                         0.7583   1648640
+   macro avg     0.4151    0.3376    0.3118   1648640
+weighted avg     0.6568    0.7583    0.6790   1648640
 
 Prediction horizon: 30  orderbook updates
-accuracy_score: 0.713474742818323
+accuracy_score: 0.6546383685947205
               precision    recall  f1-score   support
 
-           0     0.0909    0.0000    0.0000    240566
-           1     0.7135    1.0000    0.8328   1176293
-           2     0.1333    0.0000    0.0000    231781
+           0     0.3720    0.0315    0.0581    240566
+           1     0.7122    0.8798    0.7872   1176293
+           2     0.2099    0.1588    0.1808    231781
 
-    accuracy                         0.7135   1648640
-   macro avg     0.3126    0.3333    0.2776   1648640
-weighted avg     0.5411    0.7135    0.5942   1648640
+    accuracy                         0.6546   1648640
+   macro avg     0.4314    0.3567    0.3420   1648640
+weighted avg     0.5920    0.6546    0.5956   1648640
 
 Prediction horizon: 50  orderbook updates
-accuracy_score: 0.6110230250388199
+accuracy_score: 0.48227144798136645
               precision    recall  f1-score   support
 
-           0     0.1698    0.0003    0.0007    329016
-           1     0.6113    0.9994    0.7586   1007768
-           2     0.1929    0.0002    0.0004    311856
+           0     0.3581    0.2005    0.2570    329016
+           1     0.6580    0.5568    0.6032   1007768
+           2     0.2747    0.5389    0.3639    311856
 
-    accuracy                         0.6110   1648640
-   macro avg     0.3247    0.3333    0.2532   1648640
-weighted avg     0.4440    0.6110    0.4639   1648640
+    accuracy                         0.4823   1648640
+   macro avg     0.4303    0.4320    0.4080   1648640
+weighted avg     0.5257    0.4823    0.4888   1648640
 
 Prediction horizon: 100  orderbook updates
-accuracy_score: 0.22473250679347825
+accuracy_score: 0.4369340789984472
               precision    recall  f1-score   support
 
-           0     0.2247    0.9645    0.3645    370345
-           1     0.5583    0.0002    0.0005    910150
-           2     0.2235    0.0355    0.0612    368145
+           0     0.3496    0.2219    0.2714    370345
+           1     0.6072    0.4661    0.5274    910150
+           2     0.2993    0.5812    0.3951    368145
 
-    accuracy                         0.2247   1648640
-   macro avg     0.3355    0.3334    0.1421   1648640
-weighted avg     0.4086    0.2247    0.0958   1648640
+    accuracy                         0.4369   1648640
+   macro avg     0.4187    0.4231    0.3980   1648640
+weighted avg     0.4806    0.4369    0.4403   1648640
+
 
 ##################### deepOF seq2seq #####################
 Epoch 1/50

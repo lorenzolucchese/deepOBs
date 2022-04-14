@@ -10,13 +10,42 @@ import time
 import os
 from keras import backend as K
 from keras.models import load_model, Model
-from keras.layers import Flatten, Dense, Dropout, LeakyReLU, Activation, Input, LSTM, CuDNNLSTM, Reshape, Conv2D, MaxPooling2D, concatenate, Lambda, dot, BatchNormalization
+from keras.layers import Flatten, Dense, Dropout, LeakyReLU, Activation, Input, LSTM, CuDNNLSTM, Reshape, Conv2D, Conv3D, MaxPooling2D, concatenate, Lambda, dot, BatchNormalization, Layer
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras.metrics import CategoricalAccuracy, Precision, Recall, MeanSquaredError
 
 from sklearn.metrics import classification_report, accuracy_score
 import matplotlib.pyplot as plt
+
+
+class CustomReshape(Layer):
+    def __init__(self, output_dim, **kwargs):
+        self.output_dim = output_dim
+        super(CustomReshape, self).__init__(**kwargs)
+    
+    def build(self, input_shape):
+        super(CustomReshape, self).build(input_shape)
+    
+    def call(self, input_data):
+        batch_size = tf.shape(input_data)[0]
+        T = tf.shape(input_data)[1]
+        NF = tf.shape(input_data)[2]
+        input_BID = tf.reshape(input_data[:, :, :NF//2, :], [batch_size, T, NF//2, 1, 1])
+        input_BID = tf.reverse(input_BID, axis = [2])
+        input_ASK = tf.reshape(input_data[:, :, NF//2:, :], [batch_size, T, NF//2, 1, 1])
+        output = concatenate([input_BID, input_ASK], axis = 3)
+        # if not tf.executing_eagerly():
+        #     # Set the static shape for the result since it might lost during array_ops
+        #     # reshape, eg, some `None` dim in the result could be inferred.
+        #     output.set_shape(self.compute_output_shape(input_data.shape))
+        return output
+
+    def compute_output_shape(self, input_shape): 
+        batch_size = input_shape[0]
+        T = input_shape[1]
+        NF = input_shape[2]
+        return (batch_size, T, NF//2, 2, 1)
 
 
 class deepLOB:
@@ -129,10 +158,23 @@ class deepLOB:
             conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
             conv_first1 = Conv2D(32, (4, 1), padding='same')(conv_first1)
             conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+        elif self.model_inputs == "volumes":
+            # input_BID = Reshape((self.T, self.NF//2, 1, 1))(input_lmd[:, :, :self.NF//2, :])
+            # input_BID = tf.reverse(input_BID, axis = [2])
+            # input_ASK = Reshape((self.T, self.NF//2, 1, 1))(input_lmd[:, :, self.NF//2:, :])
+            # input_lmd = concatenate([input_BID, input_ASK], axis = 3)
+            input_reshaped = CustomReshape(0)(input_lmd)
+            conv_first1 = Conv3D(32, (1, 2, 2), strides=(1, 1, 1))(input_reshaped)
+            conv_first1 = Reshape((int(conv_first1.shape[1]), int(conv_first1.shape[2]), int(conv_first1.shape[4])))(conv_first1)
+            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+            conv_first1 = Conv2D(32, (4, 1), padding='same')(conv_first1)
+            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+            conv_first1 = Conv2D(32, (4, 1), padding='same')(conv_first1)
+            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
         elif self.model_inputs == "order flow":
             conv_first1 = input_lmd
         else:
-            raise ValueError('task must be either classification or regression.')
+            raise ValueError('task must be either order book, order flow or volumes.')
 
         conv_first1 = Conv2D(32, (1, 2), strides=(1, 2))(conv_first1)
         conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
@@ -141,7 +183,7 @@ class deepLOB:
         conv_first1 = Conv2D(32, (4, 1), padding='same')(conv_first1)
         conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
 
-        conv_first1 = Conv2D(32, (1, 10))(conv_first1)
+        conv_first1 = Conv2D(32, (1, conv_first1.shape[2]))(conv_first1)
         conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
         conv_first1 = Conv2D(32, (4, 1), padding='same')(conv_first1)
         conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
@@ -165,8 +207,7 @@ class deepLOB:
 
         convsecond_output = concatenate([convsecond_1, convsecond_2, convsecond_3], axis=3)
         conv_reshape = Reshape((int(convsecond_output.shape[1]), int(convsecond_output.shape[3])))(convsecond_output)
-        conv_reshape = Dropout(0.2, noise_shape=(None, 1, int(conv_reshape.shape[2])))(conv_reshape,
-                                                                                                    training=True)
+        conv_reshape = Dropout(0.2, noise_shape=(None, 1, int(conv_reshape.shape[2])))(conv_reshape, training=True)
 
         if not(self.multihorizon):
             # build the last LSTM layer
@@ -351,7 +392,7 @@ if __name__ == '__main__':
     
     #################################### SETTINGS ########################################
 
-    model_inputs = "order book"                 # options: "order book", "order flow"
+    model_inputs = "volumes"                    # options: "order book", "order flow", "volumes"
     data = "LOBSTER"                            # options: "FI2010", "AAL"
     data_dir = "data/model/AAL_orderbooks_W1"
     task = "classification"
@@ -386,13 +427,13 @@ if __name__ == '__main__':
 
     model.create_model()
 
-    # model.model.summary()
+    model.model.summary()
 
-    model.fit_model(epochs = epochs, 
-                batch_size = batch_size,
-                checkpoint_filepath = checkpoint_filepath,
-                load_weights = load_weights,
-                load_weights_filepath = load_weights_filepath)
+    # model.fit_model(epochs = epochs, 
+    #             batch_size = batch_size,
+    #             checkpoint_filepath = checkpoint_filepath,
+    #             load_weights = load_weights,
+    #             load_weights_filepath = load_weights_filepath)
 
-    model.evaluate_model(load_weights_filepath=checkpoint_filepath)
+    # model.evaluate_model(load_weights_filepath=checkpoint_filepath)
                 

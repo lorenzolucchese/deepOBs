@@ -27,7 +27,7 @@ def get_label(data, alphas=None):
     return y
 
 
-def data_classification(X, Y, T):
+def data_classification(X, Y, T, normalise=False):
     [N, D] = X.shape
     df = np.array(X)
     dY = np.array(Y)
@@ -35,13 +35,15 @@ def data_classification(X, Y, T):
     dataX = np.zeros((N - T + 1, T, D))
     for i in range(T, N + 1):
         dataX[i - T] = df[i - T:i, :]
+        if normalise:
+            dataX[i - T] = dataX[i - T] / np.max(df[i - T:i, :])
     return dataX.reshape(dataX.shape + (1,)), dataY
 
 
-def prepare_x_y(data, T, NF, alphas=None):
+def prepare_x_y(data, T, NF, alphas=None, normalise=False):
     x = prepare_x(data, NF)
     y = get_label(data, alphas)
-    x, y = data_classification(x, y, T=T)
+    x, y = data_classification(x, y, T=T, normalise=normalise)
     return x, y
 
 
@@ -98,7 +100,7 @@ def prepare_decoder_input(data, teacher_forcing):
     return decoder_input_data
 
 
-def process_data(files, T, NF, dir, type, alphas=None, samples_per_file=1, XYsplit=True):
+def process_data(files, T, NF, dir, type, alphas=None, samples_per_file=1, XYsplit=True, normalise=False):
     def process_chunk(X, Y, file_id, chunk_id):
         for j in range(len(X)//samples_per_file):
             # note that due to batch specification the last batch may have size smaller than samples_per_file
@@ -117,7 +119,7 @@ def process_data(files, T, NF, dir, type, alphas=None, samples_per_file=1, XYspl
         df = pd.read_csv(file)
         df = df.dropna()
         df = df.to_numpy()
-        X, Y = prepare_x_y(df, T, NF, alphas)
+        X, Y = prepare_x_y(df, T, NF, alphas, normalise=normalise)
 
         # parallelize
         n_proc = mp.cpu_count()
@@ -148,16 +150,17 @@ if __name__ == '__main__':
     
     data = "LOBSTER"                            # "LOBSTER" or "FI2010"
 
-    raw_data_dir = r"data/AAL_orderflows"       # r"data/AAL_orderbooks", r"data/AAL_orderflows" or r"data/FI2010"
-    processed_data_dir = r"data/model/AAL_orderflows_W1"
+    raw_data_dir = r"data/AAL_volumes"          # r"data/AAL_orderbooks", r"data/AAL_orderflows", r"data/AAL_volumes" or r"data/FI2010"
+    processed_data_dir = r"data/model/AAL_volumes_W1"
 
-    NF = 20                                     # number of features
+    NF = 40                                     # number of features
     T = 100
     task = "classification"
     
-    # If data = LOBSTER
+    # If data == LOBSTER
     samples_per_file = 256                      # how many samples to save per file
     split = {"val": 5, "train": 20, "test": 5}  # use (1, 4, 1) window: one week for validation, one week for training, one week for testing
+    normalise = True                            # for volumes need to normalise
     
     #######################################################################################
 
@@ -185,9 +188,9 @@ if __name__ == '__main__':
         print(get_class_distributions(test_files, alphas))
 
         print("processing files to batches...")
-        process_data(val_files, T, NF, processed_data_dir, "val", alphas, samples_per_file=samples_per_file, XYsplit=False)
-        process_data(train_files, T, NF, processed_data_dir, "train", alphas, samples_per_file=samples_per_file, XYsplit=False)
-        process_data(test_files, T, NF, processed_data_dir, "test", alphas, samples_per_file=samples_per_file, XYsplit=False)
+        process_data(val_files, T, NF, processed_data_dir, "val", alphas, samples_per_file=samples_per_file, XYsplit=False, normalise=normalise)
+        process_data(train_files, T, NF, processed_data_dir, "train", alphas, samples_per_file=samples_per_file, XYsplit=False, normalise=normalise)
+        process_data(test_files, T, NF, processed_data_dir, "test", alphas, samples_per_file=samples_per_file, XYsplit=False, normalise=normalise)
 
     elif data == "FI2010":
         data = np.loadtxt(os.path.join(raw_data_dir, "Train_Dst_NoAuction_ZScore_CF_7.txt")).T

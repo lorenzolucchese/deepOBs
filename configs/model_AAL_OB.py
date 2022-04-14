@@ -25,7 +25,7 @@ if __name__ == '__main__':
     if gpus:
         try:
             # Use only one GPUs
-            tf.config.set_visible_devices(gpus[0], 'GPU')
+            tf.config.set_visible_devices(gpus[2], 'GPU')
             logical_gpus = tf.config.list_logical_devices('GPU')
 
             # Or use all GPUs, memory growth needs to be the same across GPUs
@@ -43,7 +43,7 @@ if __name__ == '__main__':
     
     orderbook_updates = [10, 20, 30, 50, 100]
 
-    decoders = ["seq2seq", "attention"]
+    decoders = ["attention"]
 
     for dec in decoders:
         print("##################### deepLOB", dec, "#####################")
@@ -95,30 +95,30 @@ if __name__ == '__main__':
                     patience = 10)
 
         model.evaluate_model(load_weights_filepath = checkpoint_filepath)
-                        
-    for dec in decoders:
-        print("##################### deepOF", dec, "#####################")
+    
+    for h in range(4, 5):
+        print("##################### deepLOB #####################")
 
         #################################### SETTINGS ########################################
 
-        model_inputs = "order flow"                 # options: "order book", "order flow"
+        model_inputs = "order book"                 # options: "order book", "order flow"
         data = "LOBSTER"                            # options: "FI2010", "AAL"
-        data_dir = "data/model/AAL_orderflows_W1"
+        data_dir = "data/model/AAL_orderbooks_W1"
         task = "classification"
-        multihorizon = True                         # options: True, False
-        decoder = dec                               # options: "seq2seq", "attention"
+        multihorizon = False                        # options: True, False
+        decoder = "seq2seq"                         # options: "seq2seq", "attention"
 
         T = 100
-        NF = 20
+        NF = 40
         n_horizons = 5
-        horizon = "NA"                              # prediction horizon (0, 1, 2, 3, 4) -> (10, 20, 30, 50, 100) order book events
+        horizon = h                                 # prediction horizon (0, 1, 2, 3, 4) -> (10, 20, 30, 50, 100) order book events
         epochs = 50
         batch_size = 256
         number_of_lstm = 64
 
-        checkpoint_filepath = './model_weights/deepOF_weights_AAL_W1/weights' + dec
+        checkpoint_filepath = './model_weights/deepLOB_weights_AAL_W1/weights' + str(orderbook_updates[h])
         load_weights = False
-        load_weights_filepath = './model_weights/deepOF_weights_AAL_W1/weights' + dec
+        load_weights_filepath = './model_weights/deepLOB_weights_AAL_W1/weights' + str(orderbook_updates[h])
 
         #######################################################################################
 
@@ -142,7 +142,6 @@ if __name__ == '__main__':
                     batch_size = batch_size,
                     checkpoint_filepath = checkpoint_filepath,
                     load_weights = load_weights,
-                    load_weights_filepath = load_weights_filepath,
-                    patience = 10)
+                    load_weights_filepath = load_weights_filepath)
 
         model.evaluate_model(load_weights_filepath = checkpoint_filepath)

@@ -1,0 +1,69 @@
+getting alphas...
+data/AAL_volumes/AAL_volumes_2019-01-10.csv
+data/AAL_volumes/AAL_volumes_2019-01-11.csv
+data/AAL_volumes/AAL_volumes_2019-01-14.csv
+data/AAL_volumes/AAL_volumes_2019-01-15.csv
+data/AAL_volumes/AAL_volumes_2019-01-16.csv
+data/AAL_volumes/AAL_volumes_2019-01-17.csv
+data/AAL_volumes/AAL_volumes_2019-01-18.csv
+data/AAL_volumes/AAL_volumes_2019-01-22.csv
+data/AAL_volumes/AAL_volumes_2019-01-23.csv
+data/AAL_volumes/AAL_volumes_2019-01-24.csv
+data/AAL_volumes/AAL_volumes_2019-01-25.csv
+data/AAL_volumes/AAL_volumes_2019-01-28.csv
+data/AAL_volumes/AAL_volumes_2019-01-29.csv
+data/AAL_volumes/AAL_volumes_2019-01-30.csv
+data/AAL_volumes/AAL_volumes_2019-01-31.csv
+data/AAL_volumes/AAL_volumes_2019-02-01.csv
+data/AAL_volumes/AAL_volumes_2019-02-04.csv
+data/AAL_volumes/AAL_volumes_2019-02-05.csv
+data/AAL_volumes/AAL_volumes_2019-02-06.csv
+data/AAL_volumes/AAL_volumes_2019-02-07.csv
+train class distributions
+                  10        20        30        50       100
+down        0.135668  0.215480  0.268505  0.330973  0.334174
+stationary  0.725535  0.564795  0.459187  0.334601  0.330084
+up          0.138797  0.219725  0.272308  0.334427  0.335742
+alphas =  [0.00000000e+00 0.00000000e+00 0.00000000e+00 4.10303503e-06
+ 4.76837578e-05]
+val class distributions
+                  10        20        30        50       100
+down        0.172709  0.266427  0.323957  0.383787  0.382606
+stationary  0.648216  0.455313  0.336907  0.214466  0.218009
+up          0.179075  0.278260  0.339136  0.401747  0.399385
+test class distributions
+                  10        20        30        50       100
+down        0.082449  0.137717  0.179820  0.240378  0.260689
+stationary  0.828870  0.717527  0.636211  0.521823  0.478782
+up          0.088681  0.144756  0.183969  0.237798  0.260529
+processing files to batches...
+data/AAL_volumes/AAL_volumes_2019-01-02.csv
+data/AAL_volumes/AAL_volumes_2019-01-03.csv
+data/AAL_volumes/AAL_volumes_2019-01-04.csv
+data/AAL_volumes/AAL_volumes_2019-01-07.csv
+data/AAL_volumes/AAL_volumes_2019-01-08.csv
+data/AAL_volumes/AAL_volumes_2019-01-10.csv
+data/AAL_volumes/AAL_volumes_2019-01-11.csv
+data/AAL_volumes/AAL_volumes_2019-01-14.csv
+data/AAL_volumes/AAL_volumes_2019-01-15.csv
+data/AAL_volumes/AAL_volumes_2019-01-16.csv
+data/AAL_volumes/AAL_volumes_2019-01-17.csv
+data/AAL_volumes/AAL_volumes_2019-01-18.csv
+data/AAL_volumes/AAL_volumes_2019-01-22.csv
+data/AAL_volumes/AAL_volumes_2019-01-23.csv
+data/AAL_volumes/AAL_volumes_2019-01-24.csv
+data/AAL_volumes/AAL_volumes_2019-01-25.csv
+data/AAL_volumes/AAL_volumes_2019-01-28.csv
+data/AAL_volumes/AAL_volumes_2019-01-29.csv
+data/AAL_volumes/AAL_volumes_2019-01-30.csv
+data/AAL_volumes/AAL_volumes_2019-01-31.csv
+data/AAL_volumes/AAL_volumes_2019-02-01.csv
+data/AAL_volumes/AAL_volumes_2019-02-04.csv
+data/AAL_volumes/AAL_volumes_2019-02-05.csv
+data/AAL_volumes/AAL_volumes_2019-02-06.csv
+data/AAL_volumes/AAL_volumes_2019-02-07.csv
+data/AAL_volumes/AAL_volumes_2019-02-08.csv
+data/AAL_volumes/AAL_volumes_2019-02-11.csv
+data/AAL_volumes/AAL_volumes_2019-02-12.csv
+data/AAL_volumes/AAL_volumes_2019-02-13.csv
+data/AAL_volumes/AAL_volumes_2019-02-14.csv
