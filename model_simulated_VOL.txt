@@ -1,0 +1,104 @@
+##################### deepVOL #####################
+[[0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]
+ ...
+ [0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]]
+[0. 1. 0.]
+Model: "model"
+__________________________________________________________________________________________________
+ Layer (type)                   Output Shape         Param #     Connected to                     
+==================================================================================================
+ input_1 (InputLayer)           [(None, 100, 40, 1)  0           []                               
+                                ]                                                                 
+                                                                                                  
+ custom_reshape (CustomReshape)  (None, 100, 20, 2,   0          ['input_1[0][0]']                
+                                1)                                                                
+                                                                                                  
+ conv3d (Conv3D)                (None, 100, 19, 1,   160         ['custom_reshape[0][0]']         
+                                32)                                                               
+                                                                                                  
+ reshape (Reshape)              (None, 100, 19, 32)  0           ['conv3d[0][0]']                 
+                                                                                                  
+ leaky_re_lu (LeakyReLU)        (None, 100, 19, 32)  0           ['reshape[0][0]']                
+                                                                                                  
+ conv2d (Conv2D)                (None, 100, 19, 32)  4128        ['leaky_re_lu[0][0]']            
+                                                                                                  
+ leaky_re_lu_1 (LeakyReLU)      (None, 100, 19, 32)  0           ['conv2d[0][0]']                 
+                                                                                                  
+ conv2d_1 (Conv2D)              (None, 100, 19, 32)  4128        ['leaky_re_lu_1[0][0]']          
+                                                                                                  
+ leaky_re_lu_2 (LeakyReLU)      (None, 100, 19, 32)  0           ['conv2d_1[0][0]']               
+                                                                                                  
+ conv2d_2 (Conv2D)              (None, 100, 9, 32)   2080        ['leaky_re_lu_2[0][0]']          
+                                                                                                  
+ leaky_re_lu_3 (LeakyReLU)      (None, 100, 9, 32)   0           ['conv2d_2[0][0]']               
+                                                                                                  
+ conv2d_3 (Conv2D)              (None, 100, 9, 32)   4128        ['leaky_re_lu_3[0][0]']          
+                                                                                                  
+ leaky_re_lu_4 (LeakyReLU)      (None, 100, 9, 32)   0           ['conv2d_3[0][0]']               
+                                                                                                  
+ conv2d_4 (Conv2D)              (None, 100, 9, 32)   4128        ['leaky_re_lu_4[0][0]']          
+                                                                                                  
+ leaky_re_lu_5 (LeakyReLU)      (None, 100, 9, 32)   0           ['conv2d_4[0][0]']               
+                                                                                                  
+ conv2d_5 (Conv2D)              (None, 100, 1, 32)   9248        ['leaky_re_lu_5[0][0]']          
+                                                                                                  
+ leaky_re_lu_6 (LeakyReLU)      (None, 100, 1, 32)   0           ['conv2d_5[0][0]']               
+                                                                                                  
+ conv2d_6 (Conv2D)              (None, 100, 1, 32)   4128        ['leaky_re_lu_6[0][0]']          
+                                                                                                  
+ leaky_re_lu_7 (LeakyReLU)      (None, 100, 1, 32)   0           ['conv2d_6[0][0]']               
+                                                                                                  
+ conv2d_7 (Conv2D)              (None, 100, 1, 32)   4128        ['leaky_re_lu_7[0][0]']          
+                                                                                                  
+ leaky_re_lu_8 (LeakyReLU)      (None, 100, 1, 32)   0           ['conv2d_7[0][0]']               
+                                                                                                  
+ conv2d_8 (Conv2D)              (None, 100, 1, 64)   2112        ['leaky_re_lu_8[0][0]']          
+                                                                                                  
+ conv2d_10 (Conv2D)             (None, 100, 1, 64)   2112        ['leaky_re_lu_8[0][0]']          
+                                                                                                  
+ leaky_re_lu_9 (LeakyReLU)      (None, 100, 1, 64)   0           ['conv2d_8[0][0]']               
+                                                                                                  
+ leaky_re_lu_11 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_10[0][0]']              
+                                                                                                  
+ max_pooling2d (MaxPooling2D)   (None, 100, 1, 32)   0           ['leaky_re_lu_8[0][0]']          
+                                                                                                  
+ conv2d_9 (Conv2D)              (None, 100, 1, 64)   12352       ['leaky_re_lu_9[0][0]']          
+                                                                                                  
+ conv2d_11 (Conv2D)             (None, 100, 1, 64)   20544       ['leaky_re_lu_11[0][0]']         
+                                                                                                  
+ conv2d_12 (Conv2D)             (None, 100, 1, 64)   2112        ['max_pooling2d[0][0]']          
+                                                                                                  
+ leaky_re_lu_10 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_9[0][0]']               
+                                                                                                  
+ leaky_re_lu_12 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_11[0][0]']              
+                                                                                                  
+ leaky_re_lu_13 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_12[0][0]']              
+                                                                                                  
+ concatenate (Concatenate)      (None, 100, 1, 192)  0           ['leaky_re_lu_10[0][0]',         
+                                                                  'leaky_re_lu_12[0][0]',         
+                                                                  'leaky_re_lu_13[0][0]']         
+                                                                                                  
+ reshape_1 (Reshape)            (None, 100, 192)     0           ['concatenate[0][0]']            
+                                                                                                  
+ dropout (Dropout)              (None, 100, 192)     0           ['reshape_1[0][0]']              
+                                                                                                  
+ lstm (LSTM)                    (None, 64)           65792       ['dropout[0][0]']                
+                                                                                                  
+ dense (Dense)                  (None, 3)            195         ['lstm[0][0]']                   
+                                                                                                  
+==================================================================================================
+Total params: 141,475
+Trainable params: 141,475
+Non-trainable params: 0
+__________________________________________________________________________________________________
+Epoch 1/50
+28107/28107 - 809s - loss: 1.0987 - accuracy10: 0.3395 - val_loss: 1.1001 - val_accuracy10: 0.3365 - 809s/epoch - 29ms/step
+Epoch 2/50
+28107/28107 - 803s - loss: 1.0955 - accuracy10: 0.3592 - val_loss: 1.0926 - val_accuracy10: 0.3664 - 803s/epoch - 29ms/step
+Epoch 3/50
+28107/28107 - 803s - loss: 1.0935 - accuracy10: 0.3677 - val_loss: 1.0913 - val_accuracy10: 0.3763 - 803s/epoch - 29ms/step
+Epoch 4/50

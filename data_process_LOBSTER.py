@@ -403,6 +403,8 @@ def process_simulated_data(input_path, output_path, levels = 10, T = 100, horizo
         NF = 4*levels
     elif features == "orderflows":
         NF = 2*levels
+    else:
+        raise ValueError("features must be one of orderbooks, orderflows or volumes")
 
     csv_orderbooks = glob.glob(os.path.join(input_path, "*.{}".format("csv")))
     csv_orderbooks.sort()
@@ -459,7 +461,7 @@ def process_simulated_data(input_path, output_path, levels = 10, T = 100, horizo
 
             # add returns
             return_names = [str(h) for h in horizons]
-            df_orderflow[return_names] = df_orderbook.iloc[1:, -len(horizons):]
+            df_orderflow[return_names] = df_orderbook.iloc[1:, -len(horizons):].reindex(df_orderflow.index)
             
             df_data += [df_orderflow]
 
@@ -639,12 +641,12 @@ if __name__ == "__main__":
 
     # set parameters
     input_path = r"/scratch/lucchese/deepLOBs/data/simulated"
-    output_path = r"/scratch/lucchese/deepLOBs/data/model/simulated_volumes"
+    output_path = r"/scratch/lucchese/deepLOBs/data/model/simulated_orderflows"
 
     startTime = time.time()
     process_simulated_data(input_path=input_path, 
                  output_path=output_path,
-                 features="volumes")
+                 features="orderflows")
     executionTime = (time.time() - startTime)
 
     print("Execution time in seconds: " + str(executionTime))
