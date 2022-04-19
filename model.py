@@ -92,9 +92,6 @@ class deepLOB:
                 valY = valY[:, self.horizon , :]
                 testY = testY[:, self.horizon ,:]
 
-                print(trainX[0,:,:,0])
-                print(trainY[0,:])
-
             if multihorizon:
                 train_decoder_input = np.load(os.path.join(data_dir, "train_decoder_input.npy"))
                 val_decoder_input = np.load(os.path.join(data_dir, "val_decoder_input.npy"))
@@ -357,8 +354,6 @@ class deepLOB:
                     index = index + true_y.shape[0]
         
         if not self.multihorizon:
-            print(testY.shape)
-            print(predY.shape)
             print("Prediction horizon:", self.orderbook_updates[self.horizon], " orderbook updates")
             print('accuracy_score:', accuracy_score(np.argmax(testY, axis=1), np.argmax(predY, axis=1)))
             print(classification_report(np.argmax(testY, axis=1), np.argmax(predY, axis=1), digits=4))

@@ -1,0 +1,1085 @@
+##################### deepVOL #####################
+[[0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]
+ ...
+ [0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]]
+[0. 1. 0.]
+Model: "model"
+__________________________________________________________________________________________________
+ Layer (type)                   Output Shape         Param #     Connected to                     
+==================================================================================================
+ input_1 (InputLayer)           [(None, 100, 40, 1)  0           []                               
+                                ]                                                                 
+                                                                                                  
+ custom_reshape (CustomReshape)  (None, 100, 20, 2,   0          ['input_1[0][0]']                
+                                1)                                                                
+                                                                                                  
+ conv3d (Conv3D)                (None, 100, 19, 1,   160         ['custom_reshape[0][0]']         
+                                32)                                                               
+                                                                                                  
+ reshape (Reshape)              (None, 100, 19, 32)  0           ['conv3d[0][0]']                 
+                                                                                                  
+ leaky_re_lu (LeakyReLU)        (None, 100, 19, 32)  0           ['reshape[0][0]']                
+                                                                                                  
+ conv2d (Conv2D)                (None, 100, 19, 32)  4128        ['leaky_re_lu[0][0]']            
+                                                                                                  
+ leaky_re_lu_1 (LeakyReLU)      (None, 100, 19, 32)  0           ['conv2d[0][0]']                 
+                                                                                                  
+ conv2d_1 (Conv2D)              (None, 100, 19, 32)  4128        ['leaky_re_lu_1[0][0]']          
+                                                                                                  
+ leaky_re_lu_2 (LeakyReLU)      (None, 100, 19, 32)  0           ['conv2d_1[0][0]']               
+                                                                                                  
+ conv2d_2 (Conv2D)              (None, 100, 9, 32)   2080        ['leaky_re_lu_2[0][0]']          
+                                                                                                  
+ leaky_re_lu_3 (LeakyReLU)      (None, 100, 9, 32)   0           ['conv2d_2[0][0]']               
+                                                                                                  
+ conv2d_3 (Conv2D)              (None, 100, 9, 32)   4128        ['leaky_re_lu_3[0][0]']          
+                                                                                                  
+ leaky_re_lu_4 (LeakyReLU)      (None, 100, 9, 32)   0           ['conv2d_3[0][0]']               
+                                                                                                  
+ conv2d_4 (Conv2D)              (None, 100, 9, 32)   4128        ['leaky_re_lu_4[0][0]']          
+                                                                                                  
+ leaky_re_lu_5 (LeakyReLU)      (None, 100, 9, 32)   0           ['conv2d_4[0][0]']               
+                                                                                                  
+ conv2d_5 (Conv2D)              (None, 100, 1, 32)   9248        ['leaky_re_lu_5[0][0]']          
+                                                                                                  
+ leaky_re_lu_6 (LeakyReLU)      (None, 100, 1, 32)   0           ['conv2d_5[0][0]']               
+                                                                                                  
+ conv2d_6 (Conv2D)              (None, 100, 1, 32)   4128        ['leaky_re_lu_6[0][0]']          
+                                                                                                  
+ leaky_re_lu_7 (LeakyReLU)      (None, 100, 1, 32)   0           ['conv2d_6[0][0]']               
+                                                                                                  
+ conv2d_7 (Conv2D)              (None, 100, 1, 32)   4128        ['leaky_re_lu_7[0][0]']          
+                                                                                                  
+ leaky_re_lu_8 (LeakyReLU)      (None, 100, 1, 32)   0           ['conv2d_7[0][0]']               
+                                                                                                  
+ conv2d_8 (Conv2D)              (None, 100, 1, 64)   2112        ['leaky_re_lu_8[0][0]']          
+                                                                                                  
+ conv2d_10 (Conv2D)             (None, 100, 1, 64)   2112        ['leaky_re_lu_8[0][0]']          
+                                                                                                  
+ leaky_re_lu_9 (LeakyReLU)      (None, 100, 1, 64)   0           ['conv2d_8[0][0]']               
+                                                                                                  
+ leaky_re_lu_11 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_10[0][0]']              
+                                                                                                  
+ max_pooling2d (MaxPooling2D)   (None, 100, 1, 32)   0           ['leaky_re_lu_8[0][0]']          
+                                                                                                  
+ conv2d_9 (Conv2D)              (None, 100, 1, 64)   12352       ['leaky_re_lu_9[0][0]']          
+                                                                                                  
+ conv2d_11 (Conv2D)             (None, 100, 1, 64)   20544       ['leaky_re_lu_11[0][0]']         
+                                                                                                  
+ conv2d_12 (Conv2D)             (None, 100, 1, 64)   2112        ['max_pooling2d[0][0]']          
+                                                                                                  
+ leaky_re_lu_10 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_9[0][0]']               
+                                                                                                  
+ leaky_re_lu_12 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_11[0][0]']              
+                                                                                                  
+ leaky_re_lu_13 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_12[0][0]']              
+                                                                                                  
+ concatenate (Concatenate)      (None, 100, 1, 192)  0           ['leaky_re_lu_10[0][0]',         
+                                                                  'leaky_re_lu_12[0][0]',         
+                                                                  'leaky_re_lu_13[0][0]']         
+                                                                                                  
+ reshape_1 (Reshape)            (None, 100, 192)     0           ['concatenate[0][0]']            
+                                                                                                  
+ dropout (Dropout)              (None, 100, 192)     0           ['reshape_1[0][0]']              
+                                                                                                  
+ lstm (LSTM)                    (None, 64)           65792       ['dropout[0][0]']                
+                                                                                                  
+ dense (Dense)                  (None, 3)            195         ['lstm[0][0]']                   
+                                                                                                  
+==================================================================================================
+Total params: 141,475
+Trainable params: 141,475
+Non-trainable params: 0
+__________________________________________________________________________________________________
+Epoch 1/50
+28107/28107 - 809s - loss: 1.0987 - accuracy10: 0.3395 - val_loss: 1.1001 - val_accuracy10: 0.3365 - 809s/epoch - 29ms/step
+Epoch 2/50
+28107/28107 - 803s - loss: 1.0955 - accuracy10: 0.3592 - val_loss: 1.0926 - val_accuracy10: 0.3664 - 803s/epoch - 29ms/step
+Epoch 3/50
+28107/28107 - 803s - loss: 1.0935 - accuracy10: 0.3677 - val_loss: 1.0913 - val_accuracy10: 0.3763 - 803s/epoch - 29ms/step
+Epoch 4/50
+28107/28107 - 808s - loss: 1.0915 - accuracy10: 0.3758 - val_loss: 1.0883 - val_accuracy10: 0.3848 - 808s/epoch - 29ms/step
+Epoch 5/50
+28107/28107 - 808s - loss: 1.0902 - accuracy10: 0.3791 - val_loss: 1.0884 - val_accuracy10: 0.3827 - 808s/epoch - 29ms/step
+Epoch 6/50
+28107/28107 - 807s - loss: 1.0892 - accuracy10: 0.3823 - val_loss: 1.0869 - val_accuracy10: 0.3888 - 807s/epoch - 29ms/step
+Epoch 7/50
+28107/28107 - 806s - loss: 1.0882 - accuracy10: 0.3850 - val_loss: 1.0847 - val_accuracy10: 0.3934 - 806s/epoch - 29ms/step
+Epoch 8/50
+28107/28107 - 810s - loss: 1.0868 - accuracy10: 0.3881 - val_loss: 1.0829 - val_accuracy10: 0.3966 - 810s/epoch - 29ms/step
+Epoch 9/50
+28107/28107 - 810s - loss: 1.0858 - accuracy10: 0.3904 - val_loss: 1.0821 - val_accuracy10: 0.3973 - 810s/epoch - 29ms/step
+Epoch 10/50
+28107/28107 - 803s - loss: 1.0849 - accuracy10: 0.3920 - val_loss: 1.0872 - val_accuracy10: 0.3869 - 803s/epoch - 29ms/step
+Epoch 11/50
+28107/28107 - 811s - loss: 1.0844 - accuracy10: 0.3934 - val_loss: 1.0811 - val_accuracy10: 0.4001 - 811s/epoch - 29ms/step
+Epoch 12/50
+28107/28107 - 812s - loss: 1.0839 - accuracy10: 0.3940 - val_loss: 1.0820 - val_accuracy10: 0.3997 - 812s/epoch - 29ms/step
+Epoch 13/50
+28107/28107 - 804s - loss: 1.0836 - accuracy10: 0.3945 - val_loss: 1.0813 - val_accuracy10: 0.3989 - 804s/epoch - 29ms/step
+Epoch 14/50
+28107/28107 - 807s - loss: 1.0833 - accuracy10: 0.3951 - val_loss: 1.0803 - val_accuracy10: 0.4003 - 807s/epoch - 29ms/step
+Epoch 15/50
+28107/28107 - 812s - loss: 1.0829 - accuracy10: 0.3957 - val_loss: 1.0801 - val_accuracy10: 0.4017 - 812s/epoch - 29ms/step
+Epoch 16/50
+28107/28107 - 808s - loss: 1.0825 - accuracy10: 0.3966 - val_loss: 1.0808 - val_accuracy10: 0.4012 - 808s/epoch - 29ms/step
+Epoch 17/50
+28107/28107 - 807s - loss: 1.0823 - accuracy10: 0.3964 - val_loss: 1.0791 - val_accuracy10: 0.4025 - 807s/epoch - 29ms/step
+Epoch 18/50
+28107/28107 - 813s - loss: 1.0821 - accuracy10: 0.3980 - val_loss: 1.0788 - val_accuracy10: 0.4028 - 813s/epoch - 29ms/step
+Epoch 19/50
+28107/28107 - 816s - loss: 1.0818 - accuracy10: 0.3977 - val_loss: 1.0794 - val_accuracy10: 0.4037 - 816s/epoch - 29ms/step
+Epoch 20/50
+28107/28107 - 813s - loss: 1.0817 - accuracy10: 0.3979 - val_loss: 1.0793 - val_accuracy10: 0.4009 - 813s/epoch - 29ms/step
+Epoch 21/50
+28107/28107 - 817s - loss: 1.0814 - accuracy10: 0.3984 - val_loss: 1.0798 - val_accuracy10: 0.4008 - 817s/epoch - 29ms/step
+Epoch 22/50
+28107/28107 - 806s - loss: 1.0810 - accuracy10: 0.3990 - val_loss: 1.0785 - val_accuracy10: 0.4050 - 806s/epoch - 29ms/step
+Epoch 23/50
+28107/28107 - 810s - loss: 1.0809 - accuracy10: 0.3993 - val_loss: 1.0778 - val_accuracy10: 0.4049 - 810s/epoch - 29ms/step
+Epoch 24/50
+28107/28107 - 810s - loss: 1.0807 - accuracy10: 0.3996 - val_loss: 1.0779 - val_accuracy10: 0.4052 - 810s/epoch - 29ms/step
+Epoch 25/50
+28107/28107 - 811s - loss: 1.0805 - accuracy10: 0.4001 - val_loss: 1.0778 - val_accuracy10: 0.4049 - 811s/epoch - 29ms/step
+Epoch 26/50
+28107/28107 - 805s - loss: 1.0802 - accuracy10: 0.4008 - val_loss: 1.0771 - val_accuracy10: 0.4067 - 805s/epoch - 29ms/step
+Epoch 27/50
+28107/28107 - 806s - loss: 1.0800 - accuracy10: 0.4007 - val_loss: 1.0773 - val_accuracy10: 0.4070 - 806s/epoch - 29ms/step
+Epoch 28/50
+28107/28107 - 802s - loss: 1.0798 - accuracy10: 0.4014 - val_loss: 1.0769 - val_accuracy10: 0.4079 - 802s/epoch - 29ms/step
+Epoch 29/50
+28107/28107 - 806s - loss: 1.0797 - accuracy10: 0.4018 - val_loss: 1.0770 - val_accuracy10: 0.4080 - 806s/epoch - 29ms/step
+Epoch 30/50
+28107/28107 - 813s - loss: 1.0794 - accuracy10: 0.4025 - val_loss: 1.0763 - val_accuracy10: 0.4090 - 813s/epoch - 29ms/step
+Epoch 31/50
+28107/28107 - 815s - loss: 1.0790 - accuracy10: 0.4029 - val_loss: 1.0784 - val_accuracy10: 0.4068 - 815s/epoch - 29ms/step
+Epoch 32/50
+28107/28107 - 815s - loss: 1.0788 - accuracy10: 0.4034 - val_loss: 1.0768 - val_accuracy10: 0.4075 - 815s/epoch - 29ms/step
+Epoch 33/50
+28107/28107 - 815s - loss: 1.0785 - accuracy10: 0.4044 - val_loss: 1.0760 - val_accuracy10: 0.4116 - 815s/epoch - 29ms/step
+Epoch 34/50
+28107/28107 - 816s - loss: 1.0784 - accuracy10: 0.4045 - val_loss: 1.0750 - val_accuracy10: 0.4116 - 816s/epoch - 29ms/step
+Epoch 35/50
+28107/28107 - 811s - loss: 1.0782 - accuracy10: 0.4046 - val_loss: 1.0757 - val_accuracy10: 0.4101 - 811s/epoch - 29ms/step
+Epoch 36/50
+28107/28107 - 810s - loss: 1.0782 - accuracy10: 0.4048 - val_loss: 1.0762 - val_accuracy10: 0.4082 - 810s/epoch - 29ms/step
+Epoch 37/50
+28107/28107 - 813s - loss: 1.0779 - accuracy10: 0.4056 - val_loss: 1.0785 - val_accuracy10: 0.4001 - 813s/epoch - 29ms/step
+Epoch 38/50
+28107/28107 - 815s - loss: 1.0776 - accuracy10: 0.4063 - val_loss: 1.0752 - val_accuracy10: 0.4118 - 815s/epoch - 29ms/step
+Epoch 39/50
+28107/28107 - 818s - loss: 1.0775 - accuracy10: 0.4063 - val_loss: 1.0741 - val_accuracy10: 0.4132 - 818s/epoch - 29ms/step
+Epoch 40/50
+28107/28107 - 826s - loss: 1.0775 - accuracy10: 0.4063 - val_loss: 1.0752 - val_accuracy10: 0.4091 - 826s/epoch - 29ms/step
+Epoch 41/50
+28107/28107 - 827s - loss: 1.0772 - accuracy10: 0.4064 - val_loss: 1.0744 - val_accuracy10: 0.4121 - 827s/epoch - 29ms/step
+Epoch 42/50
+28107/28107 - 818s - loss: 1.0769 - accuracy10: 0.4071 - val_loss: 1.0752 - val_accuracy10: 0.4122 - 818s/epoch - 29ms/step
+Epoch 43/50
+28107/28107 - 815s - loss: 1.0768 - accuracy10: 0.4076 - val_loss: 1.0736 - val_accuracy10: 0.4143 - 815s/epoch - 29ms/step
+Epoch 44/50
+28107/28107 - 814s - loss: 1.0775 - accuracy10: 0.4060 - val_loss: 1.0757 - val_accuracy10: 0.4109 - 814s/epoch - 29ms/step
+Epoch 45/50
+28107/28107 - 825s - loss: 1.0770 - accuracy10: 0.4066 - val_loss: 1.0759 - val_accuracy10: 0.4106 - 825s/epoch - 29ms/step
+Epoch 46/50
+28107/28107 - 809s - loss: 1.0769 - accuracy10: 0.4074 - val_loss: 1.0792 - val_accuracy10: 0.4019 - 809s/epoch - 29ms/step
+Epoch 47/50
+28107/28107 - 807s - loss: 1.0766 - accuracy10: 0.4077 - val_loss: 1.0764 - val_accuracy10: 0.4086 - 807s/epoch - 29ms/step
+Epoch 48/50
+28107/28107 - 819s - loss: 1.0765 - accuracy10: 0.4080 - val_loss: 1.0746 - val_accuracy10: 0.4129 - 819s/epoch - 29ms/step
+(149901, 3)
+(149901, 3)
+Prediction horizon: 10  orderbook updates
+accuracy_score: 0.4020853763483899
+              precision    recall  f1-score   support
+
+           0     0.4014    0.3163    0.3538     49807
+           1     0.3775    0.4352    0.4043     49172
+           2     0.4284    0.4540    0.4409     50922
+
+    accuracy                         0.4021    149901
+   macro avg     0.4024    0.4018    0.3996    149901
+weighted avg     0.4027    0.4021    0.3999    149901
+
+[[0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]
+ ...
+ [0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]]
+[1. 0. 0.]
+Model: "model_1"
+__________________________________________________________________________________________________
+ Layer (type)                   Output Shape         Param #     Connected to                     
+==================================================================================================
+ input_2 (InputLayer)           [(None, 100, 40, 1)  0           []                               
+                                ]                                                                 
+                                                                                                  
+ custom_reshape_1 (CustomReshap  (None, 100, 20, 2,   0          ['input_2[0][0]']                
+ e)                             1)                                                                
+                                                                                                  
+ conv3d_1 (Conv3D)              (None, 100, 19, 1,   160         ['custom_reshape_1[0][0]']       
+                                32)                                                               
+                                                                                                  
+ reshape_2 (Reshape)            (None, 100, 19, 32)  0           ['conv3d_1[0][0]']               
+                                                                                                  
+ leaky_re_lu_14 (LeakyReLU)     (None, 100, 19, 32)  0           ['reshape_2[0][0]']              
+                                                                                                  
+ conv2d_13 (Conv2D)             (None, 100, 19, 32)  4128        ['leaky_re_lu_14[0][0]']         
+                                                                                                  
+ leaky_re_lu_15 (LeakyReLU)     (None, 100, 19, 32)  0           ['conv2d_13[0][0]']              
+                                                                                                  
+ conv2d_14 (Conv2D)             (None, 100, 19, 32)  4128        ['leaky_re_lu_15[0][0]']         
+                                                                                                  
+ leaky_re_lu_16 (LeakyReLU)     (None, 100, 19, 32)  0           ['conv2d_14[0][0]']              
+                                                                                                  
+ conv2d_15 (Conv2D)             (None, 100, 9, 32)   2080        ['leaky_re_lu_16[0][0]']         
+                                                                                                  
+ leaky_re_lu_17 (LeakyReLU)     (None, 100, 9, 32)   0           ['conv2d_15[0][0]']              
+                                                                                                  
+ conv2d_16 (Conv2D)             (None, 100, 9, 32)   4128        ['leaky_re_lu_17[0][0]']         
+                                                                                                  
+ leaky_re_lu_18 (LeakyReLU)     (None, 100, 9, 32)   0           ['conv2d_16[0][0]']              
+                                                                                                  
+ conv2d_17 (Conv2D)             (None, 100, 9, 32)   4128        ['leaky_re_lu_18[0][0]']         
+                                                                                                  
+ leaky_re_lu_19 (LeakyReLU)     (None, 100, 9, 32)   0           ['conv2d_17[0][0]']              
+                                                                                                  
+ conv2d_18 (Conv2D)             (None, 100, 1, 32)   9248        ['leaky_re_lu_19[0][0]']         
+                                                                                                  
+ leaky_re_lu_20 (LeakyReLU)     (None, 100, 1, 32)   0           ['conv2d_18[0][0]']              
+                                                                                                  
+ conv2d_19 (Conv2D)             (None, 100, 1, 32)   4128        ['leaky_re_lu_20[0][0]']         
+                                                                                                  
+ leaky_re_lu_21 (LeakyReLU)     (None, 100, 1, 32)   0           ['conv2d_19[0][0]']              
+                                                                                                  
+ conv2d_20 (Conv2D)             (None, 100, 1, 32)   4128        ['leaky_re_lu_21[0][0]']         
+                                                                                                  
+ leaky_re_lu_22 (LeakyReLU)     (None, 100, 1, 32)   0           ['conv2d_20[0][0]']              
+                                                                                                  
+ conv2d_21 (Conv2D)             (None, 100, 1, 64)   2112        ['leaky_re_lu_22[0][0]']         
+                                                                                                  
+ conv2d_23 (Conv2D)             (None, 100, 1, 64)   2112        ['leaky_re_lu_22[0][0]']         
+                                                                                                  
+ leaky_re_lu_23 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_21[0][0]']              
+                                                                                                  
+ leaky_re_lu_25 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_23[0][0]']              
+                                                                                                  
+ max_pooling2d_1 (MaxPooling2D)  (None, 100, 1, 32)  0           ['leaky_re_lu_22[0][0]']         
+                                                                                                  
+ conv2d_22 (Conv2D)             (None, 100, 1, 64)   12352       ['leaky_re_lu_23[0][0]']         
+                                                                                                  
+ conv2d_24 (Conv2D)             (None, 100, 1, 64)   20544       ['leaky_re_lu_25[0][0]']         
+                                                                                                  
+ conv2d_25 (Conv2D)             (None, 100, 1, 64)   2112        ['max_pooling2d_1[0][0]']        
+                                                                                                  
+ leaky_re_lu_24 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_22[0][0]']              
+                                                                                                  
+ leaky_re_lu_26 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_24[0][0]']              
+                                                                                                  
+ leaky_re_lu_27 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_25[0][0]']              
+                                                                                                  
+ concatenate_1 (Concatenate)    (None, 100, 1, 192)  0           ['leaky_re_lu_24[0][0]',         
+                                                                  'leaky_re_lu_26[0][0]',         
+                                                                  'leaky_re_lu_27[0][0]']         
+                                                                                                  
+ reshape_3 (Reshape)            (None, 100, 192)     0           ['concatenate_1[0][0]']          
+                                                                                                  
+ dropout_1 (Dropout)            (None, 100, 192)     0           ['reshape_3[0][0]']              
+                                                                                                  
+ lstm_1 (LSTM)                  (None, 64)           65792       ['dropout_1[0][0]']              
+                                                                                                  
+ dense_1 (Dense)                (None, 3)            195         ['lstm_1[0][0]']                 
+                                                                                                  
+==================================================================================================
+Total params: 141,475
+Trainable params: 141,475
+Non-trainable params: 0
+__________________________________________________________________________________________________
+Epoch 1/50
+28107/28107 - 886s - loss: 1.0994 - accuracy20: 0.3353 - val_loss: 1.0985 - val_accuracy20: 0.3403 - 886s/epoch - 32ms/step
+Epoch 2/50
+28107/28107 - 828s - loss: 1.0984 - accuracy20: 0.3420 - val_loss: 1.0989 - val_accuracy20: 0.3586 - 828s/epoch - 29ms/step
+Epoch 3/50
+28107/28107 - 829s - loss: 1.0969 - accuracy20: 0.3533 - val_loss: 1.0946 - val_accuracy20: 0.3598 - 829s/epoch - 29ms/step
+Epoch 4/50
+28107/28107 - 830s - loss: 1.0961 - accuracy20: 0.3566 - val_loss: 1.0934 - val_accuracy20: 0.3654 - 830s/epoch - 30ms/step
+Epoch 5/50
+28107/28107 - 820s - loss: 1.0952 - accuracy20: 0.3611 - val_loss: 1.0921 - val_accuracy20: 0.3723 - 820s/epoch - 29ms/step
+Epoch 6/50
+28107/28107 - 817s - loss: 1.0945 - accuracy20: 0.3650 - val_loss: 1.0910 - val_accuracy20: 0.3760 - 817s/epoch - 29ms/step
+Epoch 7/50
+28107/28107 - 823s - loss: 1.0940 - accuracy20: 0.3669 - val_loss: 1.0914 - val_accuracy20: 0.3748 - 823s/epoch - 29ms/step
+Epoch 8/50
+28107/28107 - 827s - loss: 1.0936 - accuracy20: 0.3685 - val_loss: 1.0921 - val_accuracy20: 0.3689 - 827s/epoch - 29ms/step
+Epoch 9/50
+28107/28107 - 826s - loss: 1.0933 - accuracy20: 0.3698 - val_loss: 1.0908 - val_accuracy20: 0.3740 - 826s/epoch - 29ms/step
+Epoch 10/50
+28107/28107 - 826s - loss: 1.0930 - accuracy20: 0.3712 - val_loss: 1.0904 - val_accuracy20: 0.3779 - 826s/epoch - 29ms/step
+Epoch 11/50
+28107/28107 - 829s - loss: 1.0927 - accuracy20: 0.3718 - val_loss: 1.0908 - val_accuracy20: 0.3786 - 829s/epoch - 29ms/step
+Epoch 12/50
+28107/28107 - 818s - loss: 1.0926 - accuracy20: 0.3720 - val_loss: 1.0895 - val_accuracy20: 0.3808 - 818s/epoch - 29ms/step
+Epoch 13/50
+28107/28107 - 825s - loss: 1.0921 - accuracy20: 0.3724 - val_loss: 1.0902 - val_accuracy20: 0.3779 - 825s/epoch - 29ms/step
+Epoch 14/50
+28107/28107 - 827s - loss: 1.0919 - accuracy20: 0.3736 - val_loss: 1.0899 - val_accuracy20: 0.3758 - 827s/epoch - 29ms/step
+Epoch 15/50
+28107/28107 - 822s - loss: 1.0917 - accuracy20: 0.3740 - val_loss: 1.0900 - val_accuracy20: 0.3797 - 822s/epoch - 29ms/step
+Epoch 16/50
+28107/28107 - 831s - loss: 1.0915 - accuracy20: 0.3745 - val_loss: 1.0890 - val_accuracy20: 0.3806 - 831s/epoch - 30ms/step
+Epoch 17/50
+28107/28107 - 808s - loss: 1.0911 - accuracy20: 0.3754 - val_loss: 1.0880 - val_accuracy20: 0.3829 - 808s/epoch - 29ms/step
+Epoch 18/50
+28107/28107 - 815s - loss: 1.0910 - accuracy20: 0.3754 - val_loss: 1.0886 - val_accuracy20: 0.3848 - 815s/epoch - 29ms/step
+Epoch 19/50
+28107/28107 - 837s - loss: 1.0907 - accuracy20: 0.3765 - val_loss: 1.0877 - val_accuracy20: 0.3839 - 837s/epoch - 30ms/step
+Epoch 20/50
+28107/28107 - 832s - loss: 1.0906 - accuracy20: 0.3766 - val_loss: 1.0878 - val_accuracy20: 0.3837 - 832s/epoch - 30ms/step
+Epoch 21/50
+28107/28107 - 825s - loss: 1.0903 - accuracy20: 0.3769 - val_loss: 1.0875 - val_accuracy20: 0.3854 - 825s/epoch - 29ms/step
+Epoch 22/50
+28107/28107 - 838s - loss: 1.0903 - accuracy20: 0.3770 - val_loss: 1.0873 - val_accuracy20: 0.3863 - 838s/epoch - 30ms/step
+Epoch 23/50
+28107/28107 - 835s - loss: 1.0902 - accuracy20: 0.3777 - val_loss: 1.0877 - val_accuracy20: 0.3847 - 835s/epoch - 30ms/step
+Epoch 24/50
+28107/28107 - 828s - loss: 1.0899 - accuracy20: 0.3783 - val_loss: 1.0902 - val_accuracy20: 0.3812 - 828s/epoch - 29ms/step
+Epoch 25/50
+28107/28107 - 818s - loss: 1.0899 - accuracy20: 0.3779 - val_loss: 1.0878 - val_accuracy20: 0.3844 - 818s/epoch - 29ms/step
+Epoch 26/50
+28107/28107 - 818s - loss: 1.0896 - accuracy20: 0.3793 - val_loss: 1.0886 - val_accuracy20: 0.3776 - 818s/epoch - 29ms/step
+Epoch 27/50
+28107/28107 - 841s - loss: 1.0896 - accuracy20: 0.3794 - val_loss: 1.0877 - val_accuracy20: 0.3839 - 841s/epoch - 30ms/step
+(149901, 3)
+(149901, 3)
+Prediction horizon: 20  orderbook updates
+accuracy_score: 0.3764684691896652
+              precision    recall  f1-score   support
+
+           0     0.3956    0.1924    0.2589     49837
+           1     0.3596    0.4677    0.4066     49392
+           2     0.3866    0.4685    0.4236     50672
+
+    accuracy                         0.3765    149901
+   macro avg     0.3806    0.3762    0.3630    149901
+weighted avg     0.3807    0.3765    0.3632    149901
+
+[[0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]
+ ...
+ [0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]]
+[1. 0. 0.]
+Model: "model_2"
+__________________________________________________________________________________________________
+ Layer (type)                   Output Shape         Param #     Connected to                     
+==================================================================================================
+ input_3 (InputLayer)           [(None, 100, 40, 1)  0           []                               
+                                ]                                                                 
+                                                                                                  
+ custom_reshape_2 (CustomReshap  (None, 100, 20, 2,   0          ['input_3[0][0]']                
+ e)                             1)                                                                
+                                                                                                  
+ conv3d_2 (Conv3D)              (None, 100, 19, 1,   160         ['custom_reshape_2[0][0]']       
+                                32)                                                               
+                                                                                                  
+ reshape_4 (Reshape)            (None, 100, 19, 32)  0           ['conv3d_2[0][0]']               
+                                                                                                  
+ leaky_re_lu_28 (LeakyReLU)     (None, 100, 19, 32)  0           ['reshape_4[0][0]']              
+                                                                                                  
+ conv2d_26 (Conv2D)             (None, 100, 19, 32)  4128        ['leaky_re_lu_28[0][0]']         
+                                                                                                  
+ leaky_re_lu_29 (LeakyReLU)     (None, 100, 19, 32)  0           ['conv2d_26[0][0]']              
+                                                                                                  
+ conv2d_27 (Conv2D)             (None, 100, 19, 32)  4128        ['leaky_re_lu_29[0][0]']         
+                                                                                                  
+ leaky_re_lu_30 (LeakyReLU)     (None, 100, 19, 32)  0           ['conv2d_27[0][0]']              
+                                                                                                  
+ conv2d_28 (Conv2D)             (None, 100, 9, 32)   2080        ['leaky_re_lu_30[0][0]']         
+                                                                                                  
+ leaky_re_lu_31 (LeakyReLU)     (None, 100, 9, 32)   0           ['conv2d_28[0][0]']              
+                                                                                                  
+ conv2d_29 (Conv2D)             (None, 100, 9, 32)   4128        ['leaky_re_lu_31[0][0]']         
+                                                                                                  
+ leaky_re_lu_32 (LeakyReLU)     (None, 100, 9, 32)   0           ['conv2d_29[0][0]']              
+                                                                                                  
+ conv2d_30 (Conv2D)             (None, 100, 9, 32)   4128        ['leaky_re_lu_32[0][0]']         
+                                                                                                  
+ leaky_re_lu_33 (LeakyReLU)     (None, 100, 9, 32)   0           ['conv2d_30[0][0]']              
+                                                                                                  
+ conv2d_31 (Conv2D)             (None, 100, 1, 32)   9248        ['leaky_re_lu_33[0][0]']         
+                                                                                                  
+ leaky_re_lu_34 (LeakyReLU)     (None, 100, 1, 32)   0           ['conv2d_31[0][0]']              
+                                                                                                  
+ conv2d_32 (Conv2D)             (None, 100, 1, 32)   4128        ['leaky_re_lu_34[0][0]']         
+                                                                                                  
+ leaky_re_lu_35 (LeakyReLU)     (None, 100, 1, 32)   0           ['conv2d_32[0][0]']              
+                                                                                                  
+ conv2d_33 (Conv2D)             (None, 100, 1, 32)   4128        ['leaky_re_lu_35[0][0]']         
+                                                                                                  
+ leaky_re_lu_36 (LeakyReLU)     (None, 100, 1, 32)   0           ['conv2d_33[0][0]']              
+                                                                                                  
+ conv2d_34 (Conv2D)             (None, 100, 1, 64)   2112        ['leaky_re_lu_36[0][0]']         
+                                                                                                  
+ conv2d_36 (Conv2D)             (None, 100, 1, 64)   2112        ['leaky_re_lu_36[0][0]']         
+                                                                                                  
+ leaky_re_lu_37 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_34[0][0]']              
+                                                                                                  
+ leaky_re_lu_39 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_36[0][0]']              
+                                                                                                  
+ max_pooling2d_2 (MaxPooling2D)  (None, 100, 1, 32)  0           ['leaky_re_lu_36[0][0]']         
+                                                                                                  
+ conv2d_35 (Conv2D)             (None, 100, 1, 64)   12352       ['leaky_re_lu_37[0][0]']         
+                                                                                                  
+ conv2d_37 (Conv2D)             (None, 100, 1, 64)   20544       ['leaky_re_lu_39[0][0]']         
+                                                                                                  
+ conv2d_38 (Conv2D)             (None, 100, 1, 64)   2112        ['max_pooling2d_2[0][0]']        
+                                                                                                  
+ leaky_re_lu_38 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_35[0][0]']              
+                                                                                                  
+ leaky_re_lu_40 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_37[0][0]']              
+                                                                                                  
+ leaky_re_lu_41 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_38[0][0]']              
+                                                                                                  
+ concatenate_2 (Concatenate)    (None, 100, 1, 192)  0           ['leaky_re_lu_38[0][0]',         
+                                                                  'leaky_re_lu_40[0][0]',         
+                                                                  'leaky_re_lu_41[0][0]']         
+                                                                                                  
+ reshape_5 (Reshape)            (None, 100, 192)     0           ['concatenate_2[0][0]']          
+                                                                                                  
+ dropout_2 (Dropout)            (None, 100, 192)     0           ['reshape_5[0][0]']              
+                                                                                                  
+ lstm_2 (LSTM)                  (None, 64)           65792       ['dropout_2[0][0]']              
+                                                                                                  
+ dense_2 (Dense)                (None, 3)            195         ['lstm_2[0][0]']                 
+                                                                                                  
+==================================================================================================
+Total params: 141,475
+Trainable params: 141,475
+Non-trainable params: 0
+__________________________________________________________________________________________________
+Epoch 1/50
+28107/28107 - 889s - loss: 1.0997 - accuracy30: 0.3334 - val_loss: 1.0995 - val_accuracy30: 0.3420 - 889s/epoch - 32ms/step
+Epoch 2/50
+28107/28107 - 832s - loss: 1.0993 - accuracy30: 0.3353 - val_loss: 1.1007 - val_accuracy30: 0.3420 - 832s/epoch - 30ms/step
+Epoch 3/50
+28107/28107 - 839s - loss: 1.0992 - accuracy30: 0.3334 - val_loss: 1.0997 - val_accuracy30: 0.3420 - 839s/epoch - 30ms/step
+Epoch 4/50
+28107/28107 - 837s - loss: 1.0992 - accuracy30: 0.3366 - val_loss: 1.0982 - val_accuracy30: 0.3420 - 837s/epoch - 30ms/step
+Epoch 5/50
+28107/28107 - 835s - loss: 1.0992 - accuracy30: 0.3346 - val_loss: 1.0982 - val_accuracy30: 0.3420 - 835s/epoch - 30ms/step
+Epoch 6/50
+28107/28107 - 841s - loss: 1.0987 - accuracy30: 0.3401 - val_loss: 1.0979 - val_accuracy30: 0.3519 - 841s/epoch - 30ms/step
+Epoch 7/50
+28107/28107 - 840s - loss: 1.0981 - accuracy30: 0.3443 - val_loss: 1.0961 - val_accuracy30: 0.3500 - 840s/epoch - 30ms/step
+Epoch 8/50
+28107/28107 - 839s - loss: 1.0977 - accuracy30: 0.3480 - val_loss: 1.0958 - val_accuracy30: 0.3554 - 839s/epoch - 30ms/step
+Epoch 9/50
+28107/28107 - 842s - loss: 1.0973 - accuracy30: 0.3516 - val_loss: 1.0964 - val_accuracy30: 0.3521 - 842s/epoch - 30ms/step
+Epoch 10/50
+28107/28107 - 840s - loss: 1.0970 - accuracy30: 0.3517 - val_loss: 1.0965 - val_accuracy30: 0.3564 - 840s/epoch - 30ms/step
+Epoch 11/50
+28107/28107 - 844s - loss: 1.0966 - accuracy30: 0.3548 - val_loss: 1.0945 - val_accuracy30: 0.3624 - 844s/epoch - 30ms/step
+Epoch 12/50
+28107/28107 - 834s - loss: 1.0961 - accuracy30: 0.3569 - val_loss: 1.0941 - val_accuracy30: 0.3651 - 834s/epoch - 30ms/step
+Epoch 13/50
+28107/28107 - 843s - loss: 1.0957 - accuracy30: 0.3595 - val_loss: 1.0980 - val_accuracy30: 0.3551 - 843s/epoch - 30ms/step
+Epoch 14/50
+28107/28107 - 835s - loss: 1.0956 - accuracy30: 0.3609 - val_loss: 1.0938 - val_accuracy30: 0.3691 - 835s/epoch - 30ms/step
+Epoch 15/50
+28107/28107 - 842s - loss: 1.0952 - accuracy30: 0.3624 - val_loss: 1.0942 - val_accuracy30: 0.3664 - 842s/epoch - 30ms/step
+Epoch 16/50
+28107/28107 - 844s - loss: 1.0950 - accuracy30: 0.3636 - val_loss: 1.0929 - val_accuracy30: 0.3703 - 844s/epoch - 30ms/step
+Epoch 17/50
+28107/28107 - 827s - loss: 1.0948 - accuracy30: 0.3632 - val_loss: 1.0927 - val_accuracy30: 0.3702 - 827s/epoch - 29ms/step
+Epoch 18/50
+28107/28107 - 828s - loss: 1.0946 - accuracy30: 0.3647 - val_loss: 1.0924 - val_accuracy30: 0.3714 - 828s/epoch - 29ms/step
+Epoch 19/50
+28107/28107 - 826s - loss: 1.0946 - accuracy30: 0.3642 - val_loss: 1.0921 - val_accuracy30: 0.3704 - 826s/epoch - 29ms/step
+Epoch 20/50
+28107/28107 - 822s - loss: 1.0943 - accuracy30: 0.3660 - val_loss: 1.0926 - val_accuracy30: 0.3701 - 822s/epoch - 29ms/step
+Epoch 21/50
+28107/28107 - 841s - loss: 1.0942 - accuracy30: 0.3665 - val_loss: 1.0918 - val_accuracy30: 0.3731 - 841s/epoch - 30ms/step
+Epoch 22/50
+28107/28107 - 837s - loss: 1.0940 - accuracy30: 0.3663 - val_loss: 1.0943 - val_accuracy30: 0.3673 - 837s/epoch - 30ms/step
+Epoch 23/50
+28107/28107 - 847s - loss: 1.0939 - accuracy30: 0.3669 - val_loss: 1.0923 - val_accuracy30: 0.3713 - 847s/epoch - 30ms/step
+Epoch 24/50
+28107/28107 - 847s - loss: 1.0939 - accuracy30: 0.3662 - val_loss: 1.0919 - val_accuracy30: 0.3727 - 847s/epoch - 30ms/step
+Epoch 25/50
+28107/28107 - 845s - loss: 1.0938 - accuracy30: 0.3668 - val_loss: 1.0919 - val_accuracy30: 0.3727 - 845s/epoch - 30ms/step
+Epoch 26/50
+28107/28107 - 819s - loss: 1.0936 - accuracy30: 0.3676 - val_loss: 1.0915 - val_accuracy30: 0.3738 - 819s/epoch - 29ms/step
+Epoch 27/50
+28107/28107 - 826s - loss: 1.0935 - accuracy30: 0.3673 - val_loss: 1.0917 - val_accuracy30: 0.3729 - 826s/epoch - 29ms/step
+Epoch 28/50
+28107/28107 - 820s - loss: 1.0934 - accuracy30: 0.3678 - val_loss: 1.0914 - val_accuracy30: 0.3725 - 820s/epoch - 29ms/step
+Epoch 29/50
+28107/28107 - 855s - loss: 1.0935 - accuracy30: 0.3671 - val_loss: 1.0926 - val_accuracy30: 0.3682 - 855s/epoch - 30ms/step
+Epoch 30/50
+28107/28107 - 845s - loss: 1.0933 - accuracy30: 0.3677 - val_loss: 1.0923 - val_accuracy30: 0.3713 - 845s/epoch - 30ms/step
+Epoch 31/50
+28107/28107 - 848s - loss: 1.0931 - accuracy30: 0.3687 - val_loss: 1.0920 - val_accuracy30: 0.3734 - 848s/epoch - 30ms/step
+Epoch 32/50
+28107/28107 - 851s - loss: 1.0930 - accuracy30: 0.3687 - val_loss: 1.0965 - val_accuracy30: 0.3616 - 851s/epoch - 30ms/step
+Epoch 33/50
+28107/28107 - 850s - loss: 1.0931 - accuracy30: 0.3683 - val_loss: 1.0922 - val_accuracy30: 0.3725 - 850s/epoch - 30ms/step
+(149901, 3)
+(149901, 3)
+Prediction horizon: 30  orderbook updates
+accuracy_score: 0.36864997565059604
+              precision    recall  f1-score   support
+
+           0     0.3603    0.4416    0.3968     49929
+           1     0.3641    0.2950    0.3259     49442
+           2     0.3830    0.3687    0.3757     50530
+
+    accuracy                         0.3686    149901
+   macro avg     0.3691    0.3684    0.3661    149901
+weighted avg     0.3692    0.3686    0.3663    149901
+
+[[0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]
+ ...
+ [0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]]
+[1. 0. 0.]
+Model: "model_3"
+__________________________________________________________________________________________________
+ Layer (type)                   Output Shape         Param #     Connected to                     
+==================================================================================================
+ input_4 (InputLayer)           [(None, 100, 40, 1)  0           []                               
+                                ]                                                                 
+                                                                                                  
+ custom_reshape_3 (CustomReshap  (None, 100, 20, 2,   0          ['input_4[0][0]']                
+ e)                             1)                                                                
+                                                                                                  
+ conv3d_3 (Conv3D)              (None, 100, 19, 1,   160         ['custom_reshape_3[0][0]']       
+                                32)                                                               
+                                                                                                  
+ reshape_6 (Reshape)            (None, 100, 19, 32)  0           ['conv3d_3[0][0]']               
+                                                                                                  
+ leaky_re_lu_42 (LeakyReLU)     (None, 100, 19, 32)  0           ['reshape_6[0][0]']              
+                                                                                                  
+ conv2d_39 (Conv2D)             (None, 100, 19, 32)  4128        ['leaky_re_lu_42[0][0]']         
+                                                                                                  
+ leaky_re_lu_43 (LeakyReLU)     (None, 100, 19, 32)  0           ['conv2d_39[0][0]']              
+                                                                                                  
+ conv2d_40 (Conv2D)             (None, 100, 19, 32)  4128        ['leaky_re_lu_43[0][0]']         
+                                                                                                  
+ leaky_re_lu_44 (LeakyReLU)     (None, 100, 19, 32)  0           ['conv2d_40[0][0]']              
+                                                                                                  
+ conv2d_41 (Conv2D)             (None, 100, 9, 32)   2080        ['leaky_re_lu_44[0][0]']         
+                                                                                                  
+ leaky_re_lu_45 (LeakyReLU)     (None, 100, 9, 32)   0           ['conv2d_41[0][0]']              
+                                                                                                  
+ conv2d_42 (Conv2D)             (None, 100, 9, 32)   4128        ['leaky_re_lu_45[0][0]']         
+                                                                                                  
+ leaky_re_lu_46 (LeakyReLU)     (None, 100, 9, 32)   0           ['conv2d_42[0][0]']              
+                                                                                                  
+ conv2d_43 (Conv2D)             (None, 100, 9, 32)   4128        ['leaky_re_lu_46[0][0]']         
+                                                                                                  
+ leaky_re_lu_47 (LeakyReLU)     (None, 100, 9, 32)   0           ['conv2d_43[0][0]']              
+                                                                                                  
+ conv2d_44 (Conv2D)             (None, 100, 1, 32)   9248        ['leaky_re_lu_47[0][0]']         
+                                                                                                  
+ leaky_re_lu_48 (LeakyReLU)     (None, 100, 1, 32)   0           ['conv2d_44[0][0]']              
+                                                                                                  
+ conv2d_45 (Conv2D)             (None, 100, 1, 32)   4128        ['leaky_re_lu_48[0][0]']         
+                                                                                                  
+ leaky_re_lu_49 (LeakyReLU)     (None, 100, 1, 32)   0           ['conv2d_45[0][0]']              
+                                                                                                  
+ conv2d_46 (Conv2D)             (None, 100, 1, 32)   4128        ['leaky_re_lu_49[0][0]']         
+                                                                                                  
+ leaky_re_lu_50 (LeakyReLU)     (None, 100, 1, 32)   0           ['conv2d_46[0][0]']              
+                                                                                                  
+ conv2d_47 (Conv2D)             (None, 100, 1, 64)   2112        ['leaky_re_lu_50[0][0]']         
+                                                                                                  
+ conv2d_49 (Conv2D)             (None, 100, 1, 64)   2112        ['leaky_re_lu_50[0][0]']         
+                                                                                                  
+ leaky_re_lu_51 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_47[0][0]']              
+                                                                                                  
+ leaky_re_lu_53 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_49[0][0]']              
+                                                                                                  
+ max_pooling2d_3 (MaxPooling2D)  (None, 100, 1, 32)  0           ['leaky_re_lu_50[0][0]']         
+                                                                                                  
+ conv2d_48 (Conv2D)             (None, 100, 1, 64)   12352       ['leaky_re_lu_51[0][0]']         
+                                                                                                  
+ conv2d_50 (Conv2D)             (None, 100, 1, 64)   20544       ['leaky_re_lu_53[0][0]']         
+                                                                                                  
+ conv2d_51 (Conv2D)             (None, 100, 1, 64)   2112        ['max_pooling2d_3[0][0]']        
+                                                                                                  
+ leaky_re_lu_52 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_48[0][0]']              
+                                                                                                  
+ leaky_re_lu_54 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_50[0][0]']              
+                                                                                                  
+ leaky_re_lu_55 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_51[0][0]']              
+                                                                                                  
+ concatenate_3 (Concatenate)    (None, 100, 1, 192)  0           ['leaky_re_lu_52[0][0]',         
+                                                                  'leaky_re_lu_54[0][0]',         
+                                                                  'leaky_re_lu_55[0][0]']         
+                                                                                                  
+ reshape_7 (Reshape)            (None, 100, 192)     0           ['concatenate_3[0][0]']          
+                                                                                                  
+ dropout_3 (Dropout)            (None, 100, 192)     0           ['reshape_7[0][0]']              
+                                                                                                  
+ lstm_3 (LSTM)                  (None, 64)           65792       ['dropout_3[0][0]']              
+                                                                                                  
+ dense_3 (Dense)                (None, 3)            195         ['lstm_3[0][0]']                 
+                                                                                                  
+==================================================================================================
+Total params: 141,475
+Trainable params: 141,475
+Non-trainable params: 0
+__________________________________________________________________________________________________
+Epoch 1/50
+28107/28107 - 862s - loss: 1.0997 - accuracy50: 0.3349 - val_loss: 1.0983 - val_accuracy50: 0.3424 - 862s/epoch - 31ms/step
+Epoch 2/50
+28107/28107 - 842s - loss: 1.0996 - accuracy50: 0.3315 - val_loss: 1.0984 - val_accuracy50: 0.3354 - 842s/epoch - 30ms/step
+Epoch 3/50
+28107/28107 - 845s - loss: 1.0993 - accuracy50: 0.3344 - val_loss: 1.0984 - val_accuracy50: 0.3431 - 845s/epoch - 30ms/step
+Epoch 4/50
+28107/28107 - 837s - loss: 1.0991 - accuracy50: 0.3359 - val_loss: 1.0979 - val_accuracy50: 0.3424 - 837s/epoch - 30ms/step
+Epoch 5/50
+28107/28107 - 823s - loss: 1.0987 - accuracy50: 0.3412 - val_loss: 1.0976 - val_accuracy50: 0.3411 - 823s/epoch - 29ms/step
+Epoch 6/50
+28107/28107 - 838s - loss: 1.0985 - accuracy50: 0.3412 - val_loss: 1.0978 - val_accuracy50: 0.3429 - 838s/epoch - 30ms/step
+Epoch 7/50
+28107/28107 - 833s - loss: 1.0985 - accuracy50: 0.3405 - val_loss: 1.0969 - val_accuracy50: 0.3470 - 833s/epoch - 30ms/step
+Epoch 8/50
+28107/28107 - 829s - loss: 1.0984 - accuracy50: 0.3432 - val_loss: 1.0979 - val_accuracy50: 0.3436 - 829s/epoch - 29ms/step
+Epoch 9/50
+28107/28107 - 852s - loss: 1.0983 - accuracy50: 0.3421 - val_loss: 1.0976 - val_accuracy50: 0.3449 - 852s/epoch - 30ms/step
+Epoch 10/50
+28107/28107 - 850s - loss: 1.0981 - accuracy50: 0.3449 - val_loss: 1.0988 - val_accuracy50: 0.3463 - 850s/epoch - 30ms/step
+Epoch 11/50
+28107/28107 - 833s - loss: 1.0980 - accuracy50: 0.3438 - val_loss: 1.0968 - val_accuracy50: 0.3491 - 833s/epoch - 30ms/step
+Epoch 12/50
+28107/28107 - 828s - loss: 1.0979 - accuracy50: 0.3468 - val_loss: 1.0967 - val_accuracy50: 0.3512 - 828s/epoch - 29ms/step
+Epoch 13/50
+28107/28107 - 852s - loss: 1.0976 - accuracy50: 0.3484 - val_loss: 1.0969 - val_accuracy50: 0.3506 - 852s/epoch - 30ms/step
+Epoch 14/50
+28107/28107 - 844s - loss: 1.0975 - accuracy50: 0.3501 - val_loss: 1.0967 - val_accuracy50: 0.3533 - 844s/epoch - 30ms/step
+Epoch 15/50
+28107/28107 - 860s - loss: 1.0974 - accuracy50: 0.3515 - val_loss: 1.0966 - val_accuracy50: 0.3516 - 860s/epoch - 31ms/step
+Epoch 16/50
+28107/28107 - 860s - loss: 1.0975 - accuracy50: 0.3501 - val_loss: 1.0971 - val_accuracy50: 0.3519 - 860s/epoch - 31ms/step
+Epoch 17/50
+28107/28107 - 837s - loss: 1.0971 - accuracy50: 0.3518 - val_loss: 1.0967 - val_accuracy50: 0.3520 - 837s/epoch - 30ms/step
+Epoch 18/50
+28107/28107 - 831s - loss: 1.0971 - accuracy50: 0.3530 - val_loss: 1.0955 - val_accuracy50: 0.3594 - 831s/epoch - 30ms/step
+Epoch 19/50
+28107/28107 - 834s - loss: 1.0970 - accuracy50: 0.3522 - val_loss: 1.1002 - val_accuracy50: 0.3377 - 834s/epoch - 30ms/step
+Epoch 20/50
+28107/28107 - 833s - loss: 1.0971 - accuracy50: 0.3529 - val_loss: 1.0954 - val_accuracy50: 0.3606 - 833s/epoch - 30ms/step
+Epoch 21/50
+28107/28107 - 833s - loss: 1.0971 - accuracy50: 0.3526 - val_loss: 1.0956 - val_accuracy50: 0.3611 - 833s/epoch - 30ms/step
+Epoch 22/50
+28107/28107 - 826s - loss: 1.0971 - accuracy50: 0.3513 - val_loss: 1.0963 - val_accuracy50: 0.3576 - 826s/epoch - 29ms/step
+Epoch 23/50
+28107/28107 - 865s - loss: 1.0970 - accuracy50: 0.3519 - val_loss: 1.0973 - val_accuracy50: 0.3534 - 865s/epoch - 31ms/step
+Epoch 24/50
+28107/28107 - 866s - loss: 1.0968 - accuracy50: 0.3536 - val_loss: 1.0974 - val_accuracy50: 0.3510 - 866s/epoch - 31ms/step
+Epoch 25/50
+28107/28107 - 836s - loss: 1.0969 - accuracy50: 0.3537 - val_loss: 1.0957 - val_accuracy50: 0.3607 - 836s/epoch - 30ms/step
+(149901, 3)
+(149901, 3)
+Prediction horizon: 50  orderbook updates
+accuracy_score: 0.355000967305088
+              precision    recall  f1-score   support
+
+           0     0.3461    0.5619    0.4284     49871
+           1     0.3628    0.1055    0.1634     49564
+           2     0.3662    0.3956    0.3803     50466
+
+    accuracy                         0.3550    149901
+   macro avg     0.3583    0.3543    0.3240    149901
+weighted avg     0.3584    0.3550    0.3246    149901
+
+[[0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]
+ ...
+ [0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]]
+[1. 0. 0.]
+Model: "model_4"
+__________________________________________________________________________________________________
+ Layer (type)                   Output Shape         Param #     Connected to                     
+==================================================================================================
+ input_5 (InputLayer)           [(None, 100, 40, 1)  0           []                               
+                                ]                                                                 
+                                                                                                  
+ custom_reshape_4 (CustomReshap  (None, 100, 20, 2,   0          ['input_5[0][0]']                
+ e)                             1)                                                                
+                                                                                                  
+ conv3d_4 (Conv3D)              (None, 100, 19, 1,   160         ['custom_reshape_4[0][0]']       
+                                32)                                                               
+                                                                                                  
+ reshape_8 (Reshape)            (None, 100, 19, 32)  0           ['conv3d_4[0][0]']               
+                                                                                                  
+ leaky_re_lu_56 (LeakyReLU)     (None, 100, 19, 32)  0           ['reshape_8[0][0]']              
+                                                                                                  
+ conv2d_52 (Conv2D)             (None, 100, 19, 32)  4128        ['leaky_re_lu_56[0][0]']         
+                                                                                                  
+ leaky_re_lu_57 (LeakyReLU)     (None, 100, 19, 32)  0           ['conv2d_52[0][0]']              
+                                                                                                  
+ conv2d_53 (Conv2D)             (None, 100, 19, 32)  4128        ['leaky_re_lu_57[0][0]']         
+                                                                                                  
+ leaky_re_lu_58 (LeakyReLU)     (None, 100, 19, 32)  0           ['conv2d_53[0][0]']              
+                                                                                                  
+ conv2d_54 (Conv2D)             (None, 100, 9, 32)   2080        ['leaky_re_lu_58[0][0]']         
+                                                                                                  
+ leaky_re_lu_59 (LeakyReLU)     (None, 100, 9, 32)   0           ['conv2d_54[0][0]']              
+                                                                                                  
+ conv2d_55 (Conv2D)             (None, 100, 9, 32)   4128        ['leaky_re_lu_59[0][0]']         
+                                                                                                  
+ leaky_re_lu_60 (LeakyReLU)     (None, 100, 9, 32)   0           ['conv2d_55[0][0]']              
+                                                                                                  
+ conv2d_56 (Conv2D)             (None, 100, 9, 32)   4128        ['leaky_re_lu_60[0][0]']         
+                                                                                                  
+ leaky_re_lu_61 (LeakyReLU)     (None, 100, 9, 32)   0           ['conv2d_56[0][0]']              
+                                                                                                  
+ conv2d_57 (Conv2D)             (None, 100, 1, 32)   9248        ['leaky_re_lu_61[0][0]']         
+                                                                                                  
+ leaky_re_lu_62 (LeakyReLU)     (None, 100, 1, 32)   0           ['conv2d_57[0][0]']              
+                                                                                                  
+ conv2d_58 (Conv2D)             (None, 100, 1, 32)   4128        ['leaky_re_lu_62[0][0]']         
+                                                                                                  
+ leaky_re_lu_63 (LeakyReLU)     (None, 100, 1, 32)   0           ['conv2d_58[0][0]']              
+                                                                                                  
+ conv2d_59 (Conv2D)             (None, 100, 1, 32)   4128        ['leaky_re_lu_63[0][0]']         
+                                                                                                  
+ leaky_re_lu_64 (LeakyReLU)     (None, 100, 1, 32)   0           ['conv2d_59[0][0]']              
+                                                                                                  
+ conv2d_60 (Conv2D)             (None, 100, 1, 64)   2112        ['leaky_re_lu_64[0][0]']         
+                                                                                                  
+ conv2d_62 (Conv2D)             (None, 100, 1, 64)   2112        ['leaky_re_lu_64[0][0]']         
+                                                                                                  
+ leaky_re_lu_65 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_60[0][0]']              
+                                                                                                  
+ leaky_re_lu_67 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_62[0][0]']              
+                                                                                                  
+ max_pooling2d_4 (MaxPooling2D)  (None, 100, 1, 32)  0           ['leaky_re_lu_64[0][0]']         
+                                                                                                  
+ conv2d_61 (Conv2D)             (None, 100, 1, 64)   12352       ['leaky_re_lu_65[0][0]']         
+                                                                                                  
+ conv2d_63 (Conv2D)             (None, 100, 1, 64)   20544       ['leaky_re_lu_67[0][0]']         
+                                                                                                  
+ conv2d_64 (Conv2D)             (None, 100, 1, 64)   2112        ['max_pooling2d_4[0][0]']        
+                                                                                                  
+ leaky_re_lu_66 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_61[0][0]']              
+                                                                                                  
+ leaky_re_lu_68 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_63[0][0]']              
+                                                                                                  
+ leaky_re_lu_69 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_64[0][0]']              
+                                                                                                  
+ concatenate_4 (Concatenate)    (None, 100, 1, 192)  0           ['leaky_re_lu_66[0][0]',         
+                                                                  'leaky_re_lu_68[0][0]',         
+                                                                  'leaky_re_lu_69[0][0]']         
+                                                                                                  
+ reshape_9 (Reshape)            (None, 100, 192)     0           ['concatenate_4[0][0]']          
+                                                                                                  
+ dropout_4 (Dropout)            (None, 100, 192)     0           ['reshape_9[0][0]']              
+                                                                                                  
+ lstm_4 (LSTM)                  (None, 64)           65792       ['dropout_4[0][0]']              
+                                                                                                  
+ dense_4 (Dense)                (None, 3)            195         ['lstm_4[0][0]']                 
+                                                                                                  
+==================================================================================================
+Total params: 141,475
+Trainable params: 141,475
+Non-trainable params: 0
+__________________________________________________________________________________________________
+Epoch 1/50
+28107/28107 - 872s - loss: 1.1003 - accuracy100: 0.3358 - val_loss: 1.1005 - val_accuracy100: 0.3341 - 872s/epoch - 31ms/step
+Epoch 2/50
+28107/28107 - 863s - loss: 1.0998 - accuracy100: 0.3318 - val_loss: 1.1010 - val_accuracy100: 0.3432 - 863s/epoch - 31ms/step
+Epoch 3/50
+28107/28107 - 857s - loss: 1.0998 - accuracy100: 0.3308 - val_loss: 1.0986 - val_accuracy100: 0.3432 - 857s/epoch - 30ms/step
+Epoch 4/50
+28107/28107 - 857s - loss: 1.0995 - accuracy100: 0.3339 - val_loss: 1.0990 - val_accuracy100: 0.3341 - 857s/epoch - 31ms/step
+Epoch 5/50
+28107/28107 - 855s - loss: 1.0996 - accuracy100: 0.3303 - val_loss: 1.1008 - val_accuracy100: 0.3341 - 855s/epoch - 30ms/step
+Epoch 6/50
+28107/28107 - 860s - loss: 1.0995 - accuracy100: 0.3300 - val_loss: 1.0997 - val_accuracy100: 0.3432 - 860s/epoch - 31ms/step
+Epoch 7/50
+28107/28107 - 859s - loss: 1.0995 - accuracy100: 0.3338 - val_loss: 1.0985 - val_accuracy100: 0.3341 - 859s/epoch - 31ms/step
+Epoch 8/50
+28107/28107 - 842s - loss: 1.0995 - accuracy100: 0.3315 - val_loss: 1.0986 - val_accuracy100: 0.3341 - 842s/epoch - 30ms/step
+Epoch 9/50
+28107/28107 - 833s - loss: 1.0994 - accuracy100: 0.3320 - val_loss: 1.0992 - val_accuracy100: 0.3432 - 833s/epoch - 30ms/step
+Epoch 10/50
+28107/28107 - 846s - loss: 1.0995 - accuracy100: 0.3298 - val_loss: 1.0989 - val_accuracy100: 0.3227 - 846s/epoch - 30ms/step
+Epoch 11/50
+28107/28107 - 838s - loss: 1.0994 - accuracy100: 0.3327 - val_loss: 1.0996 - val_accuracy100: 0.3227 - 838s/epoch - 30ms/step
+Epoch 12/50
+28107/28107 - 836s - loss: 1.0992 - accuracy100: 0.3345 - val_loss: 1.1020 - val_accuracy100: 0.3341 - 836s/epoch - 30ms/step
+(149901, 3)
+(149901, 3)
+Prediction horizon: 100  orderbook updates
+accuracy_score: 0.33772289711209397
+              precision    recall  f1-score   support
+
+           0     0.0000    0.0000    0.0000     50280
+           1     0.0000    0.0000    0.0000     48996
+           2     0.3377    1.0000    0.5049     50625
+
+    accuracy                         0.3377    149901
+   macro avg     0.1126    0.3333    0.1683    149901
+weighted avg     0.1141    0.3377    0.1705    149901
+
+##################### deepVOL seq2seq #####################
+Epoch 1/50
+28107/28107 - 1526s - loss: 1.0994 - accuracy10: 0.3318 - accuracy20: 0.3318 - accuracy30: 0.3318 - accuracy50: 0.3318 - accuracy100: 0.3318 - val_loss: 1.0986 - val_accuracy10: 0.3357 - val_accuracy20: 0.3357 - val_accuracy30: 0.3357 - val_accuracy50: 0.3357 - val_accuracy100: 0.3357 - 1526s/epoch - 54ms/step
+Epoch 2/50
+28107/28107 - 1481s - loss: 1.0993 - accuracy10: 0.3340 - accuracy20: 0.3340 - accuracy30: 0.3340 - accuracy50: 0.3340 - accuracy100: 0.3340 - val_loss: 1.0995 - val_accuracy10: 0.3357 - val_accuracy20: 0.3357 - val_accuracy30: 0.3357 - val_accuracy50: 0.3357 - val_accuracy100: 0.3357 - 1481s/epoch - 53ms/step
+Epoch 3/50
+28107/28107 - 1499s - loss: 1.0992 - accuracy10: 0.3337 - accuracy20: 0.3337 - accuracy30: 0.3337 - accuracy50: 0.3337 - accuracy100: 0.3337 - val_loss: 1.0987 - val_accuracy10: 0.3357 - val_accuracy20: 0.3357 - val_accuracy30: 0.3357 - val_accuracy50: 0.3357 - val_accuracy100: 0.3357 - 1499s/epoch - 53ms/step
+Epoch 4/50
+28107/28107 - 1499s - loss: 1.0990 - accuracy10: 0.3354 - accuracy20: 0.3354 - accuracy30: 0.3354 - accuracy50: 0.3354 - accuracy100: 0.3354 - val_loss: 1.0989 - val_accuracy10: 0.3447 - val_accuracy20: 0.3447 - val_accuracy30: 0.3447 - val_accuracy50: 0.3447 - val_accuracy100: 0.3447 - 1499s/epoch - 53ms/step
+Epoch 5/50
+28107/28107 - 1408s - loss: 1.0982 - accuracy10: 0.3429 - accuracy20: 0.3429 - accuracy30: 0.3429 - accuracy50: 0.3429 - accuracy100: 0.3429 - val_loss: 1.0962 - val_accuracy10: 0.3521 - val_accuracy20: 0.3521 - val_accuracy30: 0.3521 - val_accuracy50: 0.3521 - val_accuracy100: 0.3521 - 1408s/epoch - 50ms/step
+Epoch 6/50
+28107/28107 - 1403s - loss: 1.0973 - accuracy10: 0.3491 - accuracy20: 0.3491 - accuracy30: 0.3491 - accuracy50: 0.3491 - accuracy100: 0.3491 - val_loss: 1.0967 - val_accuracy10: 0.3548 - val_accuracy20: 0.3548 - val_accuracy30: 0.3548 - val_accuracy50: 0.3548 - val_accuracy100: 0.3548 - 1403s/epoch - 50ms/step
+Epoch 7/50
+28107/28107 - 1394s - loss: 1.0968 - accuracy10: 0.3511 - accuracy20: 0.3511 - accuracy30: 0.3511 - accuracy50: 0.3511 - accuracy100: 0.3511 - val_loss: 1.0949 - val_accuracy10: 0.3577 - val_accuracy20: 0.3577 - val_accuracy30: 0.3577 - val_accuracy50: 0.3577 - val_accuracy100: 0.3577 - 1394s/epoch - 50ms/step
+Epoch 8/50
+28107/28107 - 1407s - loss: 1.0962 - accuracy10: 0.3543 - accuracy20: 0.3543 - accuracy30: 0.3543 - accuracy50: 0.3543 - accuracy100: 0.3543 - val_loss: 1.0945 - val_accuracy10: 0.3645 - val_accuracy20: 0.3645 - val_accuracy30: 0.3645 - val_accuracy50: 0.3645 - val_accuracy100: 0.3645 - 1407s/epoch - 50ms/step
+Epoch 9/50
+28107/28107 - 1413s - loss: 1.0957 - accuracy10: 0.3579 - accuracy20: 0.3579 - accuracy30: 0.3579 - accuracy50: 0.3579 - accuracy100: 0.3579 - val_loss: 1.0937 - val_accuracy10: 0.3647 - val_accuracy20: 0.3647 - val_accuracy30: 0.3647 - val_accuracy50: 0.3647 - val_accuracy100: 0.3647 - 1413s/epoch - 50ms/step
+Epoch 10/50
+28107/28107 - 1413s - loss: 1.0953 - accuracy10: 0.3609 - accuracy20: 0.3609 - accuracy30: 0.3609 - accuracy50: 0.3609 - accuracy100: 0.3609 - val_loss: 1.0941 - val_accuracy10: 0.3637 - val_accuracy20: 0.3637 - val_accuracy30: 0.3637 - val_accuracy50: 0.3637 - val_accuracy100: 0.3637 - 1413s/epoch - 50ms/step
+Epoch 11/50
+28107/28107 - 1401s - loss: 1.0948 - accuracy10: 0.3623 - accuracy20: 0.3623 - accuracy30: 0.3623 - accuracy50: 0.3623 - accuracy100: 0.3623 - val_loss: 1.0933 - val_accuracy10: 0.3676 - val_accuracy20: 0.3676 - val_accuracy30: 0.3676 - val_accuracy50: 0.3676 - val_accuracy100: 0.3676 - 1401s/epoch - 50ms/step
+Epoch 12/50
+28107/28107 - 1411s - loss: 1.0947 - accuracy10: 0.3629 - accuracy20: 0.3629 - accuracy30: 0.3629 - accuracy50: 0.3629 - accuracy100: 0.3629 - val_loss: 1.0924 - val_accuracy10: 0.3700 - val_accuracy20: 0.3700 - val_accuracy30: 0.3700 - val_accuracy50: 0.3700 - val_accuracy100: 0.3700 - 1411s/epoch - 50ms/step
+Epoch 13/50
+28107/28107 - 1419s - loss: 1.0944 - accuracy10: 0.3633 - accuracy20: 0.3633 - accuracy30: 0.3633 - accuracy50: 0.3633 - accuracy100: 0.3633 - val_loss: 1.0924 - val_accuracy10: 0.3699 - val_accuracy20: 0.3699 - val_accuracy30: 0.3699 - val_accuracy50: 0.3699 - val_accuracy100: 0.3699 - 1419s/epoch - 50ms/step
+Epoch 14/50
+28107/28107 - 1428s - loss: 1.0943 - accuracy10: 0.3641 - accuracy20: 0.3641 - accuracy30: 0.3641 - accuracy50: 0.3641 - accuracy100: 0.3641 - val_loss: 1.0932 - val_accuracy10: 0.3687 - val_accuracy20: 0.3687 - val_accuracy30: 0.3687 - val_accuracy50: 0.3687 - val_accuracy100: 0.3687 - 1428s/epoch - 51ms/step
+Epoch 15/50
+28107/28107 - 1432s - loss: 1.0940 - accuracy10: 0.3651 - accuracy20: 0.3651 - accuracy30: 0.3651 - accuracy50: 0.3651 - accuracy100: 0.3651 - val_loss: 1.0917 - val_accuracy10: 0.3719 - val_accuracy20: 0.3719 - val_accuracy30: 0.3719 - val_accuracy50: 0.3719 - val_accuracy100: 0.3719 - 1432s/epoch - 51ms/step
+Epoch 16/50
+28107/28107 - 1422s - loss: 1.0938 - accuracy10: 0.3653 - accuracy20: 0.3653 - accuracy30: 0.3653 - accuracy50: 0.3653 - accuracy100: 0.3653 - val_loss: 1.0918 - val_accuracy10: 0.3717 - val_accuracy20: 0.3717 - val_accuracy30: 0.3717 - val_accuracy50: 0.3717 - val_accuracy100: 0.3717 - 1422s/epoch - 51ms/step
+Epoch 17/50
+28107/28107 - 1419s - loss: 1.0937 - accuracy10: 0.3656 - accuracy20: 0.3656 - accuracy30: 0.3656 - accuracy50: 0.3656 - accuracy100: 0.3656 - val_loss: 1.0929 - val_accuracy10: 0.3647 - val_accuracy20: 0.3647 - val_accuracy30: 0.3647 - val_accuracy50: 0.3647 - val_accuracy100: 0.3647 - 1419s/epoch - 50ms/step
+Epoch 18/50
+28107/28107 - 1435s - loss: 1.0933 - accuracy10: 0.3675 - accuracy20: 0.3675 - accuracy30: 0.3675 - accuracy50: 0.3675 - accuracy100: 0.3675 - val_loss: 1.0925 - val_accuracy10: 0.3661 - val_accuracy20: 0.3661 - val_accuracy30: 0.3661 - val_accuracy50: 0.3661 - val_accuracy100: 0.3661 - 1435s/epoch - 51ms/step
+Epoch 19/50
+28107/28107 - 1423s - loss: 1.0932 - accuracy10: 0.3680 - accuracy20: 0.3680 - accuracy30: 0.3680 - accuracy50: 0.3680 - accuracy100: 0.3680 - val_loss: 1.0919 - val_accuracy10: 0.3709 - val_accuracy20: 0.3709 - val_accuracy30: 0.3709 - val_accuracy50: 0.3709 - val_accuracy100: 0.3709 - 1423s/epoch - 51ms/step
+Epoch 20/50
+28107/28107 - 1428s - loss: 1.0930 - accuracy10: 0.3683 - accuracy20: 0.3683 - accuracy30: 0.3683 - accuracy50: 0.3683 - accuracy100: 0.3683 - val_loss: 1.0907 - val_accuracy10: 0.3739 - val_accuracy20: 0.3739 - val_accuracy30: 0.3739 - val_accuracy50: 0.3739 - val_accuracy100: 0.3739 - 1428s/epoch - 51ms/step
+Epoch 21/50
+28107/28107 - 1432s - loss: 1.0930 - accuracy10: 0.3675 - accuracy20: 0.3675 - accuracy30: 0.3675 - accuracy50: 0.3675 - accuracy100: 0.3675 - val_loss: 1.0905 - val_accuracy10: 0.3741 - val_accuracy20: 0.3741 - val_accuracy30: 0.3741 - val_accuracy50: 0.3741 - val_accuracy100: 0.3741 - 1432s/epoch - 51ms/step
+Epoch 22/50
+28107/28107 - 1427s - loss: 1.0928 - accuracy10: 0.3685 - accuracy20: 0.3685 - accuracy30: 0.3685 - accuracy50: 0.3685 - accuracy100: 0.3685 - val_loss: 1.0904 - val_accuracy10: 0.3740 - val_accuracy20: 0.3740 - val_accuracy30: 0.3740 - val_accuracy50: 0.3740 - val_accuracy100: 0.3740 - 1427s/epoch - 51ms/step
+Epoch 23/50
+28107/28107 - 1435s - loss: 1.0926 - accuracy10: 0.3689 - accuracy20: 0.3689 - accuracy30: 0.3689 - accuracy50: 0.3689 - accuracy100: 0.3689 - val_loss: 1.0907 - val_accuracy10: 0.3737 - val_accuracy20: 0.3737 - val_accuracy30: 0.3737 - val_accuracy50: 0.3737 - val_accuracy100: 0.3737 - 1435s/epoch - 51ms/step
+Epoch 24/50
+28107/28107 - 1432s - loss: 1.0924 - accuracy10: 0.3693 - accuracy20: 0.3693 - accuracy30: 0.3693 - accuracy50: 0.3693 - accuracy100: 0.3693 - val_loss: 1.0908 - val_accuracy10: 0.3735 - val_accuracy20: 0.3735 - val_accuracy30: 0.3735 - val_accuracy50: 0.3735 - val_accuracy100: 0.3735 - 1432s/epoch - 51ms/step
+Epoch 25/50
+28107/28107 - 1426s - loss: 1.0923 - accuracy10: 0.3700 - accuracy20: 0.3700 - accuracy30: 0.3700 - accuracy50: 0.3700 - accuracy100: 0.3700 - val_loss: 1.0917 - val_accuracy10: 0.3691 - val_accuracy20: 0.3691 - val_accuracy30: 0.3691 - val_accuracy50: 0.3691 - val_accuracy100: 0.3691 - 1426s/epoch - 51ms/step
+Epoch 26/50
+28107/28107 - 1420s - loss: 1.0923 - accuracy10: 0.3696 - accuracy20: 0.3696 - accuracy30: 0.3696 - accuracy50: 0.3696 - accuracy100: 0.3696 - val_loss: 1.0902 - val_accuracy10: 0.3751 - val_accuracy20: 0.3751 - val_accuracy30: 0.3751 - val_accuracy50: 0.3751 - val_accuracy100: 0.3751 - 1420s/epoch - 51ms/step
+Epoch 27/50
+28107/28107 - 1453s - loss: 1.0921 - accuracy10: 0.3703 - accuracy20: 0.3703 - accuracy30: 0.3703 - accuracy50: 0.3703 - accuracy100: 0.3703 - val_loss: 1.0907 - val_accuracy10: 0.3736 - val_accuracy20: 0.3736 - val_accuracy30: 0.3736 - val_accuracy50: 0.3736 - val_accuracy100: 0.3736 - 1453s/epoch - 52ms/step
+Epoch 28/50
+28107/28107 - 1456s - loss: 1.0920 - accuracy10: 0.3703 - accuracy20: 0.3703 - accuracy30: 0.3703 - accuracy50: 0.3703 - accuracy100: 0.3703 - val_loss: 1.0903 - val_accuracy10: 0.3753 - val_accuracy20: 0.3753 - val_accuracy30: 0.3753 - val_accuracy50: 0.3753 - val_accuracy100: 0.3753 - 1456s/epoch - 52ms/step
+Epoch 29/50
+28107/28107 - 1455s - loss: 1.0917 - accuracy10: 0.3715 - accuracy20: 0.3715 - accuracy30: 0.3715 - accuracy50: 0.3715 - accuracy100: 0.3715 - val_loss: 1.0909 - val_accuracy10: 0.3729 - val_accuracy20: 0.3729 - val_accuracy30: 0.3729 - val_accuracy50: 0.3729 - val_accuracy100: 0.3729 - 1455s/epoch - 52ms/step
+Epoch 30/50
+28107/28107 - 1443s - loss: 1.0918 - accuracy10: 0.3710 - accuracy20: 0.3710 - accuracy30: 0.3710 - accuracy50: 0.3710 - accuracy100: 0.3710 - val_loss: 1.0910 - val_accuracy10: 0.3723 - val_accuracy20: 0.3723 - val_accuracy30: 0.3723 - val_accuracy50: 0.3723 - val_accuracy100: 0.3723 - 1443s/epoch - 51ms/step
+Epoch 31/50
+28107/28107 - 1435s - loss: 1.0917 - accuracy10: 0.3714 - accuracy20: 0.3714 - accuracy30: 0.3714 - accuracy50: 0.3714 - accuracy100: 0.3714 - val_loss: 1.0897 - val_accuracy10: 0.3757 - val_accuracy20: 0.3757 - val_accuracy30: 0.3757 - val_accuracy50: 0.3757 - val_accuracy100: 0.3757 - 1435s/epoch - 51ms/step
+Epoch 32/50
+28107/28107 - 1446s - loss: 1.0915 - accuracy10: 0.3717 - accuracy20: 0.3717 - accuracy30: 0.3717 - accuracy50: 0.3717 - accuracy100: 0.3717 - val_loss: 1.0903 - val_accuracy10: 0.3742 - val_accuracy20: 0.3742 - val_accuracy30: 0.3742 - val_accuracy50: 0.3742 - val_accuracy100: 0.3742 - 1446s/epoch - 51ms/step
+Epoch 33/50
+28107/28107 - 1436s - loss: 1.0915 - accuracy10: 0.3716 - accuracy20: 0.3716 - accuracy30: 0.3716 - accuracy50: 0.3716 - accuracy100: 0.3716 - val_loss: 1.0897 - val_accuracy10: 0.3757 - val_accuracy20: 0.3757 - val_accuracy30: 0.3757 - val_accuracy50: 0.3757 - val_accuracy100: 0.3757 - 1436s/epoch - 51ms/step
+Epoch 34/50
+28107/28107 - 1472s - loss: 1.0914 - accuracy10: 0.3721 - accuracy20: 0.3721 - accuracy30: 0.3721 - accuracy50: 0.3721 - accuracy100: 0.3721 - val_loss: 1.0927 - val_accuracy10: 0.3723 - val_accuracy20: 0.3723 - val_accuracy30: 0.3723 - val_accuracy50: 0.3723 - val_accuracy100: 0.3723 - 1472s/epoch - 52ms/step
+Epoch 35/50
+28107/28107 - 1506s - loss: 1.0914 - accuracy10: 0.3723 - accuracy20: 0.3723 - accuracy30: 0.3723 - accuracy50: 0.3723 - accuracy100: 0.3723 - val_loss: 1.0896 - val_accuracy10: 0.3770 - val_accuracy20: 0.3770 - val_accuracy30: 0.3770 - val_accuracy50: 0.3770 - val_accuracy100: 0.3770 - 1506s/epoch - 54ms/step
+Epoch 36/50
+28107/28107 - 1449s - loss: 1.0914 - accuracy10: 0.3723 - accuracy20: 0.3723 - accuracy30: 0.3723 - accuracy50: 0.3723 - accuracy100: 0.3723 - val_loss: 1.0907 - val_accuracy10: 0.3755 - val_accuracy20: 0.3755 - val_accuracy30: 0.3755 - val_accuracy50: 0.3755 - val_accuracy100: 0.3755 - 1449s/epoch - 52ms/step
+Epoch 37/50
+28107/28107 - 1469s - loss: 1.0913 - accuracy10: 0.3724 - accuracy20: 0.3724 - accuracy30: 0.3724 - accuracy50: 0.3724 - accuracy100: 0.3724 - val_loss: 1.0903 - val_accuracy10: 0.3746 - val_accuracy20: 0.3746 - val_accuracy30: 0.3746 - val_accuracy50: 0.3746 - val_accuracy100: 0.3746 - 1469s/epoch - 52ms/step
+Epoch 38/50
+28107/28107 - 1451s - loss: 1.0912 - accuracy10: 0.3718 - accuracy20: 0.3718 - accuracy30: 0.3718 - accuracy50: 0.3718 - accuracy100: 0.3718 - val_loss: 1.0892 - val_accuracy10: 0.3781 - val_accuracy20: 0.3781 - val_accuracy30: 0.3781 - val_accuracy50: 0.3781 - val_accuracy100: 0.3781 - 1451s/epoch - 52ms/step
+Epoch 39/50
+28107/28107 - 1474s - loss: 1.0911 - accuracy10: 0.3726 - accuracy20: 0.3726 - accuracy30: 0.3726 - accuracy50: 0.3726 - accuracy100: 0.3726 - val_loss: 1.0914 - val_accuracy10: 0.3725 - val_accuracy20: 0.3725 - val_accuracy30: 0.3725 - val_accuracy50: 0.3725 - val_accuracy100: 0.3725 - 1474s/epoch - 52ms/step
+Epoch 40/50
+28107/28107 - 1479s - loss: 1.0911 - accuracy10: 0.3722 - accuracy20: 0.3722 - accuracy30: 0.3722 - accuracy50: 0.3722 - accuracy100: 0.3722 - val_loss: 1.0892 - val_accuracy10: 0.3783 - val_accuracy20: 0.3783 - val_accuracy30: 0.3783 - val_accuracy50: 0.3783 - val_accuracy100: 0.3783 - 1479s/epoch - 53ms/step
+Epoch 41/50
+28107/28107 - 1459s - loss: 1.0910 - accuracy10: 0.3726 - accuracy20: 0.3726 - accuracy30: 0.3726 - accuracy50: 0.3726 - accuracy100: 0.3726 - val_loss: 1.0892 - val_accuracy10: 0.3782 - val_accuracy20: 0.3782 - val_accuracy30: 0.3782 - val_accuracy50: 0.3782 - val_accuracy100: 0.3782 - 1459s/epoch - 52ms/step
+Epoch 42/50
+28107/28107 - 1454s - loss: 1.0910 - accuracy10: 0.3728 - accuracy20: 0.3728 - accuracy30: 0.3728 - accuracy50: 0.3728 - accuracy100: 0.3728 - val_loss: 1.0891 - val_accuracy10: 0.3775 - val_accuracy20: 0.3775 - val_accuracy30: 0.3775 - val_accuracy50: 0.3775 - val_accuracy100: 0.3775 - 1454s/epoch - 52ms/step
+Epoch 43/50
+28107/28107 - 1477s - loss: 1.0909 - accuracy10: 0.3732 - accuracy20: 0.3732 - accuracy30: 0.3732 - accuracy50: 0.3732 - accuracy100: 0.3732 - val_loss: 1.0894 - val_accuracy10: 0.3770 - val_accuracy20: 0.3770 - val_accuracy30: 0.3770 - val_accuracy50: 0.3770 - val_accuracy100: 0.3770 - 1477s/epoch - 53ms/step
+Epoch 44/50
+28107/28107 - 1481s - loss: 1.0909 - accuracy10: 0.3729 - accuracy20: 0.3729 - accuracy30: 0.3729 - accuracy50: 0.3729 - accuracy100: 0.3729 - val_loss: 1.0932 - val_accuracy10: 0.3738 - val_accuracy20: 0.3738 - val_accuracy30: 0.3738 - val_accuracy50: 0.3738 - val_accuracy100: 0.3738 - 1481s/epoch - 53ms/step
+Epoch 45/50
+28107/28107 - 1489s - loss: 1.0909 - accuracy10: 0.3729 - accuracy20: 0.3729 - accuracy30: 0.3729 - accuracy50: 0.3729 - accuracy100: 0.3729 - val_loss: 1.0891 - val_accuracy10: 0.3762 - val_accuracy20: 0.3762 - val_accuracy30: 0.3762 - val_accuracy50: 0.3762 - val_accuracy100: 0.3762 - 1489s/epoch - 53ms/step
+Epoch 46/50
+28107/28107 - 1485s - loss: 1.0908 - accuracy10: 0.3732 - accuracy20: 0.3732 - accuracy30: 0.3732 - accuracy50: 0.3732 - accuracy100: 0.3732 - val_loss: 1.0900 - val_accuracy10: 0.3747 - val_accuracy20: 0.3747 - val_accuracy30: 0.3747 - val_accuracy50: 0.3747 - val_accuracy100: 0.3747 - 1485s/epoch - 53ms/step
+Epoch 47/50
+28107/28107 - 1496s - loss: 1.0908 - accuracy10: 0.3735 - accuracy20: 0.3735 - accuracy30: 0.3735 - accuracy50: 0.3735 - accuracy100: 0.3735 - val_loss: 1.0896 - val_accuracy10: 0.3770 - val_accuracy20: 0.3770 - val_accuracy30: 0.3770 - val_accuracy50: 0.3770 - val_accuracy100: 0.3770 - 1496s/epoch - 53ms/step
+Epoch 48/50
+28107/28107 - 1496s - loss: 1.0907 - accuracy10: 0.3734 - accuracy20: 0.3734 - accuracy30: 0.3734 - accuracy50: 0.3734 - accuracy100: 0.3734 - val_loss: 1.0896 - val_accuracy10: 0.3770 - val_accuracy20: 0.3770 - val_accuracy30: 0.3770 - val_accuracy50: 0.3770 - val_accuracy100: 0.3770 - 1496s/epoch - 53ms/step
+Epoch 49/50
+28107/28107 - 1500s - loss: 1.0907 - accuracy10: 0.3733 - accuracy20: 0.3733 - accuracy30: 0.3733 - accuracy50: 0.3733 - accuracy100: 0.3733 - val_loss: 1.0916 - val_accuracy10: 0.3740 - val_accuracy20: 0.3740 - val_accuracy30: 0.3740 - val_accuracy50: 0.3740 - val_accuracy100: 0.3740 - 1500s/epoch - 53ms/step
+Epoch 50/50
+28107/28107 - 1500s - loss: 1.0907 - accuracy10: 0.3739 - accuracy20: 0.3739 - accuracy30: 0.3739 - accuracy50: 0.3739 - accuracy100: 0.3739 - val_loss: 1.0890 - val_accuracy10: 0.3783 - val_accuracy20: 0.3783 - val_accuracy30: 0.3783 - val_accuracy50: 0.3783 - val_accuracy100: 0.3783 - 1500s/epoch - 53ms/step
+Prediction horizon: 10  orderbook updates
+accuracy_score: 0.3948872922795712
+              precision    recall  f1-score   support
+
+           0     0.4159    0.2156    0.2840     49807
+           1     0.3712    0.4763    0.4173     49172
+           2     0.4104    0.4916    0.4474     50922
+
+    accuracy                         0.3949    149901
+   macro avg     0.3992    0.3945    0.3829    149901
+weighted avg     0.3994    0.3949    0.3832    149901
+
+Prediction horizon: 20  orderbook updates
+accuracy_score: 0.37864990893990036
+              precision    recall  f1-score   support
+
+           0     0.3939    0.2137    0.2771     49837
+           1     0.3610    0.4469    0.3994     49392
+           2     0.3895    0.4744    0.4278     50672
+
+    accuracy                         0.3786    149901
+   macro avg     0.3815    0.3783    0.3681    149901
+weighted avg     0.3816    0.3786    0.3683    149901
+
+Prediction horizon: 30  orderbook updates
+accuracy_score: 0.37112494246202493
+              precision    recall  f1-score   support
+
+           0     0.3830    0.2177    0.2776     49929
+           1     0.3568    0.4275    0.3890     49442
+           2     0.3793    0.4675    0.4188     50530
+
+    accuracy                         0.3711    149901
+   macro avg     0.3731    0.3709    0.3618    149901
+weighted avg     0.3731    0.3711    0.3620    149901
+
+Prediction horizon: 50  orderbook updates
+accuracy_score: 0.36100492992041416
+              precision    recall  f1-score   support
+
+           0     0.3691    0.2263    0.2806     49871
+           1     0.3496    0.4001    0.3731     49564
+           2     0.3674    0.4557    0.4068     50466
+
+    accuracy                         0.3610    149901
+   macro avg     0.3620    0.3607    0.3535    149901
+weighted avg     0.3621    0.3610    0.3537    149901
+
+Prediction horizon: 100  orderbook updates
+accuracy_score: 0.35257936905023984
+              precision    recall  f1-score   support
+
+           0     0.3616    0.2433    0.2909     50280
+           1     0.3412    0.3728    0.3563     48996
+           2     0.3574    0.4416    0.3951     50625
+
+    accuracy                         0.3526    149901
+   macro avg     0.3534    0.3525    0.3474    149901
+weighted avg     0.3535    0.3526    0.3474    149901
+
+##################### deepVOL attention #####################
+Epoch 1/50
+28107/28107 - 1796s - loss: 1.0993 - accuracy10: 0.3335 - accuracy20: 0.3335 - accuracy30: 0.3335 - accuracy50: 0.3335 - accuracy100: 0.3335 - val_loss: 1.0995 - val_accuracy10: 0.3250 - val_accuracy20: 0.3250 - val_accuracy30: 0.3250 - val_accuracy50: 0.3250 - val_accuracy100: 0.3250 - 1796s/epoch - 64ms/step
+Epoch 2/50
+28107/28107 - 1795s - loss: 1.0992 - accuracy10: 0.3330 - accuracy20: 0.3330 - accuracy30: 0.3330 - accuracy50: 0.3330 - accuracy100: 0.3330 - val_loss: 1.1005 - val_accuracy10: 0.3242 - val_accuracy20: 0.3242 - val_accuracy30: 0.3242 - val_accuracy50: 0.3242 - val_accuracy100: 0.3242 - 1795s/epoch - 64ms/step
+Epoch 3/50
+28107/28107 - 1746s - loss: 1.0988 - accuracy10: 0.3386 - accuracy20: 0.3386 - accuracy30: 0.3386 - accuracy50: 0.3386 - accuracy100: 0.3386 - val_loss: 1.1043 - val_accuracy10: 0.3294 - val_accuracy20: 0.3294 - val_accuracy30: 0.3294 - val_accuracy50: 0.3294 - val_accuracy100: 0.3294 - 1746s/epoch - 62ms/step
+Epoch 4/50
+28107/28107 - 1751s - loss: 1.0972 - accuracy10: 0.3498 - accuracy20: 0.3498 - accuracy30: 0.3498 - accuracy50: 0.3498 - accuracy100: 0.3498 - val_loss: 1.1124 - val_accuracy10: 0.3373 - val_accuracy20: 0.3373 - val_accuracy30: 0.3373 - val_accuracy50: 0.3373 - val_accuracy100: 0.3373 - 1751s/epoch - 62ms/step
+Epoch 5/50
+28107/28107 - 1763s - loss: 1.0950 - accuracy10: 0.3597 - accuracy20: 0.3597 - accuracy30: 0.3597 - accuracy50: 0.3597 - accuracy100: 0.3597 - val_loss: 1.1127 - val_accuracy10: 0.3385 - val_accuracy20: 0.3385 - val_accuracy30: 0.3385 - val_accuracy50: 0.3385 - val_accuracy100: 0.3385 - 1763s/epoch - 63ms/step
+Epoch 6/50
+28107/28107 - 1767s - loss: 1.0939 - accuracy10: 0.3634 - accuracy20: 0.3634 - accuracy30: 0.3634 - accuracy50: 0.3634 - accuracy100: 0.3634 - val_loss: 1.1292 - val_accuracy10: 0.3373 - val_accuracy20: 0.3373 - val_accuracy30: 0.3373 - val_accuracy50: 0.3373 - val_accuracy100: 0.3373 - 1767s/epoch - 63ms/step
+Epoch 7/50
+28107/28107 - 1749s - loss: 1.0931 - accuracy10: 0.3673 - accuracy20: 0.3673 - accuracy30: 0.3673 - accuracy50: 0.3673 - accuracy100: 0.3673 - val_loss: 1.1062 - val_accuracy10: 0.3370 - val_accuracy20: 0.3370 - val_accuracy30: 0.3370 - val_accuracy50: 0.3370 - val_accuracy100: 0.3370 - 1749s/epoch - 62ms/step
+Epoch 8/50
+28107/28107 - 1754s - loss: 1.0922 - accuracy10: 0.3701 - accuracy20: 0.3701 - accuracy30: 0.3701 - accuracy50: 0.3701 - accuracy100: 0.3701 - val_loss: 1.1175 - val_accuracy10: 0.3402 - val_accuracy20: 0.3402 - val_accuracy30: 0.3402 - val_accuracy50: 0.3402 - val_accuracy100: 0.3402 - 1754s/epoch - 62ms/step
+Epoch 9/50
+28107/28107 - 1803s - loss: 1.0915 - accuracy10: 0.3733 - accuracy20: 0.3733 - accuracy30: 0.3733 - accuracy50: 0.3733 - accuracy100: 0.3733 - val_loss: 1.1088 - val_accuracy10: 0.3417 - val_accuracy20: 0.3417 - val_accuracy30: 0.3417 - val_accuracy50: 0.3417 - val_accuracy100: 0.3417 - 1803s/epoch - 64ms/step
+Epoch 10/50
+28107/28107 - 1777s - loss: 1.0909 - accuracy10: 0.3746 - accuracy20: 0.3746 - accuracy30: 0.3746 - accuracy50: 0.3746 - accuracy100: 0.3746 - val_loss: 1.1191 - val_accuracy10: 0.3471 - val_accuracy20: 0.3471 - val_accuracy30: 0.3471 - val_accuracy50: 0.3471 - val_accuracy100: 0.3471 - 1777s/epoch - 63ms/step
+Epoch 11/50
+28107/28107 - 1799s - loss: 1.0904 - accuracy10: 0.3765 - accuracy20: 0.3765 - accuracy30: 0.3765 - accuracy50: 0.3765 - accuracy100: 0.3765 - val_loss: 1.1116 - val_accuracy10: 0.3433 - val_accuracy20: 0.3433 - val_accuracy30: 0.3433 - val_accuracy50: 0.3433 - val_accuracy100: 0.3433 - 1799s/epoch - 64ms/step
+Prediction horizon: 10  orderbook updates
+accuracy_score: 0.32986437715558936
+              precision    recall  f1-score   support
+
+           0     0.0000    0.0000    0.0000     49807
+           1     0.3273    0.7988    0.4643     49172
+           2     0.3402    0.1996    0.2516     50922
+
+    accuracy                         0.3299    149901
+   macro avg     0.2225    0.3328    0.2387    149901
+weighted avg     0.2229    0.3299    0.2378    149901
+
+Prediction horizon: 20  orderbook updates
+accuracy_score: 0.33034469416481543
+              precision    recall  f1-score   support
+
+           0     0.0000    0.0000    0.0000     49837
+           1     0.3286    0.7985    0.4656     49392
+           2     0.3374    0.1989    0.2503     50672
+
+    accuracy                         0.3303    149901
+   macro avg     0.2220    0.3325    0.2386    149901
+weighted avg     0.2223    0.3303    0.2380    149901
+
+Prediction horizon: 30  orderbook updates
+accuracy_score: 0.32929733624191965
+              precision    recall  f1-score   support
+
+           0     0.0000    0.0000    0.0000     49929
+           1     0.3288    0.8686    0.4771     49442
+           2     0.3324    0.1270    0.1837     50530
+
+    accuracy                         0.3293    149901
+   macro avg     0.2204    0.3319    0.2203    149901
+weighted avg     0.2205    0.3293    0.2193    149901
+
+Prediction horizon: 50  orderbook updates
+accuracy_score: 0.33064489229558175
+              precision    recall  f1-score   support
+
+           0     0.0000    0.0000    0.0000     49871
+           1     0.3306    1.0000    0.4970     49564
+           2     0.0000    0.0000    0.0000     50466
+
+    accuracy                         0.3306    149901
+   macro avg     0.1102    0.3333    0.1657    149901
+weighted avg     0.1093    0.3306    0.1643    149901
+
+Prediction horizon: 100  orderbook updates
+accuracy_score: 0.32685572477835373
+              precision    recall  f1-score   support
+
+           0     0.0000    0.0000    0.0000     50280
+           1     0.3269    1.0000    0.4927     48996
+           2     0.0000    0.0000    0.0000     50625
+
+    accuracy                         0.3269    149901
+   macro avg     0.1090    0.3333    0.1642    149901
+weighted avg     0.1068    0.3269    0.1610    149901
+
