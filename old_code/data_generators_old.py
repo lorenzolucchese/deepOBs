@@ -2,6 +2,7 @@ import tensorflow as tf
 import pandas as pd
 import numpy as np
 import keras
+import multiprocessing as mp
 import time
 import os
 from keras import backend as K
@@ -17,7 +18,7 @@ import matplotlib.pyplot as plt
 
 
 class CustomDataGenerator(tf.keras.utils.Sequence):
-    def __init__(self, dir, horizon, task = "classification", multihorizon = False, batch_size=256, shuffle=False, samples_per_file=256, XYsplit=False, teacher_forcing=False):
+    def __init__(self, dir, horizon, multihorizon = False, batch_size=32, shuffle=False, samples_per_file=32, XYsplit=False, multiprocess=False, teacher_forcing=False):
         """Initialization.
         :param dir: directory of files, contains folder "X" and "Y"
         :param horizon: prediction horizon, 0, 1, 2, 3, 4 or 0
@@ -37,17 +38,9 @@ class CustomDataGenerator(tf.keras.utils.Sequence):
         if self.multihorizon:
             self.horizon = slice(0, 5)
 
-        self.task = task
-        if self.task == "regression":
-            self.Y = "Y_reg"
-        elif self.task == "classification":
-            self.Y = "Y_class"
-        else:
-            raise ValueError('task must be either classification or regression.')
-
         if XYsplit:
-            self.X_files = os.listdir(os.path.join(dir, "X"))
-            self.Y_files = os.listdir(os.path.join(dir, self.Y))
+            self.Xfiles = os.listdir(os.path.join(dir, "X"))
+            self.Yfiles = os.listdir(os.path.join(dir, "Y"))
         else:
             self.files = os.listdir(dir)
 
@@ -56,7 +49,10 @@ class CustomDataGenerator(tf.keras.utils.Sequence):
         self.files_per_batch = (self.batch_size // self.samples_per_file)
         self.shuffle = shuffle
 
+        self.multiprocess = multiprocess
         self.XYsplit = XYsplit
+        self.n_proc = mp.cpu_count()
+        self.chunksize = batch_size // self.n_proc
 
         self.on_epoch_end()
 
@@ -76,8 +72,8 @@ class CustomDataGenerator(tf.keras.utils.Sequence):
     def on_epoch_end(self):
         'Shuffles indexes after each epoch'
         if self.XYsplit:
-            assert (len(self.X_files) == len(self.Y_files))
-            self.indices = np.arange(len(self.X_files))
+            assert (len(self.Xfiles) == len(self.Yfiles))
+            self.indices = np.arange(len(self.Xfiles))
         else:
             self.indices = np.arange(len(self.files))
         if self.shuffle:
@@ -95,23 +91,46 @@ class CustomDataGenerator(tf.keras.utils.Sequence):
 
         return decoder_input_data
 
-    def __data_generation(self, file_indices):
-        x_list, y_list = [], []
+    def load_chunk(self, file_indices):
+        x_list = []
+        y_list = []
         for file_index in file_indices:
             if self.XYsplit:
-                x_list.append(tf.convert_to_tensor(np.load(os.path.join(self.dir, "X", self.X_files[file_index]))))
-                y_list.append(tf.convert_to_tensor(np.load(os.path.join(self.dir, self.Y, self.Y_files[file_index])))[:, self.horizon, ...])
+                x_list.append(tf.convert_to_tensor(np.load(os.path.join(self.dir, "X", self.Xfiles[file_index]))))
+                y_list.append(tf.convert_to_tensor(np.load(os.path.join(self.dir, "Y", self.Yfiles[file_index])))[:, self.horizon, :])
             else:
                 with np.load(os.path.join(self.dir, self.files[file_index])) as data:
                     x_list.append(tf.convert_to_tensor(data["X"]))
-                    y_list.append(tf.convert_to_tensor(data[self.Y])[:, self.horizon, ...])
-        
+                    y_list.append(tf.convert_to_tensor(data["Y"])[:, self.horizon, :])
+                # data = np.load(os.path.join(self.dir, self.files[file_index]))
+                # x_list.append(tf.convert_to_tensor(data["X"]))
+                # y_list.append(tf.convert_to_tensor(data["Y"]))
         if self.samples_per_file==1:
             x = tf.stack(x_list)
             y = tf.stack(y_list)
         else:
             x = tf.concat(x_list, axis=0)
             y = tf.concat(y_list, axis=0)
+        return x, y
+
+    def __data_generation(self, file_indices):
+        if self.multiprocess:
+            # parallelize
+            file_indices_chunks = np.array_split(file_indices, self.chunksize)
+
+            with mp.Pool(processes=self.n_proc) as pool:
+                # starts the sub-processes without blocking
+                # pass the chunk to each worker process
+                proc_results = [pool.apply_async(self.load_chunk, args=(file_indices_chunk,))
+                                for file_indices_chunk in file_indices_chunks]
+
+                # blocks until all results are fetched
+                results = [r.get() for r in proc_results]
+                x = tf.concat(list(zip(*results))[0], axis=0)
+                y = tf.concat(list(zip(*results))[1], axis=0)
+
+        else:
+            x, y = self.load_chunk(file_indices)
 
         if self.multihorizon:
             decoder_input = self.prepare_decoder_input(x)

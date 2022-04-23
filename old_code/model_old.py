@@ -15,7 +15,7 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras.metrics import CategoricalAccuracy, Precision, Recall, MeanSquaredError
 
-from sklearn.metrics import classification_report, accuracy_score, mean_absolute_error, mean_squared_error, r2_score
+from sklearn.metrics import classification_report, accuracy_score
 import matplotlib.pyplot as plt
 
 
@@ -79,13 +79,6 @@ class deepLOB:
         self.data_dir = data_dir
         self.data = data
 
-        if self.task == "classification":
-            self.Y = "Y_class"
-        elif self.task == "regression":
-            self.Y = "Y_reg"
-        else:
-            raise ValueError('task must be either classification or regression.')
-
         if data in ["FI2010", "simulated"]:
             train_data = np.load(os.path.join(data_dir, "train.npz"))
             trainX, trainY = train_data["X"], train_data["Y"]
@@ -114,9 +107,9 @@ class deepLOB:
             self.test_generator = generator.flow(testX, testY, batch_size=32, shuffle=False)
     
         elif data == "LOBSTER":
-            self.train_generator = CustomDataGenerator(os.path.join(data_dir, "train"), self.horizon, task = task, multihorizon = multihorizon)
-            self.val_generator = CustomDataGenerator(os.path.join(data_dir, "val"), self.horizon, task = task, multihorizon = multihorizon)
-            self.test_generator = CustomDataGenerator(os.path.join(data_dir, "test"), self.horizon, task = task, multihorizon = multihorizon)
+            self.train_generator = CustomDataGenerator(os.path.join(data_dir, "train"), self.horizon, multihorizon = multihorizon, batch_size=32, XYsplit=False, samples_per_file=32)
+            self.val_generator = CustomDataGenerator(os.path.join(data_dir, "val"), self.horizon, multihorizon = multihorizon, batch_size=32, XYsplit=False, samples_per_file=32)
+            self.test_generator = CustomDataGenerator(os.path.join(data_dir, "test"), self.horizon, multihorizon = multihorizon, batch_size=32, XYsplit=False, samples_per_file=32, shuffle=False)
 
         else:
             raise ValueError('data must be either FI2010, simulated or LOBSTER.')
@@ -166,6 +159,10 @@ class deepLOB:
             conv_first1 = Conv2D(32, (4, 1), padding='same')(conv_first1)
             conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
         elif self.model_inputs == "volumes":
+            # input_BID = Reshape((self.T, self.NF//2, 1, 1))(input_lmd[:, :, :self.NF//2, :])
+            # input_BID = tf.reverse(input_BID, axis = [2])
+            # input_ASK = Reshape((self.T, self.NF//2, 1, 1))(input_lmd[:, :, self.NF//2:, :])
+            # input_lmd = concatenate([input_BID, input_ASK], axis = 3)
             input_reshaped = CustomReshape(0)(input_lmd)
             conv_first1 = Conv3D(32, (1, 2, 2), strides=(1, 1, 1))(input_reshaped)
             conv_first1 = Reshape((int(conv_first1.shape[1]), int(conv_first1.shape[2]), int(conv_first1.shape[4])))(conv_first1)
@@ -342,38 +339,30 @@ class deepLOB:
 
         if self.data in ["FI2010", "simulated"]:
             test_data = np.load(os.path.join(self.data_dir, "test.npz"))
-            testY = test_data[self.Y][:, self.horizon, ...]
+            testY = test_data["Y"][:, self.horizon, :]
         if self.data == "LOBSTER":
             testY = np.zeros(predY.shape)
             test_files = os.listdir(os.path.join(self.data_dir, "test"))
             index = 0
             for file in test_files:
                 with np.load(os.path.join(self.data_dir, "test", file)) as data:
-                    true_y = tf.convert_to_tensor(data[self.Y])[:, self.horizon, ...]
-                    testY[index:(index+true_y.shape[0]), ...] = true_y
+                    true_y = tf.convert_to_tensor(data["Y"])[:, self.horizon, :]
+                    if not self.multihorizon:
+                        testY[index:(index+true_y.shape[0]), :] = true_y
+                    if self.multihorizon:
+                        testY[index:(index+true_y.shape[0]), :, :] = true_y
                     index = index + true_y.shape[0]
-        if self.task == "classification":
-            if not self.multihorizon:
-                print("Prediction horizon:", self.orderbook_updates[self.horizon], " orderbook updates")
-                print('accuracy_score:', accuracy_score(np.argmax(testY, axis=1), np.argmax(predY, axis=1)))
-                print(classification_report(np.argmax(testY, axis=1), np.argmax(predY, axis=1), digits=4))
-            else:
-                for h in range(5):
-                    print("Prediction horizon:", self.orderbook_updates[h], " orderbook updates")
-                    print('accuracy_score:', accuracy_score(np.argmax(testY[:, h, :], axis=1), np.argmax(predY[:, h, :], axis=1)))
-                    print(classification_report(np.argmax(testY[:, h, :], axis=1), np.argmax(predY[:, h, :], axis=1), digits=4))
-        elif self.task == "regression":
-            if not self.multihorizon:
-                print("Prediction horizon:", self.orderbook_updates[self.horizon], " orderbook updates")
-                print('MSE:', mean_squared_error(testY, predY))
-                print('MAE:', mean_absolute_error(testY, predY))
-                print('r2:', r2_score(testY, predY))
-            else:
-                for h in range(5):
-                    print("Prediction horizon:", self.orderbook_updates[h], " orderbook updates")
-                    print('MSE:', mean_squared_error(testY[:, h], predY[:, h]))
-                    print('MAE:', mean_absolute_error(testY[:, h], predY[:, h]))
-                    print('r2:', r2_score(testY[:, h], predY[:, h]))
+        
+        if not self.multihorizon:
+            print("Prediction horizon:", self.orderbook_updates[self.horizon], " orderbook updates")
+            print('accuracy_score:', accuracy_score(np.argmax(testY, axis=1), np.argmax(predY, axis=1)))
+            print(classification_report(np.argmax(testY, axis=1), np.argmax(predY, axis=1), digits=4))
+        if self.multihorizon:
+            for h in range(5):
+                print("Prediction horizon:", self.orderbook_updates[h], " orderbook updates")
+                print('accuracy_score:', accuracy_score(np.argmax(testY[:, h, :], axis=1), np.argmax(predY[:, h, :], axis=1)))
+                print(classification_report(np.argmax(testY[:, h, :], axis=1), np.argmax(predY[:, h, :], axis=1), digits=4))
+        
 
 
 if __name__ == '__main__':
@@ -405,9 +394,9 @@ if __name__ == '__main__':
 
     model_inputs = "volumes"                    # options: "order book", "order flow", "volumes"
     data = "LOBSTER"                            # options: "FI2010", "AAL", "simulated"
-    data_dir = "data/model/AAL_volumes_W1_2"
+    data_dir = "data/model/AAL_orderbooks_W1"
     task = "classification"
-    multihorizon = True                         # options: True, False
+    multihorizon = False                        # options: True, False
     decoder = "seq2seq"                         # options: "seq2seq", "attention"
 
     T = 100
@@ -418,9 +407,9 @@ if __name__ == '__main__':
     batch_size = 256                            # note we use 256 for LOBSTER, 32 for FI2010 or simulated
     number_of_lstm = 64
 
-    checkpoint_filepath = './model_weights/deepVOL_weights_AAL_W1/weights' + decoder
-    load_weights = True
-    load_weights_filepath = './model_weights/deepVOL_weights_AAL_W1/weights' + decoder
+    checkpoint_filepath = './model_weights/deepLOB_weights_AAL_W1/weights' + str(orderbook_updates[0])
+    load_weights = False
+    load_weights_filepath = './model_weights/deepLOB_weights_AAL_W1/weights' + str(orderbook_updates[0])
 
     #######################################################################################
 
@@ -446,5 +435,5 @@ if __name__ == '__main__':
     #             load_weights = load_weights,
     #             load_weights_filepath = load_weights_filepath)
 
-    model.evaluate_model(load_weights_filepath=load_weights_filepath)
+    # model.evaluate_model(load_weights_filepath=checkpoint_filepath)
                 

@@ -13,7 +13,7 @@ import datetime
 import time
 import numpy as np
 import pickle
-from data_prepare import prepare_x_y, prepare_decoder_input
+from old_code.data_prepare_old import prepare_x_y, prepare_decoder_input
 # import h5py
 
 def process_data(TICKER, input_path, output_path, time_index="seconds", output_extension="csv",
