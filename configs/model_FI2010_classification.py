@@ -1,5 +1,5 @@
 from data_generators import CustomDataGenerator
-from model import deepLOB
+from old_code.model_old import deepLOB
 
 import tensorflow as tf
 import pandas as pd
