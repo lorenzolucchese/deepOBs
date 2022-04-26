@@ -83,15 +83,28 @@ class CustomDataGenerator(tf.keras.utils.Sequence):
         if self.shuffle:
             np.random.shuffle(self.indices)
 
-    def prepare_decoder_input(self, data):
+    def prepare_decoder_input(self, x, y):
         if self.teacher_forcing:
-            first_decoder_input = to_categorical(np.zeros(len(data)), 3)
-            first_decoder_input = first_decoder_input.reshape(len(first_decoder_input), 1, 3)
-            decoder_input_data = np.hstack((data[:, :-1, :], first_decoder_input))
+            if self.task == "classification":
+                first_decoder_input = to_categorical(np.zeros(len(x)), y.shape[-1])
+                first_decoder_input = first_decoder_input.reshape(len(first_decoder_input), 1, y.shape[-1])
+                decoder_input_data = np.hstack((x[:, :-1, :], first_decoder_input))
+            elif self.task == "regression":
+                raise ValueError('teacher forcing with regression not yet implemented.')
+            else:
+                raise ValueError('task must be either classification or regression.')
 
         if not self.teacher_forcing:
-            decoder_input_data = np.zeros((len(data), 1, 3))
-            decoder_input_data[:, 0, 0] = 1.
+            if self.task == "classification":
+                # this sets the initial hidden state of the decoder to be y_0 = [1, 0, ..., 0] for classification
+                decoder_input_data = np.zeros((len(x), 1, y.shape[-1]))
+                decoder_input_data[:, 0, 0] = 1.
+            elif self.task == "regression":
+                # this sets the initial hidden state of the decoder to be y_0 = 0 for regression
+                decoder_input_data = np.zeros((len(x), 1))
+                decoder_input_data[:, 0] = 0
+            else:
+                raise ValueError('task must be either classification or regression.')
 
         return decoder_input_data
 
@@ -114,7 +127,7 @@ class CustomDataGenerator(tf.keras.utils.Sequence):
             y = tf.concat(y_list, axis=0)
 
         if self.multihorizon:
-            decoder_input = self.prepare_decoder_input(x)
+            decoder_input = self.prepare_decoder_input(x, y)
             x = [x, decoder_input]
 
         return x, y

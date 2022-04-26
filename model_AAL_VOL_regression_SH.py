@@ -1,5 +1,4 @@
-from data_generators import CustomDataGenerator
-from old_code.model_old import deepLOB
+from model import deepLOB
 
 import tensorflow as tf
 import pandas as pd
@@ -61,6 +60,7 @@ if __name__ == '__main__':
         n_horizons = 5
         horizon = h                                 # prediction horizon (0, 1, 2, 3, 4) -> (10, 20, 30, 50, 100) order book events
         epochs = 50
+        verbose = 2
         batch_size = 256
         number_of_lstm = 64
 
@@ -90,6 +90,7 @@ if __name__ == '__main__':
                     batch_size = batch_size,
                     checkpoint_filepath = checkpoint_filepath,
                     load_weights = load_weights,
-                    load_weights_filepath = load_weights_filepath)
+                    load_weights_filepath = load_weights_filepath, 
+                    verbose = verbose)
 
         model.evaluate_model(load_weights_filepath = checkpoint_filepath)

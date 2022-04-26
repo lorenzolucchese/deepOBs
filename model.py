@@ -317,7 +317,7 @@ class deepLOB:
         
         self.model.compile(loss=loss, metrics=metrics, optimizer=adam)
 
-    def fit_model(self, epochs, batch_size, checkpoint_filepath, load_weights, load_weights_filepath, patience=5):
+    def fit_model(self, epochs, batch_size, checkpoint_filepath, load_weights, load_weights_filepath, verbose = 0, patience=5):
         model_checkpoint_callback = ModelCheckpoint(filepath=checkpoint_filepath,
         					                        save_weights_only=True,
 						                            monitor='val_loss',
@@ -330,7 +330,7 @@ class deepLOB:
             self.model.load_weights(load_weights_filepath)
 
         self.model.fit(self.train_generator, validation_data=self.val_generator,
-                       epochs=epochs, batch_size=batch_size, verbose=2, workers=8,
+                       epochs=epochs, batch_size=batch_size, verbose=verbose, workers=8,
                        max_queue_size=10,
                        callbacks=[model_checkpoint_callback, early_stopping])
 
