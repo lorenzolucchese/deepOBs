@@ -24,7 +24,7 @@ if __name__ == '__main__':
     if gpus:
         try:
             # Use only one GPUs
-            tf.config.set_visible_devices(gpus[2], 'GPU')
+            tf.config.set_visible_devices(gpus[1], 'GPU')
             logical_gpus = tf.config.list_logical_devices('GPU')
 
             # Or use all GPUs, memory growth needs to be the same across GPUs
@@ -42,8 +42,10 @@ if __name__ == '__main__':
     
     orderbook_updates = [10, 20, 30, 50, 100]
 
-    for h in range(0, 5):
-        print("##################### deepLOB #####################")
+    decoders = ["seq2seq", "attention"]
+
+    for dec in decoders:
+        print("##################### deepVOL", dec, "#####################")
 
         #################################### SETTINGS ########################################
 
@@ -52,20 +54,20 @@ if __name__ == '__main__':
         TICKER = "AAL"
         data_dir = "data/model/AAL_volumes_W1_2"
         task = "regression"
-        multihorizon = False                        # options: True, False
-        decoder = "seq2seq"                         # options: "seq2seq", "attention"
+        multihorizon = True                        # options: True, False
+        decoder = dec                              # options: "seq2seq", "attention"
 
         T = 100
         NF = 40
         n_horizons = 5
-        horizon = h                                 # prediction horizon (0, 1, 2, 3, 4) -> (10, 20, 30, 50, 100) order book events
+        horizon = None                                 # prediction horizon (0, 1, 2, 3, 4) -> (10, 20, 30, 50, 100) order book events
         epochs = 50
         verbose = 2
         batch_size = 256
         number_of_lstm = 64
 
-        checkpoint_filepath = os.path.join('./model_weights', task, 'deep_' + model_inputs + '_weights_' + TICKER + '_W1', 'weights' + str(orderbook_updates[h]))
-        load_weights = False
+        checkpoint_filepath = os.path.join('./model_weights', task, 'deep_' + model_inputs + '_weights_' + TICKER + '_W1', 'weights' + dec)
+        load_weights = True
         load_weights_filepath = checkpoint_filepath
 
         #######################################################################################
@@ -83,14 +85,14 @@ if __name__ == '__main__':
                 n_horizons = n_horizons)
 
         model.create_model()
-
-        # model.model.summary()
+        
+        model.model.summary()
 
         model.fit_model(epochs = epochs, 
-                    batch_size = batch_size,
-                    checkpoint_filepath = checkpoint_filepath,
-                    load_weights = load_weights,
-                    load_weights_filepath = load_weights_filepath, 
-                    verbose = verbose)
+                        batch_size = batch_size,
+                        checkpoint_filepath = checkpoint_filepath,
+                        load_weights = load_weights,
+                        load_weights_filepath = load_weights_filepath, 
+                        verbose = verbose)
 
         model.evaluate_model(load_weights_filepath = checkpoint_filepath)

@@ -1,0 +1,2 @@
+model_checkpoint_path: "deepOF_weights_AAL_W1_100"
+all_model_checkpoint_paths: "deepOF_weights_AAL_W1_100"

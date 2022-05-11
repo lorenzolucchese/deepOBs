@@ -1,0 +1,204 @@
+##################### deepVOL #####################
+Evaluating performance on  train set...
+Prediction horizon: 10  orderbook updates
+MSE: 3.932742247530056e-09
+MAE: 3.622144575031488e-05
+r2: -0.1330927402126294
+Evaluating performance on  val set...
+Prediction horizon: 10  orderbook updates
+MSE: 6.1100540740690025e-09
+MAE: 4.699550524821326e-05
+r2: -0.12925121704233722
+Evaluating performance on  test set...
+Prediction horizon: 10  orderbook updates
+MSE: 2.2145915074210446e-09
+MAE: 2.6761817932748004e-05
+r2: -0.2242497819666882
+Evaluating performance on  train set...
+Prediction horizon: 20  orderbook updates
+MSE: 6.494414594162595e-09
+MAE: 4.6182371027179445e-05
+r2: -0.002355273096202648
+Evaluating performance on  val set...
+Prediction horizon: 20  orderbook updates
+MSE: 1.0221509869119155e-08
+MAE: 6.283909056346962e-05
+r2: -0.001575822346998823
+Evaluating performance on  test set...
+Prediction horizon: 20  orderbook updates
+MSE: 3.417770538202279e-09
+MAE: 3.066157017285175e-05
+r2: -0.016946143353828713
+Evaluating performance on  train set...
+Prediction horizon: 30  orderbook updates
+MSE: 9.60458134589082e-09
+MAE: 5.9716006634418515e-05
+r2: -0.00836234461545482
+Evaluating performance on  val set...
+Prediction horizon: 30  orderbook updates
+MSE: 1.5250461666642163e-08
+MAE: 8.210513269559446e-05
+r2: -0.008768778172575376
+Evaluating performance on  test set...
+Prediction horizon: 30  orderbook updates
+MSE: 5.018894306628382e-09
+MAE: 3.83689862519881e-05
+r2: -0.01657174826656105
+Evaluating performance on  train set...
+Prediction horizon: 50  orderbook updates
+MSE: 1.5834434874493905e-08
+MAE: 8.618265055271693e-05
+r2: -0.019050459035923062
+Evaluating performance on  val set...
+Prediction horizon: 50  orderbook updates
+MSE: 2.5417841955056325e-08
+MAE: 0.00011616165217136264
+r2: -0.019590429002370957
+Evaluating performance on  test set...
+Prediction horizon: 50  orderbook updates
+MSE: 8.395748677189562e-09
+MAE: 5.904273320295239e-05
+r2: -0.03994968269184507
+Evaluating performance on  train set...
+Prediction horizon: 100  orderbook updates
+MSE: 2.998638227116869e-08
+MAE: 0.00012683515848956715
+r2: 0.007757299727796152
+Evaluating performance on  val set...
+Prediction horizon: 100  orderbook updates
+MSE: 4.952659530399573e-08
+MAE: 0.000171149020254223
+r2: 0.0034886465556306367
+Evaluating performance on  test set...
+Prediction horizon: 100  orderbook updates
+MSE: 1.5190353915025856e-08
+MAE: 8.719660273837185e-05
+r2: 0.01487598120027156
+##################### deepVOL seq2seq #####################
+Evaluating performance on  train set...
+Prediction horizon: 10  orderbook updates
+MSE: 4.008044945151575e-09
+MAE: 3.6058317351539246e-05
+r2: -0.15478878196236723
+Prediction horizon: 20  orderbook updates
+MSE: 6.77415778766109e-09
+MAE: 4.9594989916370385e-05
+r2: -0.04553115308514322
+Prediction horizon: 30  orderbook updates
+MSE: 9.756976999441539e-09
+MAE: 6.244665320869816e-05
+r2: -0.02436200488064233
+Prediction horizon: 50  orderbook updates
+MSE: 1.5783313736765097e-08
+MAE: 8.498804100329219e-05
+r2: -0.015760476205345597
+Prediction horizon: 100  orderbook updates
+MSE: 3.0514022938462595e-08
+MAE: 0.0001279328261756891
+r2: -0.009702212251830433
+Evaluating performance on  val set...
+Prediction horizon: 10  orderbook updates
+MSE: 6.389397619821311e-09
+MAE: 4.7673770407857655e-05
+r2: -0.1808790807551115
+Prediction horizon: 20  orderbook updates
+MSE: 1.0759847639743776e-08
+MAE: 6.685079070794115e-05
+r2: -0.05432596417709923
+Prediction horizon: 30  orderbook updates
+MSE: 1.555592982319572e-08
+MAE: 8.481595377123203e-05
+r2: -0.028974510024692313
+Prediction horizon: 50  orderbook updates
+MSE: 2.5401813775000512e-08
+MAE: 0.00011557683818104274
+r2: -0.018947487756291626
+Prediction horizon: 100  orderbook updates
+MSE: 5.0269601348470746e-08
+MAE: 0.0001724766989372079
+r2: -0.011461178976539976
+Evaluating performance on  test set...
+Prediction horizon: 10  orderbook updates
+MSE: 2.2170779908104777e-09
+MAE: 2.6115272189816527e-05
+r2: -0.2256243364780628
+Prediction horizon: 20  orderbook updates
+MSE: 3.596982103312804e-09
+MAE: 3.3768917823476366e-05
+r2: -0.07026994258097452
+Prediction horizon: 30  orderbook updates
+MSE: 5.120593709763891e-09
+MAE: 4.173516395894817e-05
+r2: -0.03717085510700424
+Prediction horizon: 50  orderbook updates
+MSE: 8.243225426836749e-09
+MAE: 5.68234091950259e-05
+r2: -0.02105720366391961
+Prediction horizon: 100  orderbook updates
+MSE: 1.558644354058052e-08
+MAE: 8.779233058825656e-05
+r2: -0.010811201989405106
+##################### deepVOL attention #####################
+Evaluating performance on  train set...
+Prediction horizon: 10  orderbook updates
+MSE: 3.985392588187094e-09
+MAE: 3.628772176532268e-05
+r2: -0.14826223646061765
+Prediction horizon: 20  orderbook updates
+MSE: 6.927276574263876e-09
+MAE: 5.038658389876849e-05
+r2: -0.06916367930226341
+Prediction horizon: 30  orderbook updates
+MSE: 9.976042665474283e-09
+MAE: 6.346264000497004e-05
+r2: -0.04736119252561255
+Prediction horizon: 50  orderbook updates
+MSE: 1.6016911899070117e-08
+MAE: 8.588766799560569e-05
+r2: -0.0307940606946997
+Prediction horizon: 100  orderbook updates
+MSE: 3.0744100824333046e-08
+MAE: 0.00012864261998880673
+r2: -0.017315438171667807
+Evaluating performance on  val set...
+Prediction horizon: 10  orderbook updates
+MSE: 6.813532351389258e-09
+MAE: 4.780395890945497e-05
+r2: -0.2592670387022771
+Prediction horizon: 20  orderbook updates
+MSE: 1.1516652502655438e-08
+MAE: 6.807295823289214e-05
+r2: -0.1284830566842432
+Prediction horizon: 30  orderbook updates
+MSE: 1.6473403501544656e-08
+MAE: 8.635951738746928e-05
+r2: -0.08966243028208187
+Prediction horizon: 50  orderbook updates
+MSE: 2.6359489778887937e-08
+MAE: 0.00011686977396502099
+r2: -0.05736291615400457
+Prediction horizon: 100  orderbook updates
+MSE: 5.119691625978335e-08
+MAE: 0.0001733965122085648
+r2: -0.030119433832728415
+Evaluating performance on  test set...
+Prediction horizon: 10  orderbook updates
+MSE: 2.7961980941911876e-09
+MAE: 2.7150633136614946e-05
+r2: -0.5457681002017827
+Prediction horizon: 20  orderbook updates
+MSE: 4.446577672435032e-09
+MAE: 3.513162165485412e-05
+r2: -0.32306425038251696
+Prediction horizon: 30  orderbook updates
+MSE: 6.12177626282994e-09
+MAE: 4.334121287472649e-05
+r2: -0.23995932526071373
+Prediction horizon: 50  orderbook updates
+MSE: 9.33809964142492e-09
+MAE: 5.8491039807103326e-05
+r2: -0.1566751379098501
+Prediction horizon: 100  orderbook updates
+MSE: 1.6770003131345338e-08
+MAE: 8.954458090057609e-05
+r2: -0.0875673452014385

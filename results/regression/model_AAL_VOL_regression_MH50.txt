@@ -1,0 +1,597 @@
+##################### deepVOL seq2seq #####################
+Model: "model"
+__________________________________________________________________________________________________
+ Layer (type)                   Output Shape         Param #     Connected to                     
+==================================================================================================
+ input_1 (InputLayer)           [(None, 100, 40, 1)  0           []                               
+                                ]                                                                 
+                                                                                                  
+ custom_reshape (CustomReshape)  (None, 100, 20, 2,   0          ['input_1[0][0]']                
+                                1)                                                                
+                                                                                                  
+ conv3d (Conv3D)                (None, 100, 19, 1,   160         ['custom_reshape[0][0]']         
+                                32)                                                               
+                                                                                                  
+ reshape (Reshape)              (None, 100, 19, 32)  0           ['conv3d[0][0]']                 
+                                                                                                  
+ leaky_re_lu (LeakyReLU)        (None, 100, 19, 32)  0           ['reshape[0][0]']                
+                                                                                                  
+ conv2d (Conv2D)                (None, 100, 19, 32)  4128        ['leaky_re_lu[0][0]']            
+                                                                                                  
+ leaky_re_lu_1 (LeakyReLU)      (None, 100, 19, 32)  0           ['conv2d[0][0]']                 
+                                                                                                  
+ conv2d_1 (Conv2D)              (None, 100, 19, 32)  4128        ['leaky_re_lu_1[0][0]']          
+                                                                                                  
+ leaky_re_lu_2 (LeakyReLU)      (None, 100, 19, 32)  0           ['conv2d_1[0][0]']               
+                                                                                                  
+ conv2d_2 (Conv2D)              (None, 100, 9, 32)   2080        ['leaky_re_lu_2[0][0]']          
+                                                                                                  
+ leaky_re_lu_3 (LeakyReLU)      (None, 100, 9, 32)   0           ['conv2d_2[0][0]']               
+                                                                                                  
+ conv2d_3 (Conv2D)              (None, 100, 9, 32)   4128        ['leaky_re_lu_3[0][0]']          
+                                                                                                  
+ leaky_re_lu_4 (LeakyReLU)      (None, 100, 9, 32)   0           ['conv2d_3[0][0]']               
+                                                                                                  
+ conv2d_4 (Conv2D)              (None, 100, 9, 32)   4128        ['leaky_re_lu_4[0][0]']          
+                                                                                                  
+ leaky_re_lu_5 (LeakyReLU)      (None, 100, 9, 32)   0           ['conv2d_4[0][0]']               
+                                                                                                  
+ conv2d_5 (Conv2D)              (None, 100, 1, 32)   9248        ['leaky_re_lu_5[0][0]']          
+                                                                                                  
+ leaky_re_lu_6 (LeakyReLU)      (None, 100, 1, 32)   0           ['conv2d_5[0][0]']               
+                                                                                                  
+ conv2d_6 (Conv2D)              (None, 100, 1, 32)   4128        ['leaky_re_lu_6[0][0]']          
+                                                                                                  
+ leaky_re_lu_7 (LeakyReLU)      (None, 100, 1, 32)   0           ['conv2d_6[0][0]']               
+                                                                                                  
+ conv2d_7 (Conv2D)              (None, 100, 1, 32)   4128        ['leaky_re_lu_7[0][0]']          
+                                                                                                  
+ leaky_re_lu_8 (LeakyReLU)      (None, 100, 1, 32)   0           ['conv2d_7[0][0]']               
+                                                                                                  
+ conv2d_8 (Conv2D)              (None, 100, 1, 64)   2112        ['leaky_re_lu_8[0][0]']          
+                                                                                                  
+ conv2d_10 (Conv2D)             (None, 100, 1, 64)   2112        ['leaky_re_lu_8[0][0]']          
+                                                                                                  
+ leaky_re_lu_9 (LeakyReLU)      (None, 100, 1, 64)   0           ['conv2d_8[0][0]']               
+                                                                                                  
+ leaky_re_lu_11 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_10[0][0]']              
+                                                                                                  
+ max_pooling2d (MaxPooling2D)   (None, 100, 1, 32)   0           ['leaky_re_lu_8[0][0]']          
+                                                                                                  
+ conv2d_9 (Conv2D)              (None, 100, 1, 64)   12352       ['leaky_re_lu_9[0][0]']          
+                                                                                                  
+ conv2d_11 (Conv2D)             (None, 100, 1, 64)   20544       ['leaky_re_lu_11[0][0]']         
+                                                                                                  
+ conv2d_12 (Conv2D)             (None, 100, 1, 64)   2112        ['max_pooling2d[0][0]']          
+                                                                                                  
+ leaky_re_lu_10 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_9[0][0]']               
+                                                                                                  
+ leaky_re_lu_12 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_11[0][0]']              
+                                                                                                  
+ leaky_re_lu_13 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_12[0][0]']              
+                                                                                                  
+ concatenate (Concatenate)      (None, 100, 1, 192)  0           ['leaky_re_lu_10[0][0]',         
+                                                                  'leaky_re_lu_12[0][0]',         
+                                                                  'leaky_re_lu_13[0][0]']         
+                                                                                                  
+ reshape_1 (Reshape)            (None, 100, 192)     0           ['concatenate[0][0]']            
+                                                                                                  
+ dropout (Dropout)              (None, 100, 192)     0           ['reshape_1[0][0]']              
+                                                                                                  
+ lstm (LSTM)                    [(None, 64),         65792       ['dropout[0][0]']                
+                                 (None, 64),                                                      
+                                 (None, 64)]                                                      
+                                                                                                  
+ input_2 (InputLayer)           [(None, 1, 1)]       0           []                               
+                                                                                                  
+ reshape_2 (Reshape)            (None, 1, 64)        0           ['lstm[0][0]']                   
+                                                                                                  
+ concatenate_1 (Concatenate)    (None, 1, 65)        0           ['input_2[0][0]',                
+                                                                  'reshape_2[0][0]']              
+                                                                                                  
+ lstm_1 (LSTM)                  [(None, 1, 64),      33280       ['concatenate_1[0][0]',          
+                                 (None, 64),                      'lstm[0][1]',                   
+                                 (None, 64)]                      'lstm[0][2]',                   
+                                                                  'concatenate_3[0][0]',          
+                                                                  'lstm_1[0][1]',                 
+                                                                  'lstm_1[0][2]',                 
+                                                                  'concatenate_5[0][0]',          
+                                                                  'lstm_1[1][1]',                 
+                                                                  'lstm_1[1][2]',                 
+                                                                  'concatenate_7[0][0]',          
+                                                                  'lstm_1[2][1]',                 
+                                                                  'lstm_1[2][2]',                 
+                                                                  'concatenate_9[0][0]',          
+                                                                  'lstm_1[3][1]',                 
+                                                                  'lstm_1[3][2]']                 
+                                                                                                  
+ concatenate_2 (Concatenate)    (None, 1, 128)       0           ['lstm_1[0][0]',                 
+                                                                  'reshape_2[0][0]']              
+                                                                                                  
+ dense (Dense)                  (None, 1, 1)         129         ['concatenate_2[0][0]',          
+                                                                  'concatenate_4[0][0]',          
+                                                                  'concatenate_6[0][0]',          
+                                                                  'concatenate_8[0][0]',          
+                                                                  'concatenate_10[0][0]']         
+                                                                                                  
+ concatenate_3 (Concatenate)    (None, 1, 65)        0           ['dense[0][0]',                  
+                                                                  'reshape_2[0][0]']              
+                                                                                                  
+ concatenate_4 (Concatenate)    (None, 1, 128)       0           ['lstm_1[1][0]',                 
+                                                                  'reshape_2[0][0]']              
+                                                                                                  
+ concatenate_5 (Concatenate)    (None, 1, 65)        0           ['dense[1][0]',                  
+                                                                  'reshape_2[0][0]']              
+                                                                                                  
+ concatenate_6 (Concatenate)    (None, 1, 128)       0           ['lstm_1[2][0]',                 
+                                                                  'reshape_2[0][0]']              
+                                                                                                  
+ concatenate_7 (Concatenate)    (None, 1, 65)        0           ['dense[2][0]',                  
+                                                                  'reshape_2[0][0]']              
+                                                                                                  
+ concatenate_8 (Concatenate)    (None, 1, 128)       0           ['lstm_1[3][0]',                 
+                                                                  'reshape_2[0][0]']              
+                                                                                                  
+ concatenate_9 (Concatenate)    (None, 1, 65)        0           ['dense[3][0]',                  
+                                                                  'reshape_2[0][0]']              
+                                                                                                  
+ concatenate_10 (Concatenate)   (None, 1, 128)       0           ['lstm_1[4][0]',                 
+                                                                  'reshape_2[0][0]']              
+                                                                                                  
+ lambda (Lambda)                (None, 5, 1)         0           ['dense[0][0]',                  
+                                                                  'dense[1][0]',                  
+                                                                  'dense[2][0]',                  
+                                                                  'dense[3][0]',                  
+                                                                  'dense[4][0]']                  
+                                                                                                  
+==================================================================================================
+Total params: 174,689
+Trainable params: 174,689
+Non-trainable params: 0
+__________________________________________________________________________________________________
+Epoch 1/50
+29360/29360 - 1971s - loss: 2.6614e-07 - mse10: 2.6614e-07 - mse20: 2.6614e-07 - mse30: 2.6614e-07 - mse50: 2.6614e-07 - mse100: 2.6614e-07 - val_loss: 1.3541e-07 - val_mse10: 1.3541e-07 - val_mse20: 1.3541e-07 - val_mse30: 1.3541e-07 - val_mse50: 1.3541e-07 - val_mse100: 1.3541e-07 - 1971s/epoch - 67ms/step
+Epoch 2/50
+29360/29360 - 1881s - loss: 7.6049e-08 - mse10: 7.6049e-08 - mse20: 7.6049e-08 - mse30: 7.6049e-08 - mse50: 7.6049e-08 - mse100: 7.6049e-08 - val_loss: 7.6659e-08 - val_mse10: 7.6659e-08 - val_mse20: 7.6659e-08 - val_mse30: 7.6659e-08 - val_mse50: 7.6659e-08 - val_mse100: 7.6659e-08 - 1881s/epoch - 64ms/step
+Epoch 3/50
+29360/29360 - 1951s - loss: 4.7964e-08 - mse10: 4.7964e-08 - mse20: 4.7964e-08 - mse30: 4.7964e-08 - mse50: 4.7964e-08 - mse100: 4.7964e-08 - val_loss: 5.7682e-08 - val_mse10: 5.7682e-08 - val_mse20: 5.7682e-08 - val_mse30: 5.7682e-08 - val_mse50: 5.7682e-08 - val_mse100: 5.7682e-08 - 1951s/epoch - 66ms/step
+Epoch 4/50
+29360/29360 - 1893s - loss: 3.7055e-08 - mse10: 3.7055e-08 - mse20: 3.7055e-08 - mse30: 3.7055e-08 - mse50: 3.7055e-08 - mse100: 3.7055e-08 - val_loss: 4.8487e-08 - val_mse10: 4.8487e-08 - val_mse20: 4.8487e-08 - val_mse30: 4.8487e-08 - val_mse50: 4.8487e-08 - val_mse100: 4.8487e-08 - 1893s/epoch - 64ms/step
+Epoch 5/50
+29360/29360 - 1914s - loss: 3.1067e-08 - mse10: 3.1067e-08 - mse20: 3.1067e-08 - mse30: 3.1067e-08 - mse50: 3.1067e-08 - mse100: 3.1067e-08 - val_loss: 4.2374e-08 - val_mse10: 4.2374e-08 - val_mse20: 4.2374e-08 - val_mse30: 4.2374e-08 - val_mse50: 4.2374e-08 - val_mse100: 4.2374e-08 - 1914s/epoch - 65ms/step
+Epoch 6/50
+29360/29360 - 2042s - loss: 2.7247e-08 - mse10: 2.7247e-08 - mse20: 2.7247e-08 - mse30: 2.7247e-08 - mse50: 2.7247e-08 - mse100: 2.7247e-08 - val_loss: 3.8518e-08 - val_mse10: 3.8518e-08 - val_mse20: 3.8518e-08 - val_mse30: 3.8518e-08 - val_mse50: 3.8518e-08 - val_mse100: 3.8518e-08 - 2042s/epoch - 70ms/step
+Epoch 7/50
+29360/29360 - 1912s - loss: 2.4622e-08 - mse10: 2.4622e-08 - mse20: 2.4622e-08 - mse30: 2.4622e-08 - mse50: 2.4622e-08 - mse100: 2.4622e-08 - val_loss: 3.5763e-08 - val_mse10: 3.5763e-08 - val_mse20: 3.5763e-08 - val_mse30: 3.5763e-08 - val_mse50: 3.5763e-08 - val_mse100: 3.5763e-08 - 1912s/epoch - 65ms/step
+Epoch 8/50
+29360/29360 - 1915s - loss: 2.2759e-08 - mse10: 2.2759e-08 - mse20: 2.2759e-08 - mse30: 2.2759e-08 - mse50: 2.2759e-08 - mse100: 2.2759e-08 - val_loss: 3.3987e-08 - val_mse10: 3.3987e-08 - val_mse20: 3.3987e-08 - val_mse30: 3.3987e-08 - val_mse50: 3.3987e-08 - val_mse100: 3.3987e-08 - 1915s/epoch - 65ms/step
+Epoch 9/50
+29360/29360 - 1977s - loss: 2.1354e-08 - mse10: 2.1354e-08 - mse20: 2.1354e-08 - mse30: 2.1354e-08 - mse50: 2.1354e-08 - mse100: 2.1354e-08 - val_loss: 3.2082e-08 - val_mse10: 3.2082e-08 - val_mse20: 3.2082e-08 - val_mse30: 3.2082e-08 - val_mse50: 3.2082e-08 - val_mse100: 3.2082e-08 - 1977s/epoch - 67ms/step
+Epoch 10/50
+29360/29360 - 1913s - loss: 2.0275e-08 - mse10: 2.0275e-08 - mse20: 2.0275e-08 - mse30: 2.0275e-08 - mse50: 2.0275e-08 - mse100: 2.0275e-08 - val_loss: 3.0789e-08 - val_mse10: 3.0789e-08 - val_mse20: 3.0789e-08 - val_mse30: 3.0789e-08 - val_mse50: 3.0789e-08 - val_mse100: 3.0789e-08 - 1913s/epoch - 65ms/step
+Epoch 11/50
+29360/29360 - 1931s - loss: 1.9421e-08 - mse10: 1.9421e-08 - mse20: 1.9421e-08 - mse30: 1.9421e-08 - mse50: 1.9421e-08 - mse100: 1.9421e-08 - val_loss: 2.9844e-08 - val_mse10: 2.9844e-08 - val_mse20: 2.9844e-08 - val_mse30: 2.9844e-08 - val_mse50: 2.9844e-08 - val_mse100: 2.9844e-08 - 1931s/epoch - 66ms/step
+Epoch 12/50
+29360/29360 - 1997s - loss: 1.8712e-08 - mse10: 1.8712e-08 - mse20: 1.8712e-08 - mse30: 1.8712e-08 - mse50: 1.8712e-08 - mse100: 1.8712e-08 - val_loss: 2.8978e-08 - val_mse10: 2.8978e-08 - val_mse20: 2.8978e-08 - val_mse30: 2.8978e-08 - val_mse50: 2.8978e-08 - val_mse100: 2.8978e-08 - 1997s/epoch - 68ms/step
+Epoch 13/50
+29360/29360 - 1932s - loss: 1.8161e-08 - mse10: 1.8161e-08 - mse20: 1.8161e-08 - mse30: 1.8161e-08 - mse50: 1.8161e-08 - mse100: 1.8161e-08 - val_loss: 2.8246e-08 - val_mse10: 2.8246e-08 - val_mse20: 2.8246e-08 - val_mse30: 2.8246e-08 - val_mse50: 2.8246e-08 - val_mse100: 2.8246e-08 - 1932s/epoch - 66ms/step
+Epoch 14/50
+29360/29360 - 1946s - loss: 1.7690e-08 - mse10: 1.7690e-08 - mse20: 1.7690e-08 - mse30: 1.7690e-08 - mse50: 1.7690e-08 - mse100: 1.7690e-08 - val_loss: 2.7647e-08 - val_mse10: 2.7647e-08 - val_mse20: 2.7647e-08 - val_mse30: 2.7647e-08 - val_mse50: 2.7647e-08 - val_mse100: 2.7647e-08 - 1946s/epoch - 66ms/step
+Epoch 15/50
+29360/29360 - 2014s - loss: 1.7298e-08 - mse10: 1.7298e-08 - mse20: 1.7298e-08 - mse30: 1.7298e-08 - mse50: 1.7298e-08 - mse100: 1.7298e-08 - val_loss: 2.7270e-08 - val_mse10: 2.7270e-08 - val_mse20: 2.7270e-08 - val_mse30: 2.7270e-08 - val_mse50: 2.7270e-08 - val_mse100: 2.7270e-08 - 2014s/epoch - 69ms/step
+Epoch 16/50
+29360/29360 - 1966s - loss: 1.6957e-08 - mse10: 1.6957e-08 - mse20: 1.6957e-08 - mse30: 1.6957e-08 - mse50: 1.6957e-08 - mse100: 1.6957e-08 - val_loss: 2.6732e-08 - val_mse10: 2.6732e-08 - val_mse20: 2.6732e-08 - val_mse30: 2.6732e-08 - val_mse50: 2.6732e-08 - val_mse100: 2.6732e-08 - 1966s/epoch - 67ms/step
+Epoch 17/50
+29360/29360 - 1957s - loss: 1.6663e-08 - mse10: 1.6663e-08 - mse20: 1.6663e-08 - mse30: 1.6663e-08 - mse50: 1.6663e-08 - mse100: 1.6663e-08 - val_loss: 2.6349e-08 - val_mse10: 2.6349e-08 - val_mse20: 2.6349e-08 - val_mse30: 2.6349e-08 - val_mse50: 2.6349e-08 - val_mse100: 2.6349e-08 - 1957s/epoch - 67ms/step
+Epoch 18/50
+29360/29360 - 2077s - loss: 1.6412e-08 - mse10: 1.6412e-08 - mse20: 1.6412e-08 - mse30: 1.6412e-08 - mse50: 1.6412e-08 - mse100: 1.6412e-08 - val_loss: 2.5984e-08 - val_mse10: 2.5984e-08 - val_mse20: 2.5984e-08 - val_mse30: 2.5984e-08 - val_mse50: 2.5984e-08 - val_mse100: 2.5984e-08 - 2077s/epoch - 71ms/step
+Epoch 19/50
+29360/29360 - 1955s - loss: 1.6191e-08 - mse10: 1.6191e-08 - mse20: 1.6191e-08 - mse30: 1.6191e-08 - mse50: 1.6191e-08 - mse100: 1.6191e-08 - val_loss: 2.5708e-08 - val_mse10: 2.5708e-08 - val_mse20: 2.5708e-08 - val_mse30: 2.5708e-08 - val_mse50: 2.5708e-08 - val_mse100: 2.5708e-08 - 1955s/epoch - 67ms/step
+Epoch 20/50
+29360/29360 - 2013s - loss: 1.5990e-08 - mse10: 1.5990e-08 - mse20: 1.5990e-08 - mse30: 1.5990e-08 - mse50: 1.5990e-08 - mse100: 1.5990e-08 - val_loss: 2.5562e-08 - val_mse10: 2.5562e-08 - val_mse20: 2.5562e-08 - val_mse30: 2.5562e-08 - val_mse50: 2.5562e-08 - val_mse100: 2.5562e-08 - 2013s/epoch - 69ms/step
+Epoch 21/50
+29360/29360 - 2116s - loss: 1.5814e-08 - mse10: 1.5814e-08 - mse20: 1.5814e-08 - mse30: 1.5814e-08 - mse50: 1.5814e-08 - mse100: 1.5814e-08 - val_loss: 2.5191e-08 - val_mse10: 2.5191e-08 - val_mse20: 2.5191e-08 - val_mse30: 2.5191e-08 - val_mse50: 2.5191e-08 - val_mse100: 2.5191e-08 - 2116s/epoch - 72ms/step
+Epoch 22/50
+29360/29360 - 1970s - loss: 1.5653e-08 - mse10: 1.5653e-08 - mse20: 1.5653e-08 - mse30: 1.5653e-08 - mse50: 1.5653e-08 - mse100: 1.5653e-08 - val_loss: 2.4977e-08 - val_mse10: 2.4977e-08 - val_mse20: 2.4977e-08 - val_mse30: 2.4977e-08 - val_mse50: 2.4977e-08 - val_mse100: 2.4977e-08 - 1970s/epoch - 67ms/step
+Epoch 23/50
+29360/29360 - 2028s - loss: 1.5514e-08 - mse10: 1.5514e-08 - mse20: 1.5514e-08 - mse30: 1.5514e-08 - mse50: 1.5514e-08 - mse100: 1.5514e-08 - val_loss: 2.4798e-08 - val_mse10: 2.4798e-08 - val_mse20: 2.4798e-08 - val_mse30: 2.4798e-08 - val_mse50: 2.4798e-08 - val_mse100: 2.4798e-08 - 2028s/epoch - 69ms/step
+Epoch 24/50
+29360/29360 - 2052s - loss: 1.5387e-08 - mse10: 1.5387e-08 - mse20: 1.5387e-08 - mse30: 1.5387e-08 - mse50: 1.5387e-08 - mse100: 1.5387e-08 - val_loss: 2.4609e-08 - val_mse10: 2.4609e-08 - val_mse20: 2.4609e-08 - val_mse30: 2.4609e-08 - val_mse50: 2.4609e-08 - val_mse100: 2.4609e-08 - 2052s/epoch - 70ms/step
+Epoch 25/50
+29360/29360 - 2001s - loss: 1.5268e-08 - mse10: 1.5268e-08 - mse20: 1.5268e-08 - mse30: 1.5268e-08 - mse50: 1.5268e-08 - mse100: 1.5268e-08 - val_loss: 2.4458e-08 - val_mse10: 2.4458e-08 - val_mse20: 2.4458e-08 - val_mse30: 2.4458e-08 - val_mse50: 2.4458e-08 - val_mse100: 2.4458e-08 - 2001s/epoch - 68ms/step
+Epoch 26/50
+29360/29360 - 2009s - loss: 1.5155e-08 - mse10: 1.5155e-08 - mse20: 1.5155e-08 - mse30: 1.5155e-08 - mse50: 1.5155e-08 - mse100: 1.5155e-08 - val_loss: 2.4301e-08 - val_mse10: 2.4301e-08 - val_mse20: 2.4301e-08 - val_mse30: 2.4301e-08 - val_mse50: 2.4301e-08 - val_mse100: 2.4301e-08 - 2009s/epoch - 68ms/step
+Epoch 27/50
+29360/29360 - 2111s - loss: 1.5059e-08 - mse10: 1.5059e-08 - mse20: 1.5059e-08 - mse30: 1.5059e-08 - mse50: 1.5059e-08 - mse100: 1.5059e-08 - val_loss: 2.4160e-08 - val_mse10: 2.4160e-08 - val_mse20: 2.4160e-08 - val_mse30: 2.4160e-08 - val_mse50: 2.4160e-08 - val_mse100: 2.4160e-08 - 2111s/epoch - 72ms/step
+Epoch 28/50
+29360/29360 - 1898s - loss: 1.4973e-08 - mse10: 1.4973e-08 - mse20: 1.4973e-08 - mse30: 1.4973e-08 - mse50: 1.4973e-08 - mse100: 1.4973e-08 - val_loss: 2.4060e-08 - val_mse10: 2.4060e-08 - val_mse20: 2.4060e-08 - val_mse30: 2.4060e-08 - val_mse50: 2.4060e-08 - val_mse100: 2.4060e-08 - 1898s/epoch - 65ms/step
+Epoch 29/50
+29360/29360 - 1894s - loss: 1.4889e-08 - mse10: 1.4889e-08 - mse20: 1.4889e-08 - mse30: 1.4889e-08 - mse50: 1.4889e-08 - mse100: 1.4889e-08 - val_loss: 2.3969e-08 - val_mse10: 2.3969e-08 - val_mse20: 2.3969e-08 - val_mse30: 2.3969e-08 - val_mse50: 2.3969e-08 - val_mse100: 2.3969e-08 - 1894s/epoch - 65ms/step
+Epoch 30/50
+29360/29360 - 2001s - loss: 1.4812e-08 - mse10: 1.4812e-08 - mse20: 1.4812e-08 - mse30: 1.4812e-08 - mse50: 1.4812e-08 - mse100: 1.4812e-08 - val_loss: 2.3804e-08 - val_mse10: 2.3804e-08 - val_mse20: 2.3804e-08 - val_mse30: 2.3804e-08 - val_mse50: 2.3804e-08 - val_mse100: 2.3804e-08 - 2001s/epoch - 68ms/step
+Epoch 31/50
+29360/29360 - 1988s - loss: 1.4739e-08 - mse10: 1.4739e-08 - mse20: 1.4739e-08 - mse30: 1.4739e-08 - mse50: 1.4739e-08 - mse100: 1.4739e-08 - val_loss: 2.3738e-08 - val_mse10: 2.3738e-08 - val_mse20: 2.3738e-08 - val_mse30: 2.3738e-08 - val_mse50: 2.3738e-08 - val_mse100: 2.3738e-08 - 1988s/epoch - 68ms/step
+Epoch 32/50
+29360/29360 - 1965s - loss: 1.4682e-08 - mse10: 1.4682e-08 - mse20: 1.4682e-08 - mse30: 1.4682e-08 - mse50: 1.4682e-08 - mse100: 1.4682e-08 - val_loss: 2.3619e-08 - val_mse10: 2.3619e-08 - val_mse20: 2.3619e-08 - val_mse30: 2.3619e-08 - val_mse50: 2.3619e-08 - val_mse100: 2.3619e-08 - 1965s/epoch - 67ms/step
+Epoch 33/50
+29360/29360 - 1983s - loss: 1.4616e-08 - mse10: 1.4616e-08 - mse20: 1.4616e-08 - mse30: 1.4616e-08 - mse50: 1.4616e-08 - mse100: 1.4616e-08 - val_loss: 2.3586e-08 - val_mse10: 2.3586e-08 - val_mse20: 2.3586e-08 - val_mse30: 2.3586e-08 - val_mse50: 2.3586e-08 - val_mse100: 2.3586e-08 - 1983s/epoch - 68ms/step
+Epoch 34/50
+29360/29360 - 2173s - loss: 1.4559e-08 - mse10: 1.4559e-08 - mse20: 1.4559e-08 - mse30: 1.4559e-08 - mse50: 1.4559e-08 - mse100: 1.4559e-08 - val_loss: 2.3430e-08 - val_mse10: 2.3430e-08 - val_mse20: 2.3430e-08 - val_mse30: 2.3430e-08 - val_mse50: 2.3430e-08 - val_mse100: 2.3430e-08 - 2173s/epoch - 74ms/step
+Epoch 35/50
+29360/29360 - 1937s - loss: 1.4510e-08 - mse10: 1.4510e-08 - mse20: 1.4510e-08 - mse30: 1.4510e-08 - mse50: 1.4510e-08 - mse100: 1.4510e-08 - val_loss: 2.3422e-08 - val_mse10: 2.3422e-08 - val_mse20: 2.3422e-08 - val_mse30: 2.3422e-08 - val_mse50: 2.3422e-08 - val_mse100: 2.3422e-08 - 1937s/epoch - 66ms/step
+Epoch 36/50
+29360/29360 - 1959s - loss: 1.4459e-08 - mse10: 1.4459e-08 - mse20: 1.4459e-08 - mse30: 1.4459e-08 - mse50: 1.4459e-08 - mse100: 1.4459e-08 - val_loss: 2.3367e-08 - val_mse10: 2.3367e-08 - val_mse20: 2.3367e-08 - val_mse30: 2.3367e-08 - val_mse50: 2.3367e-08 - val_mse100: 2.3367e-08 - 1959s/epoch - 67ms/step
+Epoch 37/50
+29360/29360 - 2010s - loss: 1.4407e-08 - mse10: 1.4407e-08 - mse20: 1.4407e-08 - mse30: 1.4407e-08 - mse50: 1.4407e-08 - mse100: 1.4407e-08 - val_loss: 2.3233e-08 - val_mse10: 2.3233e-08 - val_mse20: 2.3233e-08 - val_mse30: 2.3233e-08 - val_mse50: 2.3233e-08 - val_mse100: 2.3233e-08 - 2010s/epoch - 68ms/step
+Epoch 38/50
+29360/29360 - 2044s - loss: 1.4368e-08 - mse10: 1.4368e-08 - mse20: 1.4368e-08 - mse30: 1.4368e-08 - mse50: 1.4368e-08 - mse100: 1.4368e-08 - val_loss: 2.3462e-08 - val_mse10: 2.3462e-08 - val_mse20: 2.3462e-08 - val_mse30: 2.3462e-08 - val_mse50: 2.3462e-08 - val_mse100: 2.3462e-08 - 2044s/epoch - 70ms/step
+Epoch 39/50
+29360/29360 - 2103s - loss: 1.4323e-08 - mse10: 1.4323e-08 - mse20: 1.4323e-08 - mse30: 1.4323e-08 - mse50: 1.4323e-08 - mse100: 1.4323e-08 - val_loss: 2.3219e-08 - val_mse10: 2.3219e-08 - val_mse20: 2.3219e-08 - val_mse30: 2.3219e-08 - val_mse50: 2.3219e-08 - val_mse100: 2.3219e-08 - 2103s/epoch - 72ms/step
+Epoch 40/50
+29360/29360 - 2180s - loss: 1.4289e-08 - mse10: 1.4289e-08 - mse20: 1.4289e-08 - mse30: 1.4289e-08 - mse50: 1.4289e-08 - mse100: 1.4289e-08 - val_loss: 2.3056e-08 - val_mse10: 2.3056e-08 - val_mse20: 2.3056e-08 - val_mse30: 2.3056e-08 - val_mse50: 2.3056e-08 - val_mse100: 2.3056e-08 - 2180s/epoch - 74ms/step
+Epoch 41/50
+29360/29360 - 2025s - loss: 1.4253e-08 - mse10: 1.4253e-08 - mse20: 1.4253e-08 - mse30: 1.4253e-08 - mse50: 1.4253e-08 - mse100: 1.4253e-08 - val_loss: 2.3026e-08 - val_mse10: 2.3026e-08 - val_mse20: 2.3026e-08 - val_mse30: 2.3026e-08 - val_mse50: 2.3026e-08 - val_mse100: 2.3026e-08 - 2025s/epoch - 69ms/step
+Epoch 42/50
+29360/29360 - 2031s - loss: 1.4218e-08 - mse10: 1.4218e-08 - mse20: 1.4218e-08 - mse30: 1.4218e-08 - mse50: 1.4218e-08 - mse100: 1.4218e-08 - val_loss: 2.3035e-08 - val_mse10: 2.3035e-08 - val_mse20: 2.3035e-08 - val_mse30: 2.3035e-08 - val_mse50: 2.3035e-08 - val_mse100: 2.3035e-08 - 2031s/epoch - 69ms/step
+Epoch 43/50
+29360/29360 - 2040s - loss: 1.4183e-08 - mse10: 1.4183e-08 - mse20: 1.4183e-08 - mse30: 1.4183e-08 - mse50: 1.4183e-08 - mse100: 1.4183e-08 - val_loss: 2.3045e-08 - val_mse10: 2.3045e-08 - val_mse20: 2.3045e-08 - val_mse30: 2.3045e-08 - val_mse50: 2.3045e-08 - val_mse100: 2.3045e-08 - 2040s/epoch - 69ms/step
+Epoch 44/50
+29360/29360 - 2020s - loss: 1.4150e-08 - mse10: 1.4150e-08 - mse20: 1.4150e-08 - mse30: 1.4150e-08 - mse50: 1.4150e-08 - mse100: 1.4150e-08 - val_loss: 2.2845e-08 - val_mse10: 2.2845e-08 - val_mse20: 2.2845e-08 - val_mse30: 2.2845e-08 - val_mse50: 2.2845e-08 - val_mse100: 2.2845e-08 - 2020s/epoch - 69ms/step
+Epoch 45/50
+29360/29360 - 2003s - loss: 1.4116e-08 - mse10: 1.4116e-08 - mse20: 1.4116e-08 - mse30: 1.4116e-08 - mse50: 1.4116e-08 - mse100: 1.4116e-08 - val_loss: 2.2788e-08 - val_mse10: 2.2788e-08 - val_mse20: 2.2788e-08 - val_mse30: 2.2788e-08 - val_mse50: 2.2788e-08 - val_mse100: 2.2788e-08 - 2003s/epoch - 68ms/step
+Epoch 46/50
+29360/29360 - 1934s - loss: 1.4088e-08 - mse10: 1.4088e-08 - mse20: 1.4088e-08 - mse30: 1.4088e-08 - mse50: 1.4088e-08 - mse100: 1.4088e-08 - val_loss: 2.2755e-08 - val_mse10: 2.2755e-08 - val_mse20: 2.2755e-08 - val_mse30: 2.2755e-08 - val_mse50: 2.2755e-08 - val_mse100: 2.2755e-08 - 1934s/epoch - 66ms/step
+Epoch 47/50
+29360/29360 - 1949s - loss: 1.4066e-08 - mse10: 1.4066e-08 - mse20: 1.4066e-08 - mse30: 1.4066e-08 - mse50: 1.4066e-08 - mse100: 1.4066e-08 - val_loss: 2.2777e-08 - val_mse10: 2.2777e-08 - val_mse20: 2.2777e-08 - val_mse30: 2.2777e-08 - val_mse50: 2.2777e-08 - val_mse100: 2.2777e-08 - 1949s/epoch - 66ms/step
+Epoch 48/50
+29360/29360 - 1944s - loss: 1.4041e-08 - mse10: 1.4041e-08 - mse20: 1.4041e-08 - mse30: 1.4041e-08 - mse50: 1.4041e-08 - mse100: 1.4041e-08 - val_loss: 2.2713e-08 - val_mse10: 2.2713e-08 - val_mse20: 2.2713e-08 - val_mse30: 2.2713e-08 - val_mse50: 2.2713e-08 - val_mse100: 2.2713e-08 - 1944s/epoch - 66ms/step
+Epoch 49/50
+29360/29360 - 1947s - loss: 1.4014e-08 - mse10: 1.4014e-08 - mse20: 1.4014e-08 - mse30: 1.4014e-08 - mse50: 1.4014e-08 - mse100: 1.4014e-08 - val_loss: 2.2656e-08 - val_mse10: 2.2656e-08 - val_mse20: 2.2656e-08 - val_mse30: 2.2656e-08 - val_mse50: 2.2656e-08 - val_mse100: 2.2656e-08 - 1947s/epoch - 66ms/step
+Epoch 50/50
+29360/29360 - 1976s - loss: 1.3990e-08 - mse10: 1.3990e-08 - mse20: 1.3990e-08 - mse30: 1.3990e-08 - mse50: 1.3990e-08 - mse100: 1.3990e-08 - val_loss: 2.2607e-08 - val_mse10: 2.2607e-08 - val_mse20: 2.2607e-08 - val_mse30: 2.2607e-08 - val_mse50: 2.2607e-08 - val_mse100: 2.2607e-08 - 1976s/epoch - 67ms/step
+Prediction horizon: 10  orderbook updates
+MSE: 2.874930786699676e-09
+MAE: 3.226358098701779e-05
+r2: -0.5892923715241334
+Prediction horizon: 20  orderbook updates
+MSE: 4.0012163347829845e-09
+MAE: 3.773132606879376e-05
+r2: -0.19054848033249527
+Prediction horizon: 30  orderbook updates
+MSE: 5.472197663856395e-09
+MAE: 4.5012191780998677e-05
+r2: -0.1083878651638206
+Prediction horizon: 50  orderbook updates
+MSE: 8.641650401890217e-09
+MAE: 5.9912762685553844e-05
+r2: -0.07040860070002752
+Prediction horizon: 100  orderbook updates
+MSE: 1.608172999298747e-08
+MAE: 9.041694035637931e-05
+r2: -0.04293149248306882
+##################### deepVOL attention #####################
+Model: "model_1"
+__________________________________________________________________________________________________
+ Layer (type)                   Output Shape         Param #     Connected to                     
+==================================================================================================
+ input_3 (InputLayer)           [(None, 100, 40, 1)  0           []                               
+                                ]                                                                 
+                                                                                                  
+ custom_reshape_1 (CustomReshap  (None, 100, 20, 2,   0          ['input_3[0][0]']                
+ e)                             1)                                                                
+                                                                                                  
+ conv3d_1 (Conv3D)              (None, 100, 19, 1,   160         ['custom_reshape_1[0][0]']       
+                                32)                                                               
+                                                                                                  
+ reshape_3 (Reshape)            (None, 100, 19, 32)  0           ['conv3d_1[0][0]']               
+                                                                                                  
+ leaky_re_lu_14 (LeakyReLU)     (None, 100, 19, 32)  0           ['reshape_3[0][0]']              
+                                                                                                  
+ conv2d_13 (Conv2D)             (None, 100, 19, 32)  4128        ['leaky_re_lu_14[0][0]']         
+                                                                                                  
+ leaky_re_lu_15 (LeakyReLU)     (None, 100, 19, 32)  0           ['conv2d_13[0][0]']              
+                                                                                                  
+ conv2d_14 (Conv2D)             (None, 100, 19, 32)  4128        ['leaky_re_lu_15[0][0]']         
+                                                                                                  
+ leaky_re_lu_16 (LeakyReLU)     (None, 100, 19, 32)  0           ['conv2d_14[0][0]']              
+                                                                                                  
+ conv2d_15 (Conv2D)             (None, 100, 9, 32)   2080        ['leaky_re_lu_16[0][0]']         
+                                                                                                  
+ leaky_re_lu_17 (LeakyReLU)     (None, 100, 9, 32)   0           ['conv2d_15[0][0]']              
+                                                                                                  
+ conv2d_16 (Conv2D)             (None, 100, 9, 32)   4128        ['leaky_re_lu_17[0][0]']         
+                                                                                                  
+ leaky_re_lu_18 (LeakyReLU)     (None, 100, 9, 32)   0           ['conv2d_16[0][0]']              
+                                                                                                  
+ conv2d_17 (Conv2D)             (None, 100, 9, 32)   4128        ['leaky_re_lu_18[0][0]']         
+                                                                                                  
+ leaky_re_lu_19 (LeakyReLU)     (None, 100, 9, 32)   0           ['conv2d_17[0][0]']              
+                                                                                                  
+ conv2d_18 (Conv2D)             (None, 100, 1, 32)   9248        ['leaky_re_lu_19[0][0]']         
+                                                                                                  
+ leaky_re_lu_20 (LeakyReLU)     (None, 100, 1, 32)   0           ['conv2d_18[0][0]']              
+                                                                                                  
+ conv2d_19 (Conv2D)             (None, 100, 1, 32)   4128        ['leaky_re_lu_20[0][0]']         
+                                                                                                  
+ leaky_re_lu_21 (LeakyReLU)     (None, 100, 1, 32)   0           ['conv2d_19[0][0]']              
+                                                                                                  
+ conv2d_20 (Conv2D)             (None, 100, 1, 32)   4128        ['leaky_re_lu_21[0][0]']         
+                                                                                                  
+ leaky_re_lu_22 (LeakyReLU)     (None, 100, 1, 32)   0           ['conv2d_20[0][0]']              
+                                                                                                  
+ conv2d_21 (Conv2D)             (None, 100, 1, 64)   2112        ['leaky_re_lu_22[0][0]']         
+                                                                                                  
+ conv2d_23 (Conv2D)             (None, 100, 1, 64)   2112        ['leaky_re_lu_22[0][0]']         
+                                                                                                  
+ leaky_re_lu_23 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_21[0][0]']              
+                                                                                                  
+ leaky_re_lu_25 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_23[0][0]']              
+                                                                                                  
+ max_pooling2d_1 (MaxPooling2D)  (None, 100, 1, 32)  0           ['leaky_re_lu_22[0][0]']         
+                                                                                                  
+ conv2d_22 (Conv2D)             (None, 100, 1, 64)   12352       ['leaky_re_lu_23[0][0]']         
+                                                                                                  
+ conv2d_24 (Conv2D)             (None, 100, 1, 64)   20544       ['leaky_re_lu_25[0][0]']         
+                                                                                                  
+ conv2d_25 (Conv2D)             (None, 100, 1, 64)   2112        ['max_pooling2d_1[0][0]']        
+                                                                                                  
+ leaky_re_lu_24 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_22[0][0]']              
+                                                                                                  
+ leaky_re_lu_26 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_24[0][0]']              
+                                                                                                  
+ leaky_re_lu_27 (LeakyReLU)     (None, 100, 1, 64)   0           ['conv2d_25[0][0]']              
+                                                                                                  
+ concatenate_12 (Concatenate)   (None, 100, 1, 192)  0           ['leaky_re_lu_24[0][0]',         
+                                                                  'leaky_re_lu_26[0][0]',         
+                                                                  'leaky_re_lu_27[0][0]']         
+                                                                                                  
+ reshape_4 (Reshape)            (None, 100, 192)     0           ['concatenate_12[0][0]']         
+                                                                                                  
+ dropout_1 (Dropout)            (None, 100, 192)     0           ['reshape_4[0][0]']              
+                                                                                                  
+ lstm_2 (LSTM)                  [(None, 100, 64),    65792       ['dropout_1[0][0]']              
+                                 (None, 64),                                                      
+                                 (None, 64)]                                                      
+                                                                                                  
+ input_4 (InputLayer)           [(None, 1, 1)]       0           []                               
+                                                                                                  
+ reshape_5 (Reshape)            (None, 1, 64)        0           ['lstm_2[0][1]']                 
+                                                                                                  
+ concatenate_13 (Concatenate)   (None, 1, 65)        0           ['input_4[0][0]',                
+                                                                  'reshape_5[0][0]']              
+                                                                                                  
+ lstm_3 (LSTM)                  [(None, 1, 64),      33280       ['concatenate_13[0][0]',         
+                                 (None, 64),                      'lstm_2[0][1]',                 
+                                 (None, 64)]                      'lstm_2[0][2]',                 
+                                                                  'concatenate_15[0][0]',         
+                                                                  'lstm_3[0][1]',                 
+                                                                  'lstm_3[0][2]',                 
+                                                                  'concatenate_17[0][0]',         
+                                                                  'lstm_3[1][1]',                 
+                                                                  'lstm_3[1][2]',                 
+                                                                  'concatenate_19[0][0]',         
+                                                                  'lstm_3[2][1]',                 
+                                                                  'lstm_3[2][2]',                 
+                                                                  'concatenate_21[0][0]',         
+                                                                  'lstm_3[3][1]',                 
+                                                                  'lstm_3[3][2]']                 
+                                                                                                  
+ dot (Dot)                      (None, 1, 100)       0           ['lstm_3[0][0]',                 
+                                                                  'lstm_2[0][0]']                 
+                                                                                                  
+ activation (Activation)        (None, 1, 100)       0           ['dot[0][0]']                    
+                                                                                                  
+ dot_1 (Dot)                    (None, 1, 64)        0           ['activation[0][0]',             
+                                                                  'lstm_2[0][0]']                 
+                                                                                                  
+ batch_normalization (BatchNorm  (None, 1, 64)       256         ['dot_1[0][0]']                  
+ alization)                                                                                       
+                                                                                                  
+ concatenate_14 (Concatenate)   (None, 1, 128)       0           ['batch_normalization[0][0]',    
+                                                                  'lstm_3[0][0]']                 
+                                                                                                  
+ output_layer (Dense)           (None, 1, 1)         129         ['concatenate_14[0][0]',         
+                                                                  'concatenate_16[0][0]',         
+                                                                  'concatenate_18[0][0]',         
+                                                                  'concatenate_20[0][0]',         
+                                                                  'concatenate_22[0][0]']         
+                                                                                                  
+ concatenate_15 (Concatenate)   (None, 1, 65)        0           ['output_layer[0][0]',           
+                                                                  'batch_normalization[0][0]']    
+                                                                                                  
+ dot_2 (Dot)                    (None, 1, 100)       0           ['lstm_3[1][0]',                 
+                                                                  'lstm_2[0][0]']                 
+                                                                                                  
+ activation_1 (Activation)      (None, 1, 100)       0           ['dot_2[0][0]']                  
+                                                                                                  
+ dot_3 (Dot)                    (None, 1, 64)        0           ['activation_1[0][0]',           
+                                                                  'lstm_2[0][0]']                 
+                                                                                                  
+ batch_normalization_1 (BatchNo  (None, 1, 64)       256         ['dot_3[0][0]']                  
+ rmalization)                                                                                     
+                                                                                                  
+ concatenate_16 (Concatenate)   (None, 1, 128)       0           ['batch_normalization_1[0][0]',  
+                                                                  'lstm_3[1][0]']                 
+                                                                                                  
+ concatenate_17 (Concatenate)   (None, 1, 65)        0           ['output_layer[1][0]',           
+                                                                  'batch_normalization_1[0][0]']  
+                                                                                                  
+ dot_4 (Dot)                    (None, 1, 100)       0           ['lstm_3[2][0]',                 
+                                                                  'lstm_2[0][0]']                 
+                                                                                                  
+ activation_2 (Activation)      (None, 1, 100)       0           ['dot_4[0][0]']                  
+                                                                                                  
+ dot_5 (Dot)                    (None, 1, 64)        0           ['activation_2[0][0]',           
+                                                                  'lstm_2[0][0]']                 
+                                                                                                  
+ batch_normalization_2 (BatchNo  (None, 1, 64)       256         ['dot_5[0][0]']                  
+ rmalization)                                                                                     
+                                                                                                  
+ concatenate_18 (Concatenate)   (None, 1, 128)       0           ['batch_normalization_2[0][0]',  
+                                                                  'lstm_3[2][0]']                 
+                                                                                                  
+ concatenate_19 (Concatenate)   (None, 1, 65)        0           ['output_layer[2][0]',           
+                                                                  'batch_normalization_2[0][0]']  
+                                                                                                  
+ dot_6 (Dot)                    (None, 1, 100)       0           ['lstm_3[3][0]',                 
+                                                                  'lstm_2[0][0]']                 
+                                                                                                  
+ activation_3 (Activation)      (None, 1, 100)       0           ['dot_6[0][0]']                  
+                                                                                                  
+ dot_7 (Dot)                    (None, 1, 64)        0           ['activation_3[0][0]',           
+                                                                  'lstm_2[0][0]']                 
+                                                                                                  
+ batch_normalization_3 (BatchNo  (None, 1, 64)       256         ['dot_7[0][0]']                  
+ rmalization)                                                                                     
+                                                                                                  
+ concatenate_20 (Concatenate)   (None, 1, 128)       0           ['batch_normalization_3[0][0]',  
+                                                                  'lstm_3[3][0]']                 
+                                                                                                  
+ concatenate_21 (Concatenate)   (None, 1, 65)        0           ['output_layer[3][0]',           
+                                                                  'batch_normalization_3[0][0]']  
+                                                                                                  
+ dot_8 (Dot)                    (None, 1, 100)       0           ['lstm_3[4][0]',                 
+                                                                  'lstm_2[0][0]']                 
+                                                                                                  
+ activation_4 (Activation)      (None, 1, 100)       0           ['dot_8[0][0]']                  
+                                                                                                  
+ dot_9 (Dot)                    (None, 1, 64)        0           ['activation_4[0][0]',           
+                                                                  'lstm_2[0][0]']                 
+                                                                                                  
+ batch_normalization_4 (BatchNo  (None, 1, 64)       256         ['dot_9[0][0]']                  
+ rmalization)                                                                                     
+                                                                                                  
+ concatenate_22 (Concatenate)   (None, 1, 128)       0           ['batch_normalization_4[0][0]',  
+                                                                  'lstm_3[4][0]']                 
+                                                                                                  
+ outputs (Lambda)               (None, 5, 1)         0           ['output_layer[0][0]',           
+                                                                  'output_layer[1][0]',           
+                                                                  'output_layer[2][0]',           
+                                                                  'output_layer[3][0]',           
+                                                                  'output_layer[4][0]']           
+                                                                                                  
+==================================================================================================
+Total params: 175,969
+Trainable params: 175,329
+Non-trainable params: 640
+__________________________________________________________________________________________________
+Epoch 1/50
+29360/29360 - 2144s - loss: 9.5602e-07 - mse10: 9.5602e-07 - mse20: 9.5602e-07 - mse30: 9.5602e-07 - mse50: 9.5602e-07 - mse100: 9.5602e-07 - val_loss: 1.4362e-07 - val_mse10: 1.4362e-07 - val_mse20: 1.4362e-07 - val_mse30: 1.4362e-07 - val_mse50: 1.4362e-07 - val_mse100: 1.4362e-07 - 2144s/epoch - 73ms/step
+Epoch 2/50
+29360/29360 - 2142s - loss: 6.6602e-08 - mse10: 6.6602e-08 - mse20: 6.6602e-08 - mse30: 6.6602e-08 - mse50: 6.6602e-08 - mse100: 6.6602e-08 - val_loss: 1.1089e-07 - val_mse10: 1.1089e-07 - val_mse20: 1.1089e-07 - val_mse30: 1.1089e-07 - val_mse50: 1.1089e-07 - val_mse100: 1.1089e-07 - 2142s/epoch - 73ms/step
+Epoch 3/50
+29360/29360 - 2163s - loss: 5.5162e-08 - mse10: 5.5162e-08 - mse20: 5.5162e-08 - mse30: 5.5162e-08 - mse50: 5.5162e-08 - mse100: 5.5162e-08 - val_loss: 9.4941e-08 - val_mse10: 9.4941e-08 - val_mse20: 9.4941e-08 - val_mse30: 9.4941e-08 - val_mse50: 9.4941e-08 - val_mse100: 9.4941e-08 - 2163s/epoch - 74ms/step
+Epoch 4/50
+29360/29360 - 2161s - loss: 4.8289e-08 - mse10: 4.8289e-08 - mse20: 4.8289e-08 - mse30: 4.8289e-08 - mse50: 4.8289e-08 - mse100: 4.8289e-08 - val_loss: 8.7566e-08 - val_mse10: 8.7566e-08 - val_mse20: 8.7566e-08 - val_mse30: 8.7566e-08 - val_mse50: 8.7566e-08 - val_mse100: 8.7566e-08 - 2161s/epoch - 74ms/step
+Epoch 5/50
+29360/29360 - 2176s - loss: 4.3229e-08 - mse10: 4.3229e-08 - mse20: 4.3229e-08 - mse30: 4.3229e-08 - mse50: 4.3229e-08 - mse100: 4.3229e-08 - val_loss: 7.8978e-08 - val_mse10: 7.8978e-08 - val_mse20: 7.8978e-08 - val_mse30: 7.8978e-08 - val_mse50: 7.8978e-08 - val_mse100: 7.8978e-08 - 2176s/epoch - 74ms/step
+Epoch 6/50
+29360/29360 - 2187s - loss: 3.9375e-08 - mse10: 3.9375e-08 - mse20: 3.9375e-08 - mse30: 3.9375e-08 - mse50: 3.9375e-08 - mse100: 3.9375e-08 - val_loss: 7.0954e-08 - val_mse10: 7.0954e-08 - val_mse20: 7.0954e-08 - val_mse30: 7.0954e-08 - val_mse50: 7.0954e-08 - val_mse100: 7.0954e-08 - 2187s/epoch - 74ms/step
+Epoch 7/50
+29360/29360 - 2188s - loss: 3.6340e-08 - mse10: 3.6340e-08 - mse20: 3.6340e-08 - mse30: 3.6340e-08 - mse50: 3.6340e-08 - mse100: 3.6340e-08 - val_loss: 6.4358e-08 - val_mse10: 6.4358e-08 - val_mse20: 6.4358e-08 - val_mse30: 6.4358e-08 - val_mse50: 6.4358e-08 - val_mse100: 6.4358e-08 - 2188s/epoch - 75ms/step
+Epoch 8/50
+29360/29360 - 2205s - loss: 3.3729e-08 - mse10: 3.3729e-08 - mse20: 3.3729e-08 - mse30: 3.3729e-08 - mse50: 3.3729e-08 - mse100: 3.3729e-08 - val_loss: 6.1461e-08 - val_mse10: 6.1461e-08 - val_mse20: 6.1461e-08 - val_mse30: 6.1461e-08 - val_mse50: 6.1461e-08 - val_mse100: 6.1461e-08 - 2205s/epoch - 75ms/step
+Epoch 9/50
+29360/29360 - 2197s - loss: 3.1663e-08 - mse10: 3.1663e-08 - mse20: 3.1663e-08 - mse30: 3.1663e-08 - mse50: 3.1663e-08 - mse100: 3.1663e-08 - val_loss: 5.9443e-08 - val_mse10: 5.9443e-08 - val_mse20: 5.9443e-08 - val_mse30: 5.9443e-08 - val_mse50: 5.9443e-08 - val_mse100: 5.9443e-08 - 2197s/epoch - 75ms/step
+Epoch 10/50
+29360/29360 - 2190s - loss: 2.9876e-08 - mse10: 2.9876e-08 - mse20: 2.9876e-08 - mse30: 2.9876e-08 - mse50: 2.9876e-08 - mse100: 2.9876e-08 - val_loss: 5.4829e-08 - val_mse10: 5.4829e-08 - val_mse20: 5.4829e-08 - val_mse30: 5.4829e-08 - val_mse50: 5.4829e-08 - val_mse100: 5.4829e-08 - 2190s/epoch - 75ms/step
+Epoch 11/50
+29360/29360 - 2198s - loss: 2.8351e-08 - mse10: 2.8351e-08 - mse20: 2.8351e-08 - mse30: 2.8351e-08 - mse50: 2.8351e-08 - mse100: 2.8351e-08 - val_loss: 5.2985e-08 - val_mse10: 5.2985e-08 - val_mse20: 5.2985e-08 - val_mse30: 5.2985e-08 - val_mse50: 5.2985e-08 - val_mse100: 5.2985e-08 - 2198s/epoch - 75ms/step
+Epoch 12/50
+29360/29360 - 2200s - loss: 2.7057e-08 - mse10: 2.7057e-08 - mse20: 2.7057e-08 - mse30: 2.7057e-08 - mse50: 2.7057e-08 - mse100: 2.7057e-08 - val_loss: 4.9497e-08 - val_mse10: 4.9497e-08 - val_mse20: 4.9497e-08 - val_mse30: 4.9497e-08 - val_mse50: 4.9497e-08 - val_mse100: 4.9497e-08 - 2200s/epoch - 75ms/step
+Epoch 13/50
+29360/29360 - 2177s - loss: 2.5945e-08 - mse10: 2.5945e-08 - mse20: 2.5945e-08 - mse30: 2.5945e-08 - mse50: 2.5945e-08 - mse100: 2.5945e-08 - val_loss: 4.7970e-08 - val_mse10: 4.7970e-08 - val_mse20: 4.7970e-08 - val_mse30: 4.7970e-08 - val_mse50: 4.7970e-08 - val_mse100: 4.7970e-08 - 2177s/epoch - 74ms/step
+Epoch 14/50
+29360/29360 - 2182s - loss: 2.4951e-08 - mse10: 2.4951e-08 - mse20: 2.4951e-08 - mse30: 2.4951e-08 - mse50: 2.4951e-08 - mse100: 2.4951e-08 - val_loss: 4.7100e-08 - val_mse10: 4.7100e-08 - val_mse20: 4.7100e-08 - val_mse30: 4.7100e-08 - val_mse50: 4.7100e-08 - val_mse100: 4.7100e-08 - 2182s/epoch - 74ms/step
+Epoch 15/50
+29360/29360 - 2195s - loss: 2.4130e-08 - mse10: 2.4130e-08 - mse20: 2.4130e-08 - mse30: 2.4130e-08 - mse50: 2.4130e-08 - mse100: 2.4130e-08 - val_loss: 4.4664e-08 - val_mse10: 4.4664e-08 - val_mse20: 4.4664e-08 - val_mse30: 4.4664e-08 - val_mse50: 4.4664e-08 - val_mse100: 4.4664e-08 - 2195s/epoch - 75ms/step
+Epoch 16/50
+29360/29360 - 2199s - loss: 2.3353e-08 - mse10: 2.3353e-08 - mse20: 2.3353e-08 - mse30: 2.3353e-08 - mse50: 2.3353e-08 - mse100: 2.3353e-08 - val_loss: 4.3721e-08 - val_mse10: 4.3721e-08 - val_mse20: 4.3721e-08 - val_mse30: 4.3721e-08 - val_mse50: 4.3721e-08 - val_mse100: 4.3721e-08 - 2199s/epoch - 75ms/step
+Epoch 17/50
+29360/29360 - 2211s - loss: 2.2696e-08 - mse10: 2.2696e-08 - mse20: 2.2696e-08 - mse30: 2.2696e-08 - mse50: 2.2696e-08 - mse100: 2.2696e-08 - val_loss: 4.2760e-08 - val_mse10: 4.2760e-08 - val_mse20: 4.2760e-08 - val_mse30: 4.2760e-08 - val_mse50: 4.2760e-08 - val_mse100: 4.2760e-08 - 2211s/epoch - 75ms/step
+Epoch 18/50
+29360/29360 - 2207s - loss: 2.2092e-08 - mse10: 2.2092e-08 - mse20: 2.2092e-08 - mse30: 2.2092e-08 - mse50: 2.2092e-08 - mse100: 2.2092e-08 - val_loss: 4.1523e-08 - val_mse10: 4.1523e-08 - val_mse20: 4.1523e-08 - val_mse30: 4.1523e-08 - val_mse50: 4.1523e-08 - val_mse100: 4.1523e-08 - 2207s/epoch - 75ms/step
+Epoch 19/50
+29360/29360 - 2217s - loss: 2.1527e-08 - mse10: 2.1527e-08 - mse20: 2.1527e-08 - mse30: 2.1527e-08 - mse50: 2.1527e-08 - mse100: 2.1527e-08 - val_loss: 4.0508e-08 - val_mse10: 4.0508e-08 - val_mse20: 4.0508e-08 - val_mse30: 4.0508e-08 - val_mse50: 4.0508e-08 - val_mse100: 4.0508e-08 - 2217s/epoch - 75ms/step
+Epoch 20/50
+29360/29360 - 2208s - loss: 2.1022e-08 - mse10: 2.1022e-08 - mse20: 2.1022e-08 - mse30: 2.1022e-08 - mse50: 2.1022e-08 - mse100: 2.1022e-08 - val_loss: 3.9217e-08 - val_mse10: 3.9217e-08 - val_mse20: 3.9217e-08 - val_mse30: 3.9217e-08 - val_mse50: 3.9217e-08 - val_mse100: 3.9217e-08 - 2208s/epoch - 75ms/step
+Epoch 21/50
+29360/29360 - 2235s - loss: 2.0594e-08 - mse10: 2.0594e-08 - mse20: 2.0594e-08 - mse30: 2.0594e-08 - mse50: 2.0594e-08 - mse100: 2.0594e-08 - val_loss: 3.8347e-08 - val_mse10: 3.8347e-08 - val_mse20: 3.8347e-08 - val_mse30: 3.8347e-08 - val_mse50: 3.8347e-08 - val_mse100: 3.8347e-08 - 2235s/epoch - 76ms/step
+Epoch 22/50
+29360/29360 - 2214s - loss: 2.0149e-08 - mse10: 2.0149e-08 - mse20: 2.0149e-08 - mse30: 2.0149e-08 - mse50: 2.0149e-08 - mse100: 2.0149e-08 - val_loss: 3.7409e-08 - val_mse10: 3.7409e-08 - val_mse20: 3.7409e-08 - val_mse30: 3.7409e-08 - val_mse50: 3.7409e-08 - val_mse100: 3.7409e-08 - 2214s/epoch - 75ms/step
+Epoch 23/50
+29360/29360 - 2238s - loss: 1.9774e-08 - mse10: 1.9774e-08 - mse20: 1.9774e-08 - mse30: 1.9774e-08 - mse50: 1.9774e-08 - mse100: 1.9774e-08 - val_loss: 3.6441e-08 - val_mse10: 3.6441e-08 - val_mse20: 3.6441e-08 - val_mse30: 3.6441e-08 - val_mse50: 3.6441e-08 - val_mse100: 3.6441e-08 - 2238s/epoch - 76ms/step
+Epoch 24/50
+29360/29360 - 2249s - loss: 1.9389e-08 - mse10: 1.9389e-08 - mse20: 1.9389e-08 - mse30: 1.9389e-08 - mse50: 1.9389e-08 - mse100: 1.9389e-08 - val_loss: 3.6290e-08 - val_mse10: 3.6290e-08 - val_mse20: 3.6290e-08 - val_mse30: 3.6290e-08 - val_mse50: 3.6290e-08 - val_mse100: 3.6290e-08 - 2249s/epoch - 77ms/step
+Epoch 25/50
+29360/29360 - 2253s - loss: 1.9071e-08 - mse10: 1.9071e-08 - mse20: 1.9071e-08 - mse30: 1.9071e-08 - mse50: 1.9071e-08 - mse100: 1.9071e-08 - val_loss: 3.5371e-08 - val_mse10: 3.5371e-08 - val_mse20: 3.5371e-08 - val_mse30: 3.5371e-08 - val_mse50: 3.5371e-08 - val_mse100: 3.5371e-08 - 2253s/epoch - 77ms/step
+Epoch 26/50
+29360/29360 - 2248s - loss: 1.8767e-08 - mse10: 1.8767e-08 - mse20: 1.8767e-08 - mse30: 1.8767e-08 - mse50: 1.8767e-08 - mse100: 1.8767e-08 - val_loss: 3.4342e-08 - val_mse10: 3.4342e-08 - val_mse20: 3.4342e-08 - val_mse30: 3.4342e-08 - val_mse50: 3.4342e-08 - val_mse100: 3.4342e-08 - 2248s/epoch - 77ms/step
+Epoch 27/50
+29360/29360 - 2255s - loss: 1.8475e-08 - mse10: 1.8475e-08 - mse20: 1.8475e-08 - mse30: 1.8475e-08 - mse50: 1.8475e-08 - mse100: 1.8475e-08 - val_loss: 3.4701e-08 - val_mse10: 3.4701e-08 - val_mse20: 3.4701e-08 - val_mse30: 3.4701e-08 - val_mse50: 3.4701e-08 - val_mse100: 3.4701e-08 - 2255s/epoch - 77ms/step
+Epoch 28/50
+29360/29360 - 2256s - loss: 1.8219e-08 - mse10: 1.8219e-08 - mse20: 1.8219e-08 - mse30: 1.8219e-08 - mse50: 1.8219e-08 - mse100: 1.8219e-08 - val_loss: 3.3374e-08 - val_mse10: 3.3374e-08 - val_mse20: 3.3374e-08 - val_mse30: 3.3374e-08 - val_mse50: 3.3374e-08 - val_mse100: 3.3374e-08 - 2256s/epoch - 77ms/step
+Epoch 29/50
+29360/29360 - 2253s - loss: 1.7969e-08 - mse10: 1.7969e-08 - mse20: 1.7969e-08 - mse30: 1.7969e-08 - mse50: 1.7969e-08 - mse100: 1.7969e-08 - val_loss: 3.3040e-08 - val_mse10: 3.3040e-08 - val_mse20: 3.3040e-08 - val_mse30: 3.3040e-08 - val_mse50: 3.3040e-08 - val_mse100: 3.3040e-08 - 2253s/epoch - 77ms/step
+Epoch 30/50
+29360/29360 - 2272s - loss: 1.7747e-08 - mse10: 1.7747e-08 - mse20: 1.7747e-08 - mse30: 1.7747e-08 - mse50: 1.7747e-08 - mse100: 1.7747e-08 - val_loss: 3.2455e-08 - val_mse10: 3.2455e-08 - val_mse20: 3.2455e-08 - val_mse30: 3.2455e-08 - val_mse50: 3.2455e-08 - val_mse100: 3.2455e-08 - 2272s/epoch - 77ms/step
+Epoch 31/50
+29360/29360 - 2273s - loss: 1.7509e-08 - mse10: 1.7509e-08 - mse20: 1.7509e-08 - mse30: 1.7509e-08 - mse50: 1.7509e-08 - mse100: 1.7509e-08 - val_loss: 3.1954e-08 - val_mse10: 3.1954e-08 - val_mse20: 3.1954e-08 - val_mse30: 3.1954e-08 - val_mse50: 3.1954e-08 - val_mse100: 3.1954e-08 - 2273s/epoch - 77ms/step
+Epoch 32/50
+29360/29360 - 2262s - loss: 1.7325e-08 - mse10: 1.7325e-08 - mse20: 1.7325e-08 - mse30: 1.7325e-08 - mse50: 1.7325e-08 - mse100: 1.7325e-08 - val_loss: 3.1450e-08 - val_mse10: 3.1450e-08 - val_mse20: 3.1450e-08 - val_mse30: 3.1450e-08 - val_mse50: 3.1450e-08 - val_mse100: 3.1450e-08 - 2262s/epoch - 77ms/step
+Epoch 33/50
+29360/29360 - 2268s - loss: 1.7145e-08 - mse10: 1.7145e-08 - mse20: 1.7145e-08 - mse30: 1.7145e-08 - mse50: 1.7145e-08 - mse100: 1.7145e-08 - val_loss: 3.0990e-08 - val_mse10: 3.0990e-08 - val_mse20: 3.0990e-08 - val_mse30: 3.0990e-08 - val_mse50: 3.0990e-08 - val_mse100: 3.0990e-08 - 2268s/epoch - 77ms/step
+Epoch 34/50
+29360/29360 - 2295s - loss: 1.6976e-08 - mse10: 1.6976e-08 - mse20: 1.6976e-08 - mse30: 1.6976e-08 - mse50: 1.6976e-08 - mse100: 1.6976e-08 - val_loss: 3.0741e-08 - val_mse10: 3.0741e-08 - val_mse20: 3.0741e-08 - val_mse30: 3.0741e-08 - val_mse50: 3.0741e-08 - val_mse100: 3.0741e-08 - 2295s/epoch - 78ms/step
+Epoch 35/50
+29360/29360 - 2299s - loss: 1.6792e-08 - mse10: 1.6792e-08 - mse20: 1.6792e-08 - mse30: 1.6792e-08 - mse50: 1.6792e-08 - mse100: 1.6792e-08 - val_loss: 3.0272e-08 - val_mse10: 3.0272e-08 - val_mse20: 3.0272e-08 - val_mse30: 3.0272e-08 - val_mse50: 3.0272e-08 - val_mse100: 3.0272e-08 - 2299s/epoch - 78ms/step
+Epoch 36/50
+29360/29360 - 2286s - loss: 1.6651e-08 - mse10: 1.6651e-08 - mse20: 1.6651e-08 - mse30: 1.6651e-08 - mse50: 1.6651e-08 - mse100: 1.6651e-08 - val_loss: 2.9833e-08 - val_mse10: 2.9833e-08 - val_mse20: 2.9833e-08 - val_mse30: 2.9833e-08 - val_mse50: 2.9833e-08 - val_mse100: 2.9833e-08 - 2286s/epoch - 78ms/step
+Epoch 37/50
+29360/29360 - 2268s - loss: 1.6512e-08 - mse10: 1.6512e-08 - mse20: 1.6512e-08 - mse30: 1.6512e-08 - mse50: 1.6512e-08 - mse100: 1.6512e-08 - val_loss: 2.9787e-08 - val_mse10: 2.9787e-08 - val_mse20: 2.9787e-08 - val_mse30: 2.9787e-08 - val_mse50: 2.9787e-08 - val_mse100: 2.9787e-08 - 2268s/epoch - 77ms/step
+Epoch 38/50
+29360/29360 - 2265s - loss: 1.6385e-08 - mse10: 1.6385e-08 - mse20: 1.6385e-08 - mse30: 1.6385e-08 - mse50: 1.6385e-08 - mse100: 1.6385e-08 - val_loss: 2.9329e-08 - val_mse10: 2.9329e-08 - val_mse20: 2.9329e-08 - val_mse30: 2.9329e-08 - val_mse50: 2.9329e-08 - val_mse100: 2.9329e-08 - 2265s/epoch - 77ms/step
+Epoch 39/50
+29360/29360 - 2227s - loss: 1.6251e-08 - mse10: 1.6251e-08 - mse20: 1.6251e-08 - mse30: 1.6251e-08 - mse50: 1.6251e-08 - mse100: 1.6251e-08 - val_loss: 2.9118e-08 - val_mse10: 2.9118e-08 - val_mse20: 2.9118e-08 - val_mse30: 2.9118e-08 - val_mse50: 2.9118e-08 - val_mse100: 2.9118e-08 - 2227s/epoch - 76ms/step
+Epoch 40/50
+29360/29360 - 2199s - loss: 1.6128e-08 - mse10: 1.6128e-08 - mse20: 1.6128e-08 - mse30: 1.6128e-08 - mse50: 1.6128e-08 - mse100: 1.6128e-08 - val_loss: 2.8878e-08 - val_mse10: 2.8878e-08 - val_mse20: 2.8878e-08 - val_mse30: 2.8878e-08 - val_mse50: 2.8878e-08 - val_mse100: 2.8878e-08 - 2199s/epoch - 75ms/step
+Epoch 41/50
+29360/29360 - 2224s - loss: 1.6025e-08 - mse10: 1.6025e-08 - mse20: 1.6025e-08 - mse30: 1.6025e-08 - mse50: 1.6025e-08 - mse100: 1.6025e-08 - val_loss: 2.8503e-08 - val_mse10: 2.8503e-08 - val_mse20: 2.8503e-08 - val_mse30: 2.8503e-08 - val_mse50: 2.8503e-08 - val_mse100: 2.8503e-08 - 2224s/epoch - 76ms/step
+Epoch 42/50
+29360/29360 - 2098s - loss: 1.5923e-08 - mse10: 1.5923e-08 - mse20: 1.5923e-08 - mse30: 1.5923e-08 - mse50: 1.5923e-08 - mse100: 1.5923e-08 - val_loss: 2.8197e-08 - val_mse10: 2.8197e-08 - val_mse20: 2.8197e-08 - val_mse30: 2.8197e-08 - val_mse50: 2.8197e-08 - val_mse100: 2.8197e-08 - 2098s/epoch - 71ms/step
+Epoch 43/50
+29360/29360 - 2168s - loss: 1.5809e-08 - mse10: 1.5809e-08 - mse20: 1.5809e-08 - mse30: 1.5809e-08 - mse50: 1.5809e-08 - mse100: 1.5809e-08 - val_loss: 2.7812e-08 - val_mse10: 2.7812e-08 - val_mse20: 2.7812e-08 - val_mse30: 2.7812e-08 - val_mse50: 2.7812e-08 - val_mse100: 2.7812e-08 - 2168s/epoch - 74ms/step
+Epoch 44/50
+29360/29360 - 2111s - loss: 1.5732e-08 - mse10: 1.5732e-08 - mse20: 1.5732e-08 - mse30: 1.5732e-08 - mse50: 1.5732e-08 - mse100: 1.5732e-08 - val_loss: 2.7723e-08 - val_mse10: 2.7723e-08 - val_mse20: 2.7723e-08 - val_mse30: 2.7723e-08 - val_mse50: 2.7723e-08 - val_mse100: 2.7723e-08 - 2111s/epoch - 72ms/step
+Epoch 45/50
+29360/29360 - 2227s - loss: 1.5629e-08 - mse10: 1.5629e-08 - mse20: 1.5629e-08 - mse30: 1.5629e-08 - mse50: 1.5629e-08 - mse100: 1.5629e-08 - val_loss: 2.7735e-08 - val_mse10: 2.7735e-08 - val_mse20: 2.7735e-08 - val_mse30: 2.7735e-08 - val_mse50: 2.7735e-08 - val_mse100: 2.7735e-08 - 2227s/epoch - 76ms/step
+Epoch 46/50
+29360/29360 - 2237s - loss: 1.5545e-08 - mse10: 1.5545e-08 - mse20: 1.5545e-08 - mse30: 1.5545e-08 - mse50: 1.5545e-08 - mse100: 1.5545e-08 - val_loss: 2.7289e-08 - val_mse10: 2.7289e-08 - val_mse20: 2.7289e-08 - val_mse30: 2.7289e-08 - val_mse50: 2.7289e-08 - val_mse100: 2.7289e-08 - 2237s/epoch - 76ms/step
+Epoch 47/50
+29360/29360 - 2090s - loss: 1.5465e-08 - mse10: 1.5465e-08 - mse20: 1.5465e-08 - mse30: 1.5465e-08 - mse50: 1.5465e-08 - mse100: 1.5465e-08 - val_loss: 2.7223e-08 - val_mse10: 2.7223e-08 - val_mse20: 2.7223e-08 - val_mse30: 2.7223e-08 - val_mse50: 2.7223e-08 - val_mse100: 2.7223e-08 - 2090s/epoch - 71ms/step
+Epoch 48/50
+29360/29360 - 2055s - loss: 1.5399e-08 - mse10: 1.5399e-08 - mse20: 1.5399e-08 - mse30: 1.5399e-08 - mse50: 1.5399e-08 - mse100: 1.5399e-08 - val_loss: 2.7119e-08 - val_mse10: 2.7119e-08 - val_mse20: 2.7119e-08 - val_mse30: 2.7119e-08 - val_mse50: 2.7119e-08 - val_mse100: 2.7119e-08 - 2055s/epoch - 70ms/step
+Epoch 49/50
+29360/29360 - 2211s - loss: 1.5330e-08 - mse10: 1.5330e-08 - mse20: 1.5330e-08 - mse30: 1.5330e-08 - mse50: 1.5330e-08 - mse100: 1.5330e-08 - val_loss: 2.6867e-08 - val_mse10: 2.6867e-08 - val_mse20: 2.6867e-08 - val_mse30: 2.6867e-08 - val_mse50: 2.6867e-08 - val_mse100: 2.6867e-08 - 2211s/epoch - 75ms/step
+Epoch 50/50
+29360/29360 - 2189s - loss: 1.5254e-08 - mse10: 1.5254e-08 - mse20: 1.5254e-08 - mse30: 1.5254e-08 - mse50: 1.5254e-08 - mse100: 1.5254e-08 - val_loss: 2.6665e-08 - val_mse10: 2.6665e-08 - val_mse20: 2.6665e-08 - val_mse30: 2.6665e-08 - val_mse50: 2.6665e-08 - val_mse100: 2.6665e-08 - 2189s/epoch - 75ms/step
+Prediction horizon: 10  orderbook updates
+MSE: 7.591293350596784e-09
+MAE: 4.524812912770255e-05
+r2: -3.196547850098095
+Prediction horizon: 20  orderbook updates
+MSE: 9.801355144586207e-09
+MAE: 5.129623627172426e-05
+r2: -1.9163603005282366
+Prediction horizon: 30  orderbook updates
+MSE: 1.183613237347892e-08
+MAE: 5.820843740257611e-05
+r2: -1.3973961284123972
+Prediction horizon: 50  orderbook updates
+MSE: 1.5261854655553944e-08
+MAE: 7.162212438168148e-05
+r2: -0.8904283008677807
+Prediction horizon: 100  orderbook updates
+MSE: 2.281322145221832e-08
+MAE: 9.945543858210571e-05
+r2: -0.4794818161904053

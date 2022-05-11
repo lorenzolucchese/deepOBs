@@ -158,41 +158,15 @@ if __name__ == '__main__':
     #################################### SETTINGS ########################################
     data = "LOBSTER"                            # "LOBSTER" or "FI2010"
 
-    raw_data_dir = r"data/AAL_volumes"          # r"data/AAL_orderbooks", r"data/AAL_orderflows", r"data/AAL_volumes" or r"data/FI2010"
-    processed_data_dir = r"data/model/AAL_volumes_W1_2"
+    raw_data_dir = r"data/FI2010"               # r"data/FI2010"
+    processed_data_dir = r"data/model/FI2010"
 
     NF = 40                                     # number of features
     T = 100
-    
-    # If data == LOBSTER
-    samples_per_file = 256                      # how many samples to save per file
-    split = {"val": 5, "train": 20, "test": 5}  # use (1, 4, 1) window: one week for validation, one week for training, one week for testing
-    normalise = True                            # for volumes need to normalise
     #######################################################################################
 
     if data == "LOBSTER":
-        extension = "csv"
-        csv_file_list = glob.glob(os.path.join(raw_data_dir, "*.{}").format(extension))
-        csv_file_list.sort()
-
-        val_files = csv_file_list[0:split["val"]]
-        train_files = csv_file_list[split["val"]:(split["val"] + split["train"])]
-        test_files = csv_file_list[(split["val"] + split["train"]):(split["val"] + split["train"] + split["test"])]
-
-        print("getting alphas...")
-        alphas = get_alphas(train_files, distribution=True)
-
-        print("alphas = ", alphas)
-
-        print("val class distributions")
-        print(get_class_distributions(val_files, alphas))
-        print("test class distributions")
-        print(get_class_distributions(test_files, alphas))
-
-        print("processing files to batches...")
-        process_data(val_files, T, NF, processed_data_dir, "val", alphas, samples_per_file=samples_per_file, XYsplit=False, normalise=normalise)
-        process_data(train_files, T, NF, processed_data_dir, "train", alphas, samples_per_file=samples_per_file, XYsplit=False, normalise=normalise)
-        process_data(test_files, T, NF, processed_data_dir, "test", alphas, samples_per_file=samples_per_file, XYsplit=False, normalise=normalise)
+        pass
 
     elif data == "FI2010":
         data = np.loadtxt(os.path.join(raw_data_dir, "Train_Dst_NoAuction_ZScore_CF_7.txt")).T
