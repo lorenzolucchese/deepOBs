@@ -16,7 +16,7 @@ from sklearn.metrics import classification_report, accuracy_score
 import matplotlib.pyplot as plt
 
 class CustomDataGenerator(tf.keras.utils.Sequence):
-    def __init__(self, dir, files, NF, horizon, task = "classification", alphas = None, multihorizon = False, normalise = False, batch_size=256, shuffle=False, teacher_forcing=False, window=100):
+    def __init__(self, dir, files, NF, horizon, task = "classification", alphas = np.array([]), multihorizon = False, normalise = False, batch_size=256, shuffle=True, teacher_forcing=False, window=100):
         """Initialization.
         :param dir: directory of files
         :param files: list of files in directory to use
@@ -48,8 +48,8 @@ class CustomDataGenerator(tf.keras.utils.Sequence):
         if self.multihorizon:
             self.horizon = slice(0, 5)
 
-        if (self.task == "classification")&(self.alphas == None):
-            raise ValueError('alphas must be array if task is classification.')
+        if (self.task == "classification")&(self.alphas.size == 0):
+            raise ValueError('alphas must be assigned if task is classification.')
 
         self.on_epoch_end()
 
@@ -75,9 +75,10 @@ class CustomDataGenerator(tf.keras.utils.Sequence):
         return x, y
 
     def on_file_end(self):
+        print("Ended file, new file")
         self.done_samples += self.samples_in_file
         self.file_index += 1
-        self.file = pd.read_csv(os.path.join(self.dir, self.files[self.file_index]))
+        self.file = pd.read_csv(self.files[self.file_index]).to_numpy()
         self.samples_in_file = self.file.shape[0] - self.window + 1
         self.indices = np.arange(self.samples_in_file)
         if self.shuffle:
@@ -86,7 +87,13 @@ class CustomDataGenerator(tf.keras.utils.Sequence):
     def on_epoch_end(self):
         'Restart file list after each epoch'
         self.file_index = 0
-        self.done_samples = 0
+        self.done_samples = 0        
+        self.file = pd.read_csv(self.files[self.file_index]).to_numpy()
+        self.samples_in_file = self.file.shape[0] - self.window + 1
+        self.indices = np.arange(self.samples_in_file)
+        if self.shuffle:
+            np.random.shuffle(self.files)
+            np.random.shuffle(self.indices)
 
     def prepare_decoder_input(self, x, y):
         if self.teacher_forcing:
@@ -119,11 +126,11 @@ class CustomDataGenerator(tf.keras.utils.Sequence):
             x_sample = self.file[file_index:(file_index+self.window), :self.NF]
             if self.normalise:
                 x_sample = x_sample / np.max(x_sample)
-            y_sample = self.file[(file_index+self.window), -5:]
+            y_sample = self.file[(file_index+self.window-1), -5:]
             if self.task == "classification":
                 y_sample = (+1)*(y_sample > -self.alphas) + (+1)*(y_sample > self.alphas)
-                y_sample = to_categorical(y_sample, 3).reshape(1, 3)
-            y_sample = y_sample[self.horizon]
+                y_sample = to_categorical(y_sample, 3).reshape(5, 3)
+            y_sample = y_sample[self.horizon, :]
             x_list.append(x_sample)
             y_list.append(y_sample)
         

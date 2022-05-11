@@ -15,6 +15,7 @@ from keras.layers import Flatten, Dense, Dropout, LeakyReLU, Activation, Input, 
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras.metrics import CategoricalAccuracy, Precision, Recall, MeanSquaredError
+from tensorflow.keras.utils import to_categorical
 
 from sklearn.metrics import classification_report, accuracy_score, mean_absolute_error, mean_squared_error, r2_score
 import matplotlib.pyplot as plt
@@ -107,14 +108,14 @@ class deepLOB:
                 testX = [testX, test_decoder_input]
 
             generator = tf.keras.preprocessing.image.ImageDataGenerator()
-            self.train_generator = generator.flow(trainX, trainY, batch_size=32, shuffle=False)
-            self.val_generator = generator.flow(valX, valY, batch_size=32, shuffle=False)
+            self.train_generator = generator.flow(trainX, trainY, batch_size=32, shuffle=True)
+            self.val_generator = generator.flow(valX, valY, batch_size=32, shuffle=True)
             self.test_generator = generator.flow(testX, testY, batch_size=32, shuffle=False)
     
         elif data == "LOBSTER":
             self.train_generator = CustomDataGenerator(self.data_dir, self.files["train"], self.NF, self.horizon, self.alphas, self.multihorizon)
             self.val_generator = CustomDataGenerator(self.data_dir, self.files["val"], self.NF, self.horizon, self.alphas, self.multihorizon)
-            self.test_generator = CustomDataGenerator(self.data_dir, self.files["test"], self.NF, self.horizon, self.alphas, self.multihorizon)
+            self.test_generator = CustomDataGenerator(self.data_dir, self.files["test"], self.NF, self.horizon, self.alphas, self.multihorizon, shuffle=False)
 
         else:
             raise ValueError('data must be either FI2010, simulated or LOBSTER.')
@@ -360,8 +361,16 @@ class deepLOB:
             eval_files = self.files[eval_set]
             index = 0
             for file in eval_files:
-                file = pd.read_csv(os.path.join(self.data_dir, file))
-                true_y = files[self.window:, -5:]
+                file = pd.read_csv(file).to_numpy()
+                true_y = files[self.T:, -5:]
+                if self.task == "classification":
+                    label_list = []
+                    for h in range(5):
+                        labels = to_categorical(true_y[:, h], 3)
+                        labels = labels.reshape(len(labels), 1, 3)
+                        label_list.append(labels)
+                    true_y = np.hstack(label_list)
+                true_y = true_y[:, self.horizon, ...]                    
                 evalY[index:(index+true_y.shape[0]), ...] = true_y
                 index = index + true_y.shape[0]
         if self.task == "classification":
@@ -438,12 +447,14 @@ if __name__ == '__main__':
     data = "LOBSTER"                            # options: "FI2010", "LOBSTER", "simulated"
     data_dir = "data/AAL_orderbooks"
     csv_file_list = glob.glob(os.path.join(data_dir, "*.{}").format("csv"))
+    csv_file_list.sort()
     files = {
         "val": csv_file_list[:5],
         "train": csv_file_list[5:25],
         "test": csv_file_list[25:30]
     }
-    alphas = get_alphas(files["train"])
+    # alphas = get_alphas(files["train"])
+    alphas = np.array([0.0000000e+00, 0.0000000e+00, 0.0000000e+00, 0.0000000e+00, 3.2942814e-05])
     task = "classification"
     multihorizon = True                         # options: True, False
     decoder = "seq2seq"                         # options: "seq2seq", "attention"
@@ -456,9 +467,9 @@ if __name__ == '__main__':
     batch_size = 256                            # note we use 256 for LOBSTER, 32 for FI2010 or simulated
     number_of_lstm = 64
 
-    checkpoint_filepath = './model_weights/deepVOL_weights_AAL_W1/weights' + decoder
-    load_weights = True
-    load_weights_filepath = './model_weights/deepVOL_weights_AAL_W1/weights' + decoder
+    checkpoint_filepath = './model_weights_new/deepOB_weights_AAL_W1/weights' + decoder
+    load_weights = False
+    load_weights_filepath = './model_weights_new/deepOB_weights_AAL_W1/weights' + decoder
 
     #######################################################################################
 
@@ -478,11 +489,11 @@ if __name__ == '__main__':
 
     model.model.summary()
 
-    # model.fit_model(epochs = epochs, 
-    #             batch_size = batch_size,
-    #             checkpoint_filepath = checkpoint_filepath,
-    #             load_weights = load_weights,
-    #             load_weights_filepath = load_weights_filepath)
+    model.fit_model(epochs = epochs, 
+                batch_size = batch_size,
+                checkpoint_filepath = checkpoint_filepath,
+                load_weights = load_weights,
+                load_weights_filepath = load_weights_filepath)
 
     model.evaluate_model(load_weights_filepath=load_weights_filepath)
                 
