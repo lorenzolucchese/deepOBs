@@ -1,5 +1,6 @@
 from pyparsing import PrecededBy
 from data_generators import CustomDataGenerator
+from data_prepare import get_alphas
 
 import tensorflow as tf
 import pandas as pd
@@ -17,6 +18,8 @@ from tensorflow.keras.metrics import CategoricalAccuracy, Precision, Recall, Mea
 
 from sklearn.metrics import classification_report, accuracy_score, mean_absolute_error, mean_squared_error, r2_score
 import matplotlib.pyplot as plt
+import matplotlib as mpl
+import glob
 
 
 class CustomReshape(Layer):
@@ -49,14 +52,14 @@ class CustomReshape(Layer):
 
 
 class deepLOB:
-    def __init__(self, T, NF, horizon, number_of_lstm, data = "FI2010", data_dir = "data/model/FI2010", model_inputs = "order book", task="classification", multihorizon=False, decoder = "seq2seq", n_horizons=5):
+    def __init__(self, T, NF, horizon, number_of_lstm, data, data_dir, files = None, model_inputs = "order book", task = "classification", alphas=None, multihorizon=False, decoder = "seq2seq", n_horizons=5):
         """Initialization.
         :param T: time window 
         :param NF: number of features
         :param horizon: when not multihorizon, the horizon to consider
         :param number_of_lstm: number of nodes in lstm
         :param data: whether the data fits in the RAM and is thus divided in train, val, test datasets (and, if multihorizon, corresponding decoder_input) - "FI2010", "simulated"
-                     or if the data is saved by batches in folders train, test, val (and, if multihorizon, corresponding decoder_input) - "LOBSTER".
+                     or if custom data generator is required - "LOBSTER".
         :param data_dir: parent directory for data
         :param model_inputs: what type of inputs
         :param task: regression or classification
@@ -72,19 +75,14 @@ class deepLOB:
         self.number_of_lstm = number_of_lstm
         self.model_inputs = model_inputs
         self.task = task
+        self.alphas = alphas
         self.multihorizon = multihorizon
         self.decoder = decoder
         self.n_horizons = n_horizons
         self.orderbook_updates = [10, 20, 30, 50, 100]
         self.data_dir = data_dir
+        self.files = files
         self.data = data
-
-        if self.task == "classification":
-            self.Y = "Y_class"
-        elif self.task == "regression":
-            self.Y = "Y_reg"
-        else:
-            raise ValueError('task must be either classification or regression.')
 
         if data in ["FI2010", "simulated"]:
             train_data = np.load(os.path.join(data_dir, "train.npz"))
@@ -114,9 +112,9 @@ class deepLOB:
             self.test_generator = generator.flow(testX, testY, batch_size=32, shuffle=False)
     
         elif data == "LOBSTER":
-            self.train_generator = CustomDataGenerator(os.path.join(data_dir, "train"), self.horizon, task = task, multihorizon = multihorizon)
-            self.val_generator = CustomDataGenerator(os.path.join(data_dir, "val"), self.horizon, task = task, multihorizon = multihorizon)
-            self.test_generator = CustomDataGenerator(os.path.join(data_dir, "test"), self.horizon, task = task, multihorizon = multihorizon)
+            self.train_generator = CustomDataGenerator(self.data_dir, self.files["train"], self.NF, self.horizon, self.alphas, self.multihorizon)
+            self.val_generator = CustomDataGenerator(self.data_dir, self.files["val"], self.NF, self.horizon, self.alphas, self.multihorizon)
+            self.test_generator = CustomDataGenerator(self.data_dir, self.files["test"], self.NF, self.horizon, self.alphas, self.multihorizon)
 
         else:
             raise ValueError('data must be either FI2010, simulated or LOBSTER.')
@@ -308,10 +306,13 @@ class deepLOB:
 
                 # Concatenate all predictions
                 decoder_outputs = Lambda(lambda x: K.concatenate(x, axis=1), name='outputs')(all_outputs)
-                decoder_attention = Lambda(lambda x: K.concatenate(x, axis=1), name='attentions')(all_attention)
+                # decoder_attention = Lambda(lambda x: K.concatenate(x, axis=1), name='attentions')(all_attention)
             
+            elif self.decoder == None:
+                pass
+
             else:
-                raise ValueError('multihorizon must be either seq2seq or attention.')
+                raise ValueError('multihorizon must be either seq2seq, attention or None.')
 
             self.model = Model([input_lmd, decoder_inputs], decoder_outputs)
         
@@ -334,47 +335,77 @@ class deepLOB:
                        max_queue_size=10,
                        callbacks=[model_checkpoint_callback, early_stopping])
 
-    def evaluate_model(self, load_weights_filepath):
+    def evaluate_model(self, load_weights_filepath, eval_set = "test"):
         self.model.load_weights(load_weights_filepath)
+
+        print("Evaluating performance on ", eval_set, "set...")
+
+        if eval_set == "test":
+            generator = self.test_generator
+        elif eval_set == "val":
+            generator = self.val_generator
+        elif eval_set == "train":
+            generator = self.train_generator
+        else:
+            raise ValueError("eval_set must be test, val or train.")
         
         # avoid RAM issues
-        predY = self.model.predict(self.test_generator)
+        predY = np.squeeze(self.model.predict(generator))
 
         if self.data in ["FI2010", "simulated"]:
-            test_data = np.load(os.path.join(self.data_dir, "test.npz"))
-            testY = test_data[self.Y][:, self.horizon, ...]
+            eval_data = np.load(os.path.join(self.data_dir, eval_set + ".npz"))
+            evalY = eval_data["Y"][:, self.horizon, ...]
         if self.data == "LOBSTER":
-            testY = np.zeros(predY.shape)
-            test_files = os.listdir(os.path.join(self.data_dir, "test"))
+            evalY = np.zeros(predY.shape)
+            eval_files = self.files[eval_set]
             index = 0
-            for file in test_files:
-                with np.load(os.path.join(self.data_dir, "test", file)) as data:
-                    true_y = tf.convert_to_tensor(data[self.Y])[:, self.horizon, ...]
-                    testY[index:(index+true_y.shape[0]), ...] = true_y
-                    index = index + true_y.shape[0]
+            for file in eval_files:
+                file = pd.read_csv(os.path.join(self.data_dir, file))
+                true_y = files[self.window:, -5:]
+                evalY[index:(index+true_y.shape[0]), ...] = true_y
+                index = index + true_y.shape[0]
         if self.task == "classification":
             if not self.multihorizon:
                 print("Prediction horizon:", self.orderbook_updates[self.horizon], " orderbook updates")
-                print('accuracy_score:', accuracy_score(np.argmax(testY, axis=1), np.argmax(predY, axis=1)))
-                print(classification_report(np.argmax(testY, axis=1), np.argmax(predY, axis=1), digits=4))
+                print('accuracy_score:', accuracy_score(np.argmax(evalY, axis=1), np.argmax(predY, axis=1)))
+                print(classification_report(np.argmax(evalY, axis=1), np.argmax(predY, axis=1), digits=4))
             else:
                 for h in range(5):
                     print("Prediction horizon:", self.orderbook_updates[h], " orderbook updates")
-                    print('accuracy_score:', accuracy_score(np.argmax(testY[:, h, :], axis=1), np.argmax(predY[:, h, :], axis=1)))
-                    print(classification_report(np.argmax(testY[:, h, :], axis=1), np.argmax(predY[:, h, :], axis=1), digits=4))
+                    print('accuracy_score:', accuracy_score(np.argmax(evalY[:, h, :], axis=1), np.argmax(predY[:, h, :], axis=1)))
+                    print(classification_report(np.argmax(evalY[:, h, :], axis=1), np.argmax(predY[:, h, :], axis=1), digits=4))
         elif self.task == "regression":
             if not self.multihorizon:
                 print("Prediction horizon:", self.orderbook_updates[self.horizon], " orderbook updates")
-                print('MSE:', mean_squared_error(testY, predY))
-                print('MAE:', mean_absolute_error(testY, predY))
-                print('r2:', r2_score(testY, predY))
+                print('MSE:', mean_squared_error(evalY, predY))
+                print('MAE:', mean_absolute_error(evalY, predY))
+                print('r2:', r2_score(evalY, predY))
+                regression_fit_plot(evalY, predY, title = eval_set + str(self.orderbook_updates[self.horizon]), 
+                                    path = os.path.join("plots", self.data, "single-horizon", eval_set + str(self.orderbook_updates[self.horizon]) + '.png'))
+                
             else:
                 for h in range(5):
                     print("Prediction horizon:", self.orderbook_updates[h], " orderbook updates")
-                    print('MSE:', mean_squared_error(testY[:, h], predY[:, h]))
-                    print('MAE:', mean_absolute_error(testY[:, h], predY[:, h]))
-                    print('r2:', r2_score(testY[:, h], predY[:, h]))
+                    print('MSE:', mean_squared_error(evalY[:, h], predY[:, h]))
+                    print('MAE:', mean_absolute_error(evalY[:, h], predY[:, h]))
+                    print('r2:', r2_score(evalY[:, h], predY[:, h]))
+                    regression_fit_plot(evalY, predY, title = eval_set + str(self.orderbook_updates[h]), 
+                                        path=os.path.join("plots", self.data, "multi-horizon", self.decoder, eval_set + str(self.orderbook_updates[h]) + '.png'))
 
+
+def regression_fit_plot(evalY, predY, title, path):
+    fig, ax = plt.subplots()
+    mpl.rcParams['agg.path.chunksize'] = len(evalY)
+    ax.scatter(evalY, predY, s=10, c='k', alpha=0.5)
+    lims = [np.min([evalY, predY]), np.max([evalY, predY])]
+    ax.plot(lims, lims, linestyle='--', color='k', alpha=0.75, zorder=0)
+    ax.set_aspect('equal')
+    ax.set_xlim(lims)
+    ax.set_ylim(lims)
+    ax.set_title(title)
+    ax.set_xlabel("True y")
+    ax.set_ylabel("Pred y")
+    fig.savefig(path)
 
 if __name__ == '__main__':
     # limit gpu memory
@@ -403,9 +434,16 @@ if __name__ == '__main__':
     
     #################################### SETTINGS ########################################
 
-    model_inputs = "volumes"                    # options: "order book", "order flow", "volumes"
-    data = "LOBSTER"                            # options: "FI2010", "AAL", "simulated"
-    data_dir = "data/model/AAL_volumes_W1_2"
+    model_inputs = "order book"                 # options: "order book", "order flow", "volumes"
+    data = "LOBSTER"                            # options: "FI2010", "LOBSTER", "simulated"
+    data_dir = "data/AAL_orderbooks"
+    csv_file_list = glob.glob(os.path.join(data_dir, "*.{}").format("csv"))
+    files = {
+        "val": csv_file_list[:5],
+        "train": csv_file_list[5:25],
+        "test": csv_file_list[25:30]
+    }
+    alphas = get_alphas(files["train"])
     task = "classification"
     multihorizon = True                         # options: True, False
     decoder = "seq2seq"                         # options: "seq2seq", "attention"
