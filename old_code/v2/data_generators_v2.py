@@ -106,7 +106,7 @@ class CustomDataGenerator(tf.keras.utils.Sequence):
             else:
                 raise ValueError('task must be either classification or regression.')
 
-        return decoder_input_data
+        return tf.convert_to_tensor(decoder_input_data)
 
     def __data_generation(self, file_indices):
         x_list, y_list = [], []

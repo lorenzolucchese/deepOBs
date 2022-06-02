@@ -64,10 +64,11 @@ def get_alphas(files, distribution=True):
         class0 = np.array([sum(returns[:, i] < -alphas[i])/n for i in range(5)])
         class2 = np.array([sum(returns[:, i] > alphas[i])/n for i in range(5)])
         class1 = 1 - (class0 + class2)
+        print("train class distributions")
         distributions = pd.DataFrame(np.vstack([class0, class1, class2]), 
                                     index=["down", "stationary", "up"], 
                                     columns=["10", "20", "30", "50", "100"])
-        return alphas, distributions
+        print(distributions)
     return alphas
 
 
