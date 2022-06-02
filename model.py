@@ -1,5 +1,5 @@
 from pyparsing import PrecededBy
-from data_generators import CustomDataGenerator
+from data_generators import CustomtfDataset
 from data_prepare import get_alphas
 
 import tensorflow as tf
@@ -53,7 +53,22 @@ class CustomReshape(Layer):
 
 
 class deepLOB:
-    def __init__(self, T, NF, horizon, number_of_lstm, data, data_dir, files = None, model_inputs = "order book", task = "classification", alphas=None, multihorizon=False, decoder = "seq2seq", n_horizons=5):
+    def __init__(self, 
+                 T,
+                 NF, 
+                 horizon,
+                 number_of_lstm,
+                 data, 
+                 data_dir, 
+                 files = None, 
+                 model_inputs = "order book", 
+                 task = "classification", 
+                 alphas=None, 
+                 multihorizon=False, 
+                 decoder = "seq2seq", 
+                 n_horizons=5,
+                 batch_size=256, 
+                 train_roll_window=1):
         """Initialization.
         :param T: time window 
         :param NF: number of features
@@ -84,6 +99,7 @@ class deepLOB:
         self.data_dir = data_dir
         self.files = files
         self.data = data
+        self.batch_size = batch_size
 
         if data in ["FI2010", "simulated"]:
             train_data = np.load(os.path.join(data_dir, "train.npz"))
@@ -108,14 +124,14 @@ class deepLOB:
                 testX = [testX, test_decoder_input]
 
             generator = tf.keras.preprocessing.image.ImageDataGenerator()
-            self.train_generator = generator.flow(trainX, trainY, batch_size=32, shuffle=True)
-            self.val_generator = generator.flow(valX, valY, batch_size=32, shuffle=True)
-            self.test_generator = generator.flow(testX, testY, batch_size=32, shuffle=False)
+            self.train_generator = generator.flow(trainX, trainY, batch_size=self.batch_size, shuffle=True)
+            self.val_generator = generator.flow(valX, valY, batch_size=self.batch_size, shuffle=True)
+            self.test_generator = generator.flow(testX, testY, batch_size=self.batch_size, shuffle=False)
     
         elif data == "LOBSTER":
-            self.train_generator = CustomDataGenerator(self.data_dir, self.files["train"], self.NF, self.horizon, self.alphas, self.multihorizon)
-            self.val_generator = CustomDataGenerator(self.data_dir, self.files["val"], self.NF, self.horizon, self.alphas, self.multihorizon)
-            self.test_generator = CustomDataGenerator(self.data_dir, self.files["test"], self.NF, self.horizon, self.alphas, self.multihorizon, shuffle=False)
+            self.train_generator = CustomtfDataset(files = self.files["train"], NF = self.NF, horizon = self.horizon, alphas = self.alphas, multihorizon = self.multihorizon, batch_size=self.batch_size, window = self.T, roll_window=self.T)
+            self.val_generator = CustomtfDataset(files = self.files["val"], NF = self.NF, horizon = self.horizon, alphas = self.alphas, multihorizon = self.multihorizon, batch_size=self.batch_size, window = self.T, roll_window=train_roll_window)
+            self.test_generator = CustomtfDataset(files = self.files["test"], NF = self.NF, horizon = self.horizon, alphas = self.alphas, multihorizon = self.multihorizon, batch_size=self.batch_size, shuffle=False, window = self.T, roll_window=1)
 
         else:
             raise ValueError('data must be either FI2010, simulated or LOBSTER.')
@@ -154,7 +170,7 @@ class deepLOB:
 
         adam = Adam(learning_rate=0.01, epsilon=1)
 
-        input_lmd = Input(shape=(self.T, self.NF, 1))
+        input_lmd = Input(shape=(self.T, self.NF, 1), name='input')
 
         # build the convolutional block
         if self.model_inputs == "order book":
@@ -213,7 +229,7 @@ class deepLOB:
 
         if not(self.multihorizon):
             # build the last LSTM layer
-            conv_lstm = LSTM(self.number_of_lstm, batch_input_shape=(32, self.T, int(conv_reshape.shape[2])))(conv_reshape)
+            conv_lstm = CuDNNLSTM(self.number_of_lstm, batch_input_shape=(self.batch_size, self.T, int(conv_reshape.shape[2])))(conv_reshape)
             out = Dense(output_dim, activation=output_activation)(conv_lstm)
             self.model = Model(inputs=input_lmd, outputs=out)
         
@@ -221,13 +237,13 @@ class deepLOB:
             if self.decoder == "seq2seq":
                 # seq2seq
                 encoder_inputs = conv_reshape
-                encoder = LSTM(self.number_of_lstm, return_state=True)
+                encoder = CuDNNLSTM(self.number_of_lstm, return_state=True)
                 encoder_outputs, state_h, state_c = encoder(encoder_inputs)
                 states = [state_h, state_c]
 
                 # Set up the decoder, which will only process one time step at a time.
-                decoder_inputs = Input(shape=(1, output_dim))
-                decoder_lstm = LSTM(self.number_of_lstm, return_sequences=True, return_state=True)
+                decoder_inputs = Input(shape=(1, output_dim), name = 'decoder_input')
+                decoder_lstm = CuDNNLSTM(self.number_of_lstm, return_sequences=True, return_state=True)
                 decoder_dense = Dense(output_dim, activation=output_activation)
 
                 all_outputs = []
@@ -259,14 +275,14 @@ class deepLOB:
             elif self.decoder == "attention":
                 # attention
                 encoder_inputs = conv_reshape
-                encoder = LSTM(self.number_of_lstm, return_state=True, return_sequences=True)
+                encoder = CuDNNLSTM(self.number_of_lstm, return_state=True, return_sequences=True)
                 encoder_outputs, state_h, state_c = encoder(encoder_inputs)
                 states = [state_h, state_c]
 
                 # Set up the decoder, which will only process one time step at a time.
                 # The attention decoder will have a different context vector at each time step, depending on attention weights.
                 decoder_inputs = Input(shape=(1, output_dim))
-                decoder_lstm = LSTM(self.number_of_lstm, return_sequences=True, return_state=True)
+                decoder_lstm = CuDNNLSTM(self.number_of_lstm, return_sequences=True, return_state=True)
                 decoder_dense = Dense(output_dim, activation=output_activation, name='output_layer')
 
                 # start off decoder with
@@ -315,11 +331,11 @@ class deepLOB:
             else:
                 raise ValueError('multihorizon must be either seq2seq, attention or None.')
 
-            self.model = Model([input_lmd, decoder_inputs], decoder_outputs)
+            self.model = Model(inputs=[input_lmd, decoder_inputs], outputs=decoder_outputs)
         
         self.model.compile(loss=loss, metrics=metrics, optimizer=adam)
 
-    def fit_model(self, epochs, batch_size, checkpoint_filepath, load_weights, load_weights_filepath, verbose = 0, patience=5):
+    def fit_model(self, epochs, checkpoint_filepath, load_weights, load_weights_filepath, verbose = 1, patience=5):
         model_checkpoint_callback = ModelCheckpoint(filepath=checkpoint_filepath,
         					                        save_weights_only=True,
 						                            monitor='val_loss',
@@ -332,8 +348,8 @@ class deepLOB:
             self.model.load_weights(load_weights_filepath)
 
         self.model.fit(self.train_generator, validation_data=self.val_generator,
-                       epochs=epochs, batch_size=batch_size, verbose=verbose, workers=8,
-                       max_queue_size=10,
+                       epochs=epochs, verbose=verbose, workers=8,
+                       max_queue_size=10, use_multiprocessing=True,
                        callbacks=[model_checkpoint_callback, early_stopping])
 
     def evaluate_model(self, load_weights_filepath, eval_set = "test"):
@@ -357,22 +373,27 @@ class deepLOB:
             eval_data = np.load(os.path.join(self.data_dir, eval_set + ".npz"))
             evalY = eval_data["Y"][:, self.horizon, ...]
         if self.data == "LOBSTER":
-            evalY = np.zeros(predY.shape)
             eval_files = self.files[eval_set]
-            index = 0
+
+            # create combined dataset
+            dataset = np.array([]).reshape(0, self.NF + 5)
             for file in eval_files:
-                file = pd.read_csv(file).to_numpy()
-                true_y = files[self.T:, -5:]
-                if self.task == "classification":
-                    label_list = []
-                    for h in range(5):
-                        labels = to_categorical(true_y[:, h], 3)
-                        labels = labels.reshape(len(labels), 1, 3)
-                        label_list.append(labels)
-                    true_y = np.hstack(label_list)
-                true_y = true_y[:, self.horizon, ...]                    
-                evalY[index:(index+true_y.shape[0]), ...] = true_y
-                index = index + true_y.shape[0]
+                dataset = np.concatenate([dataset, pd.read_csv(file).to_numpy()])
+            evalY = dataset[(self.T-1):, -5:]
+            evalY = evalY[:, self.horizon]
+            if self.task == "classification":
+                if self.multihorizon:
+                    all_label = []
+                    for h in range(evalY.shape[1]):
+                        one_label = (+1)*(evalY[:, h]>=-self.alphas[h]) + (+1)*(evalY[:, h]>self.alphas[h])
+                        one_label = to_categorical(one_label, 3)
+                        one_label = one_label.reshape(len(one_label), 1, 3)
+                        all_label.append(one_label)
+                    evalY = np.hstack(all_label)
+                else:
+                    evalY = (+1)*(evalY>=-self.alphas[self.horizon]) + (+1)*(evalY>self.alphas[self.horizon])
+                    evalY = to_categorical(evalY, 3)
+            
         if self.task == "classification":
             if not self.multihorizon:
                 print("Prediction horizon:", self.orderbook_updates[self.horizon], " orderbook updates")
@@ -419,11 +440,10 @@ def regression_fit_plot(evalY, predY, title, path):
 if __name__ == '__main__':
     # limit gpu memory
     gpus = tf.config.experimental.list_physical_devices('GPU')
-    print(gpus)
     if gpus:
         try:
             # Use only one GPUs
-            tf.config.set_visible_devices(gpus[0], 'GPU')
+            tf.config.set_visible_devices(gpus[1], 'GPU')
             logical_gpus = tf.config.list_logical_devices('GPU')
 
             # Or use all GPUs, memory growth needs to be the same across GPUs
@@ -442,7 +462,6 @@ if __name__ == '__main__':
     orderbook_updates = [10, 20, 30, 50, 100]
     
     #################################### SETTINGS ########################################
-
     model_inputs = "order book"                 # options: "order book", "order flow", "volumes"
     data = "LOBSTER"                            # options: "FI2010", "LOBSTER", "simulated"
     data_dir = "data/AAL_orderbooks"
@@ -453,8 +472,13 @@ if __name__ == '__main__':
         "train": csv_file_list[5:25],
         "test": csv_file_list[25:30]
     }
-    # alphas = get_alphas(files["train"])
+    # alphas, distributions = get_alphas(files["train"])
     alphas = np.array([0.0000000e+00, 0.0000000e+00, 0.0000000e+00, 0.0000000e+00, 3.2942814e-05])
+    distributions = pd.DataFrame(np.vstack([np.array([0.121552, 0.194825, 0.245483, 0.314996, 0.334330]), 
+                                            np.array([0.752556, 0.604704, 0.504695, 0.368647, 0.330456]),
+                                            np.array([0.125893, 0.200471, 0.249821, 0.316357, 0.335214])]), 
+                                index=["down", "stationary", "up"], 
+                                columns=["10", "20", "30", "50", "100"])
     task = "classification"
     multihorizon = True                         # options: True, False
     decoder = "seq2seq"                         # options: "seq2seq", "attention"
@@ -464,6 +488,8 @@ if __name__ == '__main__':
     n_horizons = 5
     horizon = 0                                 # prediction horizon (0, 1, 2, 3, 4) -> (10, 20, 30, 50, 100) order book events
     epochs = 50
+    training_verbose = 2
+    train_roll_window = 100
     batch_size = 256                            # note we use 256 for LOBSTER, 32 for FI2010 or simulated
     number_of_lstm = 64
 
@@ -474,26 +500,30 @@ if __name__ == '__main__':
     #######################################################################################
 
     model = deepLOB(T, 
-            NF,
-            horizon = horizon, 
-            number_of_lstm = number_of_lstm, 
-            data = data, 
-            data_dir = data_dir, 
-            model_inputs = model_inputs, 
-            task = task, 
-            multihorizon = multihorizon, 
-            decoder = decoder, 
-            n_horizons = n_horizons)
+                    NF, 
+                    horizon, 
+                    number_of_lstm, 
+                    data, 
+                    data_dir, 
+                    files, 
+                    model_inputs, 
+                    task, 
+                    alphas, 
+                    multihorizon, 
+                    decoder, 
+                    n_horizons,
+                    batch_size,
+                    train_roll_window)
 
     model.create_model()
 
     model.model.summary()
 
-    model.fit_model(epochs = epochs, 
-                batch_size = batch_size,
-                checkpoint_filepath = checkpoint_filepath,
-                load_weights = load_weights,
-                load_weights_filepath = load_weights_filepath)
+    model.fit_model(epochs = epochs,
+                    checkpoint_filepath = checkpoint_filepath,
+                    load_weights = load_weights,
+                    load_weights_filepath = load_weights_filepath,
+                    verbose = training_verbose)
 
     model.evaluate_model(load_weights_filepath=load_weights_filepath)
                 
