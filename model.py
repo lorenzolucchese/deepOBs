@@ -1,26 +1,24 @@
-from pyparsing import PrecededBy
+from importlib_metadata import distribution
 from data_generators import CustomtfDataset
 from data_prepare import get_alphas
 
 import tensorflow as tf
 import pandas as pd
 import numpy as np
-import keras
-import multiprocessing as mp
-import time
+import itertools
 import os
 from keras import backend as K
 from keras.models import load_model, Model
 from keras.layers import Flatten, Dense, Dropout, LeakyReLU, Activation, Input, LSTM, CuDNNLSTM, Reshape, Conv2D, Conv3D, MaxPooling2D, concatenate, Lambda, dot, BatchNormalization, Layer
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
-from tensorflow.keras.metrics import CategoricalAccuracy, Precision, Recall, MeanSquaredError
-from tensorflow.keras.utils import to_categorical
+from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.metrics import CategoricalAccuracy, Precision, Recall, MeanSquaredError, MeanMetricWrapper
+from keras.utils import metrics_utils
 
 from sklearn.metrics import classification_report, accuracy_score, mean_absolute_error, mean_squared_error, r2_score
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import glob
+from functools import partial
 
 
 class CustomReshape(Layer):
@@ -52,6 +50,79 @@ class CustomReshape(Layer):
         return (batch_size, T, NF//2, 2, 1)
 
 
+def weighted_categorical_crossentropy(y_true, y_pred, weights):
+    # weights is a CxC matrix (where C is the number of classes) that defines the class weights
+    # i.e. weights[i, j] defines the weight for an example of class i which was classified as class j
+    nb_cl = len(weights)
+    final_mask = K.zeros_like(y_pred[:, 0])
+    y_pred_max = K.max(y_pred, axis=1)
+    y_pred_max = K.reshape(y_pred_max, (K.shape(y_pred)[0], 1))
+    y_pred_max_mat = K.cast(K.equal(y_pred, y_pred_max), K.floatx())
+    for c_p, c_t in itertools.product(range(nb_cl), range(nb_cl)):
+        final_mask += (weights[c_t, c_p] * y_pred_max_mat[:, c_p] * y_true[:, c_t])
+    return K.categorical_crossentropy(y_true, y_pred) * final_mask
+
+
+def multihorizon_weighted_categorical_crossentropy(y_true, y_pred, imbalances):
+    # imbalances is a CxH matrix (where C is the number of classes) that defines the class imbalances
+    # i.e. imbalances[:, h] defines the class distributions for horizon h
+    C, H = imbalances.shape
+    losses = []
+    for h in range(H):
+        weights = np.vstack([1 / imbalances[:, h]]*C).T
+        losses.append(weighted_categorical_crossentropy(y_true[:, h, :], y_pred[:, h, :], weights))
+    return tf.add_n(losses)
+    
+
+def sparse_categorical_matches(y_true, y_pred):
+    """Creates float Tensor, 1.0 for label-prediction match, 0.0 for mismatch.
+    You can provide logits of classes as `y_pred`, since argmax of
+    logits and probabilities are same.
+    Args:
+        y_true: Integer ground truth values.
+        y_pred: The prediction values.
+    Returns:
+        Match tensor: 1.0 for label-prediction match, 0.0 for mismatch.
+    """
+    reshape_matches = False
+    y_pred = tf.convert_to_tensor(y_pred)
+    y_true = tf.convert_to_tensor(y_true)
+    y_true_org_shape = tf.shape(y_true)
+    y_pred_rank = y_pred.shape.ndims
+    y_true_rank = y_true.shape.ndims
+
+    # If the shape of y_true is (num_samples, 1), squeeze to (num_samples,)
+    if (y_true_rank is not None) and (y_pred_rank is not None) and (len(K.int_shape(y_true)) == len(K.int_shape(y_pred))):
+        y_true = tf.squeeze(y_true, [-1])
+        reshape_matches = True
+    y_pred = tf.math.argmax(y_pred, axis=-1)
+
+    # If the predicted output and actual output types don't match, force cast them
+    # to match.
+    if K.dtype(y_pred) != K.dtype(y_true):
+        y_pred = tf.cast(y_pred, K.dtype(y_true))
+    matches = tf.cast(tf.equal(y_true, y_pred), K.floatx())
+    if reshape_matches:
+        matches = tf.reshape(matches, shape=y_true_org_shape)
+    return matches
+
+
+class MultihorizonCategoricalAccuracy(MeanMetricWrapper):
+  def __init__(self, h, name='multihorizon_categorical_accuracy', dtype=None):
+    super(MultihorizonCategoricalAccuracy, self).__init__(
+        lambda y_true, y_pred: sparse_categorical_matches(tf.math.argmax(y_true[:, h, :], axis=-1), y_pred[:, h, :]),
+        name,
+        dtype=dtype)
+
+
+class MultihorizonMeanSquaredError(MeanMetricWrapper):
+  def __init__(self, h, name='multihorizon_mse', dtype=None):
+    super(MultihorizonMeanSquaredError, self).__init__(
+        lambda y_true, y_pred: mean_squared_error(y_true[:, h], y_pred[:, h]),
+        name,
+        dtype=dtype)
+
+
 class deepLOB:
     def __init__(self, 
                  T,
@@ -68,7 +139,8 @@ class deepLOB:
                  decoder = "seq2seq", 
                  n_horizons=5,
                  batch_size=256, 
-                 train_roll_window=1):
+                 train_roll_window=1,
+                 imbalances = None):
         """Initialization.
         :param T: time window 
         :param NF: number of features
@@ -100,6 +172,7 @@ class deepLOB:
         self.files = files
         self.data = data
         self.batch_size = batch_size
+        self.imbalances = imbalances
 
         if data in ["FI2010", "simulated"]:
             train_data = np.load(os.path.join(data_dir, "train.npz"))
@@ -142,15 +215,19 @@ class deepLOB:
         if self.task == "classification":
             output_activation = "softmax"
             output_dim = 3
-            loss = "categorical_crossentropy"
             if self.multihorizon:
+                if self.imbalances is None:
+                    loss = "categorical_crossentropy"
+                else:
+                    loss = partial(multihorizon_weighted_categorical_crossentropy, imbalances=self.imbalances)
                 metrics = []
                 for i in range(self.n_horizons):
                     h = str(self.orderbook_updates[i])
-                    metrics.append([CategoricalAccuracy(name = "accuracy"+ h)])
+                    metrics.append([MultihorizonCategoricalAccuracy(i, name = "accuracy" + h)])
             else:
+                loss = "categorical_crossentropy"
                 h = str(self.orderbook_updates[self.horizon])
-                metrics = [CategoricalAccuracy(name = "accuracy"+ h)]
+                metrics = [CategoricalAccuracy(name = "accuracy" + h)]
         elif self.task == "regression":
             output_activation = "linear"
             output_dim = 1
@@ -160,7 +237,7 @@ class deepLOB:
                 metrics = []
                 for i in range(self.n_horizons):
                     h = str(self.orderbook_updates[i])
-                    metrics.append([MeanSquaredError(name = "mse"+ h)])
+                    metrics.append([MultihorizonMeanSquaredError(i, name = "mse" + h)])
             else:
                 h = str(self.orderbook_updates[self.horizon])
                 metrics = [MeanSquaredError(name = "mse"+ h)]
@@ -168,7 +245,7 @@ class deepLOB:
             raise ValueError('task must be either classification or regression.')
         self.metrics = metrics
 
-        adam = Adam(learning_rate=0.01, epsilon=1)
+        adam = tf.keras.optimizers.Adam(learning_rate=0.01, epsilon=1)
 
         input_lmd = Input(shape=(self.T, self.NF, 1), name='input')
 
@@ -386,13 +463,13 @@ class deepLOB:
                     all_label = []
                     for h in range(evalY.shape[1]):
                         one_label = (+1)*(evalY[:, h]>=-self.alphas[h]) + (+1)*(evalY[:, h]>self.alphas[h])
-                        one_label = to_categorical(one_label, 3)
+                        one_label = tf.keras.utils.to_categorical(one_label, 3)
                         one_label = one_label.reshape(len(one_label), 1, 3)
                         all_label.append(one_label)
                     evalY = np.hstack(all_label)
                 else:
                     evalY = (+1)*(evalY>=-self.alphas[self.horizon]) + (+1)*(evalY>self.alphas[self.horizon])
-                    evalY = to_categorical(evalY, 3)
+                    evalY = tf.keras.utils.to_categorical(evalY, 3)
             
         if self.task == "classification":
             if not self.multihorizon:
@@ -477,8 +554,9 @@ if __name__ == '__main__':
     distributions = pd.DataFrame(np.vstack([np.array([0.121552, 0.194825, 0.245483, 0.314996, 0.334330]), 
                                             np.array([0.752556, 0.604704, 0.504695, 0.368647, 0.330456]),
                                             np.array([0.125893, 0.200471, 0.249821, 0.316357, 0.335214])]), 
-                                index=["down", "stationary", "up"], 
-                                columns=["10", "20", "30", "50", "100"])
+                                 index=["down", "stationary", "up"], 
+                                 columns=["10", "20", "30", "50", "100"])
+    imbalances = distributions.to_numpy()
     task = "classification"
     multihorizon = True                         # options: True, False
     decoder = "seq2seq"                         # options: "seq2seq", "attention"
@@ -488,14 +566,15 @@ if __name__ == '__main__':
     n_horizons = 5
     horizon = 0                                 # prediction horizon (0, 1, 2, 3, 4) -> (10, 20, 30, 50, 100) order book events
     epochs = 50
+    patience = 5
     training_verbose = 2
-    train_roll_window = 100
+    train_roll_window = 1
     batch_size = 256                            # note we use 256 for LOBSTER, 32 for FI2010 or simulated
     number_of_lstm = 64
 
-    checkpoint_filepath = './model_weights_new/deepOB_weights_AAL_W1/weights' + decoder
+    checkpoint_filepath = './model_weights/deepOB_weights_AAL_W1/weights' + decoder
     load_weights = False
-    load_weights_filepath = './model_weights_new/deepOB_weights_AAL_W1/weights' + decoder
+    load_weights_filepath = './model_weights/deepOB_weights_AAL_W1/weights' + decoder
 
     #######################################################################################
 
@@ -513,7 +592,8 @@ if __name__ == '__main__':
                     decoder, 
                     n_horizons,
                     batch_size,
-                    train_roll_window)
+                    train_roll_window,
+                    imbalances)
 
     model.create_model()
 
@@ -523,7 +603,8 @@ if __name__ == '__main__':
                     checkpoint_filepath = checkpoint_filepath,
                     load_weights = load_weights,
                     load_weights_filepath = load_weights_filepath,
-                    verbose = training_verbose)
+                    verbose = training_verbose,
+                    patience = patience)
 
     model.evaluate_model(load_weights_filepath=load_weights_filepath)
                 
