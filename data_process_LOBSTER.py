@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Sep  8 12:23:30 2020
-
-@author: Lorenzo
-"""
-
 import os
 import glob
 import pandas as pd
@@ -13,11 +6,11 @@ import datetime
 import time
 import numpy as np
 import pickle
-from old_code.data_prepare_old import prepare_x_y, prepare_decoder_input
+from data_prepare import prepare_x_y, prepare_decoder_input
 # import h5py
 
 def process_data(TICKER, input_path, output_path, time_index="seconds", output_extension="csv",
-                  horizons=np.array([10, 20, 30, 50, 100]), features = "orderbook"):
+                  horizons=np.array([10, 20, 30, 50, 100]), features = "orderbook", queue_depth=5):
     """
     Function for pre-processing LOBSTER data. The data must be stored in the input_path
     directory as daily message book and order book files. The data is treated in the following way:
@@ -39,7 +32,7 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
                        directories
     :param output_path: the path where we wish to save the processed datasets
     :param time_index: the time-index to use ("seconds" or "datetime")
-    :param output_extension: the extension of the saved files ("hdf5" or "csv")
+    :param output_extension: the extension of the saved files ("hdf5" or "csv") / if volumes_L3 .npz
     :param horizons: forecasting horizons for labels
     :param features: whether to return order book, order flow or volume features
            if volume: return the volumes of the first 2*levels ticks on each side of the mid, even if these are empty. 
@@ -51,7 +44,9 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
              "aOF1", "bOF1", "aOF2",  "bOF2", ..., "aOFN", "bOFN", "horizons[0]", ..., "horizons[-1]"
              where N is the number of levels.
              if volumes:
-             "BIDvol20", ...,  "BIDvol1", "ASKvol1", ..., "ASKvol20", "horizons[0]", ..., "horizons[-1]".
+             "BIDvol20", ...,  "BIDvol1", "ASKvol1", ..., "ASKvol20", "horizons[0]", ..., "horizons[-1]"
+             if volumes_L3:
+             3d array with axis time, level, depth
     """
     extension = "csv"
     csv_file_list = glob.glob(os.path.join(input_path, "*.{}".format(extension)))
@@ -125,7 +120,179 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
         assert (len(df_message) == len(df_orderbook))
 
         # add column names to message book
-        df_message.columns = ["seconds", "event type", "order ID", "size", "price", "direction"]
+        df_message.columns = ["seconds", "event type", "order ID", "volume", "price", "direction"]
+
+        # if features == "volumes_L3":
+        #     # create 3d array for L3 orderbook
+        #     orderbook_L3 = np.zeros((len(df_message)+1, 4*levels, queue_depth))
+            
+        #     bid_side = []
+        #     ask_side = []
+        #     for i in range(1, levels+1):
+        #         bid_side.append(np.array([df_orderbook.loc[:, "BIDp"+str(i)][0], df_orderbook.loc[:, "BIDs"+str(i)][0], 60*60*9.5]))
+        #         ask_side.append(np.array([df_orderbook.loc[:, "ASKp"+str(i)][0], df_orderbook.loc[:, "ASKs"+str(i)][0], 60*60*9.5]))
+        #     bid_side = pd.DataFrame(np.vstack(bid_side), index = ["id" + str(i) for i in np.arange(len(bid_side))], columns = ["price", "volume", "seconds"], dtype = np.int64)
+        #     ask_side = pd.DataFrame(np.vstack(ask_side), index = ["id" + str(i) for i in np.arange(len(ask_side))], columns = ["price", "volume", "seconds"], dtype = np.int64)
+
+        #     bid_side = bid_side.sort_values(by=["price", "seconds"], ascending = [False, True])
+        #     ask_side = ask_side.sort_values(by=["price", "seconds"], ascending = [True, True])
+
+        #     unique_bids = np.flip(np.unique(bid_side["price"].values))
+        #     unique_asks = np.unique(ask_side["price"].values)
+
+        #     mid = (unique_bids[0] + unique_asks[0]) // 2
+
+        #     ticks = np.concatenate([np.round((mid - 25) / 100) * 100 + 100 * np.arange(-2*levels+1, 1), np.round((mid + 25) / 100) * 100 + 100 * np.arange(2*levels)])
+
+        #     for i in range(2*levels):
+        #         if ticks[2*levels - i] in bid_side["price"].values:
+        #             queue = bid_side.loc[bid_side.index[bid_side["price"]==ticks[2*levels - i]], :]
+        #             if len(queue) < queue_depth:
+        #                 for j, index_ in enumerate(queue.index):
+        #                     orderbook_L3[0, 2*levels - i, j] = queue.loc[index_, "volume"]
+        #             else:
+        #                 for j, index_ in enumerate(queue.index[:(queue_depth-1)]):
+        #                     orderbook_L3[0, 2*levels - i, j] = queue.loc[index_, "volume"]
+        #                 orderbook_L3[0, 2*levels - i, (queue_depth-1)] = np.sum(queue.loc[queue.index[(queue_depth-1):], "volume"])
+        #         if ticks[2*levels + i] in ask_side["price"].values:
+        #             queue = ask_side.loc[ask_side.index[ask_side["price"]==ticks[2*levels + i]], :]
+        #             if len(queue) < queue_depth:
+        #                 for j, index_ in enumerate(queue.index):
+        #                     orderbook_L3[0, 2*levels + i, j] = queue.loc[index_, "volume"]
+        #             else:
+        #                 for j, index_ in enumerate(queue.index[:(queue_depth-1)]):
+        #                     orderbook_L3[0, 2*levels + i, j] = queue.loc[index_, "volume"]
+        #                 orderbook_L3[0, 2*levels + i, (queue_depth-1)] = np.sum(queue.loc[queue.index[(queue_depth-1):], "volume"])
+            
+        #     for index in df_message.index[1:]:
+        #         seconds = df_message.loc[index, "seconds"]
+        #         event_type = df_message.loc[index, "event type"]
+        #         direction = df_message.loc[index, "direction"]
+        #         order_id = df_message.loc[index, "order ID"]
+        #         price = df_message.loc[index, "price"]
+        #         volume = df_message.loc[index, "volume"]
+
+        #         # write code looping over df_message and updating dictionary of prices with
+        #         # a precomputed ticks matrix, reinitialize each time price re-
+        #         # if not price in ticks:
+        #         #     if direction == 1:
+        #         #         bid_side = bid_side.drop(bid_side.index[bid_side["price"]==price])
+        #         #         bid_side.loc['id'+ str(seconds)] = np.array([])
+                
+        #         # new limit order
+        #         if event_type == 1:
+        #             if direction == 1:
+        #                 bid_side.loc[order_id] = np.array([price, volume, seconds])
+        #             elif direction == -1:
+        #                 ask_side.loc[order_id] = np.array([price, volume, seconds])
+                
+        #         # cancellation (partial deletion)
+        #         elif event_type == 2:
+        #             if direction == 1:
+        #                 # if id is not present (i.e. it is at the start of order book), delete based on price
+        #                 if order_id in bid_side.index:
+        #                     bid_side.loc[order_id, "volume"] -= volume
+        #                 else:
+        #                     bid_side.loc[bid_side.index[bid_side["price"] == price], "volume"] -= volume
+        #             elif direction == -1:
+        #                 # if id is not present (i.e. it is at the start of order book), delete based on price
+        #                 if order_id in ask_side.index:
+        #                     ask_side.loc[order_id, "volume"] -= volume
+        #                 else:
+        #                     ask_side.loc[ask_side.index[ask_side["price"] == price], "volume"] -= volume
+                
+        #         # deletion
+        #         elif event_type == 3:
+        #             if direction == 1:
+        #                 # if id is not present (i.e. it is at the start of order book), delete based on price
+        #                 if order_id in bid_side.index:
+        #                     bid_side = bid_side.drop(order_id)
+        #                 else:
+        #                     bid_side.loc[bid_side.index[['id' in str(_) for _ in bid_side.index]&(bid_side["price"] == price)], "volume"] -= volume
+        #                     if bid_side.loc[bid_side.index[['id' in str(_) for _ in bid_side.index]&(bid_side["price"] == price)], "volume"].values == 0:
+        #                         bid_side = bid_side.drop(bid_side.index[['id' in str(_) for _ in bid_side.index]&(bid_side["price"] == price)])
+        #             elif direction == -1:
+        #                  # if id is not present (i.e. it is at the start of order book), delete based on price
+        #                 if order_id in ask_side.index:
+        #                     ask_side = ask_side.drop(order_id)
+        #                 else:
+        #                     ask_side.loc[ask_side.index[['id' in str(_) for _ in ask_side.index]&(ask_side["price"] == price)], "volume"] -= volume
+        #                     if ask_side.loc[ask_side.index[['id' in str(_) for _ in ask_side.index]&(ask_side["price"] == price)], "volume"].values == 0:
+        #                         ask_side = ask_side.drop(ask_side.index[['id' in str(_) for _ in ask_side.index]&(ask_side["price"] == price)])
+                
+        #         # execution of visible limit order
+        #         elif event_type == 4:
+        #             if direction == 1:
+        #                 # if id is not present (i.e. it is at the start of order book), execute based on price
+        #                 if order_id in bid_side.index:
+        #                     bid_side.loc[order_id, "volume"] -= volume
+        #                     if bid_side.loc[order_id, "volume"] == 0:
+        #                         bid_side = bid_side.drop(order_id)
+        #                 else:
+        #                     bid_side.loc[bid_side.index[['id' in str(_) for _ in bid_side.index]&(bid_side["price"] == price)], "volume"] -= volume
+        #                     if bid_side.loc[bid_side.index[['id' in str(_) for _ in bid_side.index]&(bid_side["price"] == price)], "volume"].values == 0:
+        #                         bid_side = bid_side.drop(bid_side.index[['id' in str(_) for _ in bid_side.index]&(bid_side["price"] == price)])
+        #             elif direction == -1:
+        #                 # if id is not present (i.e. it is at the start of order book), execute based on price
+        #                 if order_id in ask_side.index:
+        #                     ask_side.loc[order_id, "volume"] -= volume
+        #                     if ask_side.loc[order_id, "volume"] == 0:
+        #                         ask_side = ask_side.drop(order_id)
+        #                 else:
+        #                     ask_side.loc[ask_side.index[['id' in str(_) for _ in ask_side.index]&(ask_side["price"] == price)], "volume"] -= volume
+        #                     if ask_side.loc[ask_side.index[['id' in str(_) for _ in ask_side.index]&(ask_side["price"] == price)], "volume"].values == 0:
+        #                         ask_side = ask_side.drop(ask_side.index[['id' in str(_) for _ in ask_side.index]&(ask_side["price"] == price)])
+                
+        #         # execution of hidden limit order
+        #         elif event_type == 5:
+        #             pass
+                
+        #         # auction trade
+        #         elif event_type == 6:
+        #             pass
+                
+        #         # trading halt
+        #         elif event_type == 7:
+        #             pass
+                
+        #         else:
+        #             raise ValueError("LOBSTER event type must be 1, 2, 3, 4, 5, 6 or 7")
+                
+        #         bid_side = bid_side.sort_values(by=["price", "seconds"], ascending = [False, True])
+        #         ask_side = ask_side.sort_values(by=["price", "seconds"], ascending = [True, True])
+
+        #         unique_bids = np.flip(np.unique(bid_side["price"].values))
+        #         unique_asks = np.unique(ask_side["price"].values)
+
+        #         mid = (unique_bids[0] + unique_asks[0]) // 2
+
+        #         ticks = np.concatenate([np.round((mid - 25) / 100) * 100 + 100 * np.arange(-2*levels+1, 1), np.round((mid + 25) / 100) * 100 + 100 * np.arange(2*levels)])
+
+        #         for i in range(2*levels):
+        #             if ticks[2*levels - i] in bid_side["price"].values:
+        #                 queue = bid_side.loc[bid_side.index[bid_side["price"]==ticks[2*levels - i]], :]
+        #                 if len(queue) < queue_depth:
+        #                     for j, index_ in enumerate(queue.index):
+        #                         orderbook_L3[0, 2*levels - i, j] = queue.loc[index_, "volume"]
+        #                 else:
+        #                     for j, index_ in enumerate(queue.index[:(queue_depth-1)]):
+        #                         orderbook_L3[0, 2*levels - i, j] = queue.loc[index_, "volume"]
+        #                     orderbook_L3[0, 2*levels - i, (queue_depth-1)] = np.sum(queue.loc[queue.index[(queue_depth-1):], "volume"])
+        #             if ticks[2*levels + i] in ask_side["price"].values:
+        #                 queue = ask_side.loc[ask_side.index[ask_side["price"]==ticks[2*levels + i]], :]
+        #                 if len(queue) < queue_depth:
+        #                     for j, index_ in enumerate(queue.index):
+        #                         orderbook_L3[0, 2*levels + i, j] = queue.loc[index_, "volume"]
+        #                 else:
+        #                     for j, index_ in enumerate(queue.index[:(queue_depth-1)]):
+        #                         orderbook_L3[0, 2*levels + i, j] = queue.loc[index_, "volume"]
+        #                     orderbook_L3[0, 2*levels + i, (queue_depth-1)] = np.sum(queue.loc[queue.index[(queue_depth-1):], "volume"])
+
+        #     print(orderbook_L3[0])
+        #     print(orderbook_L3[1000])
+        #     print(df_message.iloc[1000, :])
+        #     print(orderbook_L3[1001])
+
 
         # remove crossed quotes
         df_orderbook.drop(df_orderbook[(df_orderbook["BIDp1"] > df_orderbook["ASKp1"])].index)
@@ -133,6 +300,9 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
 
         # add the seconds since midnight column to the order book from the message book
         df_orderbook.insert(0, "seconds", df_message["seconds"])
+
+        df_orderbook_full = df_orderbook
+        df_message_full = df_message
 
         # one conceptual event (e.g. limit order modification which is implemented as a cancellation followed
         # by an immediate new arrival, single market order executing against multiple resting limit orders) may
@@ -163,8 +333,13 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
             market_close_seconds = market_close * 60 * 60 - 10 * 60
             df_orderbook = df_orderbook.loc[(df_orderbook["seconds"] >= market_open_seconds) &
                                             (df_orderbook["seconds"] <= market_close_seconds)]
+
             df_message = df_message.loc[(df_message["seconds"] >= market_open_seconds) &
                                         (df_message["seconds"] <= market_close_seconds)]
+
+            # if features == "volumes_L3":
+            #     orderbook_L3 = orderbook_L3[(df_orderbook["seconds"] >= market_open_seconds) &
+            #                                 (df_orderbook["seconds"] <= market_close_seconds)]
 
         elif time_index == "datetime":
             # index using datetime index
@@ -211,7 +386,7 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
             spread = np.average((df_orderbook["ASKp1"] - df_orderbook["BIDp1"]) / df_orderbook["mid price"] * 10000,
                                 weights=time_deltas)
             volume = np.sum(
-                df_message.loc[(df_message["event type"] == 4) | (df_message["event type"] == 5)]["size"] *
+                df_message.loc[(df_message["event type"] == 4) | (df_message["event type"] == 5)]["volume"] *
                 df_message.loc[(df_message["event type"] == 4) | (df_message["event type"] == 5)][
                     "price"] / 10 ** 4) / 10 ** 6
             tick_size = np.average((df_orderbook["ASKp1"] - df_orderbook["BIDp1"]) == 100.0,
@@ -249,7 +424,7 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
             df_orderbook[feature_names] = np.concatenate([ASK_OF, BID_OF], axis=1)
 
         elif features == "volumes":
-            # Assumes tick_size = 0.0001 $, as per LOBSTER data
+            # Assumes tick_size = 0.01 $, as per LOBSTER data
             
             # print("min bid-ask spread:", np.min(df_orderbook["ASKp1"] - df_orderbook["BIDp1"]))
             # print("average bid-ask spread:", np.mean(df_orderbook["ASKp1"] - df_orderbook["BIDp1"]))
@@ -271,7 +446,6 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
                 flags = np.hstack((np.repeat(False, flags.shape[0]).reshape((flags.shape[0], 1)), flags[:, :-1]))
                 volumes[flags.sum(axis=1) > 0, i] = orderbook_states.values[flags]
             
-            # remove all price-volume features and add in orderflow
             df_orderbook = df_orderbook.drop(feature_names, axis=1).iloc[:, :]
             feature_names_raw = ["BIDs", "ASKs"]
             feature_names = []
@@ -283,9 +457,203 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
                     for i in range(1, 2*levels + 1):
                         feature_names += [feature_name + str(i)]
             df_orderbook[feature_names] = volumes
+        
+        elif features == "volumes_L3":
+            # Assumes tick_size = 0.01 $, as per LOBSTER data
+
+            ticks = np.hstack((np.outer(np.round((df_orderbook_full["mid price"] - 25) / 100) * 100, np.ones(2*levels)) + 100 * np.outer(np.ones(len(df_orderbook_full)), np.arange(-2*levels+1, 1)),
+                               np.outer(np.round((df_orderbook_full["mid price"] + 25) / 100) * 100, np.ones(2*levels)) + 100 * np.outer(np.ones(len(df_orderbook_full)), np.arange(2*levels))))
+            
+            volumes = np.zeros((len(df_orderbook_full), 4*levels))
+
+            orderbook_states = df_orderbook_full[feature_names]
+
+            for i in range(4*levels):
+                flags = (orderbook_states.values == np.repeat(ticks[:, i].reshape((len(orderbook_states), 1)), orderbook_states.shape[1], axis=1))
+                flags = np.hstack((np.repeat(False, flags.shape[0]).reshape((flags.shape[0], 1)), flags[:, :-1]))
+                volumes[flags.sum(axis=1) > 0, i] = orderbook_states.values[flags]
+
+            print(df_orderbook_full.head())
+
+            orderbook_L3 = np.zeros((len(df_orderbook_full), 4*levels, queue_depth))
+
+            print(df_message_full.head())
+
+            prices_dict = {}
+            skip = False
+            
+            for i, index in enumerate(df_message_full.index):
+                seconds = df_message_full.loc[index, "seconds"]
+                event_type = df_message_full.loc[index, "event type"]
+                order_id = df_message_full.loc[index, "order ID"]
+                price = df_message_full.loc[index, "price"]
+                volume = df_message_full.loc[index, "volume"]
+
+                # if new price is entering range (re-)initialize dict
+                for price_ in df_orderbook_full.iloc[i, 2::2]:
+                    if (price_ in df_orderbook_full.iloc[i - 1, 2::2].values) and (price_ in prices_dict.keys()):
+                        pass
+                    else:
+                        j = np.where(df_orderbook_full.iloc[i, 2::2]==price_)[0]
+                        volume_ = df_orderbook_full.iloc[i, 2 + 2*j + 1].values[0]
+                        prices_dict[price_] = pd.DataFrame(np.array([[volume_, 0]]), index = ['id'], columns = ["volume", "seconds"])
+                        if price_ == price:
+                            skip = True
+                
+                price_df = prices_dict.get(price, pd.DataFrame([], columns = ["volume", "seconds"]) )
+                
+                # if new price also corresponds to message_df price skip to avoid double counting
+                if skip:
+                    skip = False
+                    pass
+
+                # new limit order
+                elif event_type == 1:
+                    price_df.loc[order_id] = [volume, seconds]
+                
+                # cancellation (partial deletion)
+                elif event_type == 2:
+                    # if order_id is not in price dataframe then this is part of initial order
+                    if order_id in price_df.index:
+                        price_df.loc[order_id, "volume"] -= volume
+                    else:
+                        price_df.loc["id", "volume"] -= volume
+                
+                # deletion
+                elif event_type == 3:
+                    # if id is not present (i.e. it is at the start of order book), delete from "id" and check if "id" is empty
+                    if order_id in price_df.index:
+                        price_df = price_df.drop(order_id)
+                    else:
+                        price_df.loc["id", "volume"] -= volume
+                        if price_df.loc["id", "volume"] == 0:
+                            price_df = price_df.drop("id")
+                
+                # execution of visible limit order
+                elif event_type == 4:
+                    if order_id in price_df.index:
+                        price_df.loc[order_id, "volume"] -= volume
+                        if price_df.loc[order_id, "volume"] == 0:
+                            price_df = price_df.drop(order_id)
+                    else:
+                        price_df.loc["id", "volume"] -= volume
+                        if price_df.loc["id", "volume"] == 0:
+                            price_df = price_df.drop("id")
+                
+                # execution of hidden limit order
+                elif event_type == 5:
+                    pass
+                
+                # auction trade
+                elif event_type == 6:
+                    pass
+                
+                # trading halt
+                elif event_type == 7:
+                    pass
+                
+                else:
+                    raise ValueError("LOBSTER event type must be 1, 2, 3, 4, 5, 6 or 7")
+                
+                price_df = price_df.sort_values(by="seconds")
+                prices_dict[price] = price_df
+
+                # update orderbooks_L3
+                if event_type in [5, 6, 7]:
+                    orderbook_L3[i, :, :] = orderbook_L3[i - 1, :, :] 
+                elif (ticks[i, :] == ticks[i - 1, :]).all():
+                    j = np.where(ticks[i, :] == price)[0]
+                    orderbook_L3[i, :, :] = orderbook_L3[i - 1, :, :] 
+                    if len(price_df) == 0:
+                        orderbook_L3[i, j, :] = np.zeros(queue_depth)
+                    elif len(price_df) < queue_depth:
+                        orderbook_L3[i, j, :len(price_df)] = price_df["volume"].values
+                    else:
+                        orderbook_L3[i, j, :(queue_depth-1)] = price_df["volume"].values[:(queue_depth-1)]
+                        orderbook_L3[i, j, queue_depth-1] = np.sum(price_df["volume"].values[(queue_depth-1):])
+                else:
+                    for j, price_ in enumerate(ticks[i, :]):
+                        price_df_ = prices_dict.get(price_, [])
+                        if len(price_df_) == 0:
+                            orderbook_L3[i, j, :] = np.zeros(queue_depth)
+                        elif len(price_df_) < queue_depth:
+                            orderbook_L3[i, j, :len(price_df_)] = price_df_["volume"].values
+                        else:
+                            orderbook_L3[i, j, :(queue_depth-1)] = price_df_["volume"].values[:(queue_depth-1)]
+                            orderbook_L3[i, j, queue_depth-1] = np.sum(price_df_["volume"].values[(queue_depth-1):])
+
+                if i%10==0:
+                    print(i)
+            
+            # need then to remove all same timestamps and first/last 10 minutes (collpse to last)
+            orderbook_L3 = orderbook_L3[df_orderbook_full.index.isin(df_orderbook.index), :, :]
+
+            
+        #     # initialize index dictionary to keep track of when prices enter level range
+        #     prices_index = {}
+
+            
+        #     df_message_full_index = df_message_full.index
+        #     df_message_full = df_message_full.to_numpy()
+        #     # ["seconds", "event type", "order ID", "volume", "price", "direction"]
+        #     df_orderbook_full = df_orderbook_full.to_numpy()
+
+        #     for i in range(len(df_orderbook_full)):
+        #         seconds = df_orderbook_full[i, 0]
+        #         # if new price is entering range initilaize/update
+        #         for price in ticks[i, :]:
+        #             if (not price in ticks[i - 1, :]) or (not price in prices_index.keys()):
+        #                 prices_index[price] = df_message_full_index[i]
+        #         for j in range(4*levels):
+        #             direction = int(j < 2*levels) - int(j >= 2*levels)
+        #             price = int(ticks[i, j])
+        #             orders = df_message_full[(df_message_full[:, 0]<=seconds)&(df_message_full[:, 1] <= 4)&(df_message_full[:, 4] == price)&(df_message_full[:, 5]==direction)&(df_message_full_index >= prices_index[price]), :]
+                   
+
+        #         if i%10==0:
+        #             print(i)
+
+
+        #     # for i, index in enumerate(df_orderbook_full.index):
+        #     #     seconds = df_orderbook_full.loc[index, "seconds"]
+        #     #     # if new price is entering range initilaize/update
+        #     #     for price in ticks[i, :]:
+        #     #         if (not price in ticks[i - 1, :]) or (not price in prices_index.keys()):
+        #     #             prices_index[price] = df_orderbook_full.index[i]
+        #     #     for j in range(4*levels):
+        #     #         direction = int(j < 2*levels) - int(j >= 2*levels)
+        #     #         price = int(ticks[i, j])
+        #     #         orders = df_message_full.loc[(df_message_full["price"] == price)&(df_message_full["seconds"]<=seconds)&(df_message_full["direction"]==direction)&(df_message_full["event type"] <= 4)&(df_message_full.index >= prices_index[price]), :]
+
+        #             # if len(orders)>0:
+        #             #     # when price goes out of level-range we don't get volume update information... how to deal with this?
+        #             #     # - keep only last orders which add up total volume (?) 
+        #             #     # - each time price goes out of range delete queue and restart it as a single order volume coming in.
+        #             #     # - each time price comes back into range add/delete volume such that it matches volume data.
+
+        #             #     # in practice: get orders df since last time price came back into range and work from there
+        #             #     print(price)
+        #             #     print(seconds)
+        #             #     print(orders)
+        #             #     cancelled_orders = orders.loc[orders["event type"] == 3]
+        #             #     if len(cancelled_orders)>0:
+        #             #         orders = orders.loc[~orders["order ID"].isin(cancelled_orders["order ID"].values)]
+        #             #     else:
+        #             #         pass
+
+        #             # else: 
+        #             #     continue
+        #         #     if i == 100:
+        #         #         print(price)
+        #         #         print(seconds)
+        #         #         print(orders)
+                    
+        #         # if i==100:
+        #         #     break
+
 
         else:
-            raise ValueError('features must be one of "orderbook", "orderflow" or "volumes".')
+            raise ValueError('features must be one of "orderbook", "orderflow", "volumes" or "volumes_L3.')
 
         if features in ["orderbook", "orderflow"]:
             # dynamic z-score normalisation
@@ -335,13 +703,19 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
         # drop elements with na predictions at the end which cannot be used for training
         df_orderbook = df_orderbook.iloc[:-max(horizons), :]
 
+        if features == "volumes_L3":
+            orderbook_L3 = orderbook_L3[:-max(horizons), :, :]
+            returns = df_orderbook.iloc[:, -len(horizons):].values
+
         # save
-        output_name = os.path.join(output_path, TICKER + "_" + features + "_" + str(date.date()) + "." + output_extension)
+        output_name = os.path.join(output_path, TICKER + "_" + features + "_" + str(date.date()))
         if output_extension == "hdf5":
-            with h5py.File(output_name, "w") as f:
+            with h5py.File(output_name + ".hdf5", "w") as f:
                 f.create_dataset("default", data=df_orderbook)
+        elif features == "volumes_L3":
+            np.savez(output_name + ".npz", features=orderbook_L3, responses=returns)
         elif output_extension == "csv":
-            df_orderbook.to_csv(output_name, header=True, index=False)
+            df_orderbook.to_csv(output_name + ".csv", header=True, index=False)
         else:
             raise ValueError("output_extension must be hdf5 or csv")
 
@@ -615,39 +989,40 @@ def make_it_better(path):
 
 
 if __name__ == "__main__":
+    #============================================================================
     # LOBSTER DATA
 
-    # # set parameters
-    # TICKER = "AAL"
-    # input_path = r"E:\_data_dwn_16_85__AAL_2019-01-01_2020-01-31_10"
-    # output_path = r"E:\AAL_volumes"
-    # index = "seconds"    
-
-    # # In E:\AAL_OB need to use make_it_better on order books after 2019-08-26 to remove seconds and mid-prices
-    # # In E:\AAL_volumes might want to use make_it_better to adjust feature names
-
-    # startTime = time.time()
-    # process_data(TICKER=TICKER, 
-    #              input_path=input_path, 
-    #              output_path=output_path, 
-    #              output_extension="csv", 
-    #              features="volumes")
-    # executionTime = (time.time() - startTime)
-
-    # print("Execution time in seconds: " + str(executionTime))
-
-    #============================================================================
-    # SIMULATED DATA
-
     # set parameters
-    input_path = r"/scratch/lucchese/deepLOBs/data/simulated"
-    output_path = r"/scratch/lucchese/deepLOBs/data/model/simulated_orderflows"
+    TICKER = "AAL"
+    input_path = r"data_raw\AAL_data_dwn"
+    output_path = r"data\AAL_volumes_L3"
+    index = "seconds"    
+
+    # In E:\AAL_OB need to use make_it_better on order books after 2019-08-26 to remove seconds and mid-prices
+    # In E:\AAL_volumes might want to use make_it_better to adjust feature names
 
     startTime = time.time()
-    process_simulated_data(input_path=input_path, 
-                 output_path=output_path,
-                 features="orderflows")
+    process_data(TICKER=TICKER, 
+                 input_path=input_path, 
+                 output_path=output_path, 
+                 output_extension="csv", 
+                 features="volumes_L3")
     executionTime = (time.time() - startTime)
 
     print("Execution time in seconds: " + str(executionTime))
+
+    # #============================================================================
+    # # SIMULATED DATA
+
+    # # set parameters
+    # input_path = r"/scratch/lucchese/deepLOBs/data/simulated"
+    # output_path = r"/scratch/lucchese/deepLOBs/data/model/simulated_orderflows"
+
+    # startTime = time.time()
+    # process_simulated_data(input_path=input_path, 
+    #              output_path=output_path,
+    #              features="orderflows")
+    # executionTime = (time.time() - startTime)
+
+    # print("Execution time in seconds: " + str(executionTime))
 
