@@ -1,23 +1,11 @@
+import queue
 from model import deepLOB
 
 import tensorflow as tf
 import pandas as pd
 import numpy as np
-import keras
-import multiprocessing as mp
-import time
 import glob
 import os
-from keras import backend as K
-from keras.models import load_model, Model
-from keras.layers import Flatten, Dense, Dropout, LeakyReLU, Activation, Input, LSTM, CuDNNLSTM, Reshape, Conv2D, MaxPooling2D, concatenate, Lambda, dot, BatchNormalization
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
-from tensorflow.keras.metrics import CategoricalAccuracy, Precision, Recall, MeanSquaredError
-
-from sklearn.metrics import classification_report, accuracy_score
-import matplotlib.pyplot as plt
-
 
 if __name__ == '__main__':
     # limit gpu memory
@@ -43,130 +31,84 @@ if __name__ == '__main__':
     
     orderbook_updates = [10, 20, 30, 50, 100]
     decoders = ["seq2seq", "attention"]
+    distributions = pd.DataFrame(np.vstack([np.array([0.121552, 0.194825, 0.245483, 0.314996, 0.334330]), 
+                                            np.array([0.752556, 0.604704, 0.504695, 0.368647, 0.330456]),
+                                            np.array([0.125893, 0.200471, 0.249821, 0.316357, 0.335214])]), 
+                                 index=["down", "stationary", "up"], 
+                                 columns=["10", "20", "30", "50", "100"])
+    data_imbalances = distributions.to_numpy()
 
-    for h in range(5):
-        print("##################### deepLOB #####################")
-        #################################### SETTINGS ########################################
-        model_inputs = "order book"                 # options: "order book", "order flow", "volumes"
-        data = "LOBSTER"                            # options: "FI2010", "LOBSTER", "simulated"
-        data_dir = "data/AAL_orderbooks"
-        csv_file_list = glob.glob(os.path.join(data_dir, "*.{}").format("csv"))
-        csv_file_list.sort()
-        files = {
-            "val": csv_file_list[:5],
-            "train": csv_file_list[5:25],
-            "test": csv_file_list[25:30]
-        }
-        # alphas = get_alphas(files["train"])
-        alphas = np.array([0.0000000e+00, 0.0000000e+00, 0.0000000e+00, 0.0000000e+00, 3.2942814e-05])
-        task = "classification"
-        multihorizon = False                        # options: True, False
-        decoder = "seq2seq"                         # options: "seq2seq", "attention"
+    for imbalances_flag in [True, False]:
+        if imbalances_flag:
+            imbalances  = data_imbalances
+        else:
+            imbalances = None
+        for train_roll_window in [100, 10, 1]:
+            print("##################### deepLOB - seq2seq #####################")
+            print("train_roll_window = ", train_roll_window)
+            print("imbalances = ", imbalances_flag)
+            print(imbalances)
+            #################################### SETTINGS ########################################
+            model_inputs = "orderbook"                 # options: "order book", "order flow", "volumes"
+            data = "LOBSTER"                            # options: "FI2010", "LOBSTER", "simulated"
+            data_dir = "data/AAL_orderbooks"
+            csv_file_list = glob.glob(os.path.join(data_dir, "*.{}").format("csv"))
+            csv_file_list.sort()
+            files = {
+                "val": csv_file_list[:5],
+                "train": csv_file_list[5:25],
+                "test": csv_file_list[25:30]
+            }
+            alphas = np.array([0.0000000e+00, 0.0000000e+00, 0.0000000e+00, 0.0000000e+00, 3.2942814e-05])
+            task = "classification"
+            multihorizon = True                         # options: True, False
+            decoder = "seq2seq"                         # options: "seq2seq", "attention"
 
-        T = 100
-        NF = 40                                     # remember to change this when changing features
-        n_horizons = 5
-        horizon = h                                 # prediction horizon (0, 1, 2, 3, 4) -> (10, 20, 30, 50, 100) order book events
-        epochs = 50
-        training_verbose = 2
-        train_roll_window = 100
-        batch_size = 256                            # note we use 256 for LOBSTER, 32 for FI2010 or simulated
-        number_of_lstm = 64
+            T = 100
+            NF = 40                                     # remember to change this when changing features
+            queue_depth = None
+            n_horizons = 5
+            horizon = 0                                 # prediction horizon (0, 1, 2, 3, 4) -> (10, 20, 30, 50, 100) order book events
+            epochs = 50
+            patience = 5
+            training_verbose = 2
+            train_roll_window = train_roll_window
+            batch_size = 256                            # note we use 256 for LOBSTER, 32 for FI2010 or simulated
+            number_of_lstm = 64
 
-        checkpoint_filepath = './model_weights_new/deepOB_weights_AAL_W1/weights' + str(orderbook_updates[h])
-        load_weights = False
-        load_weights_filepath = './model_weights_new/deepOB_weights_AAL_W1/weights' + str(orderbook_updates[h])
+            checkpoint_filepath = './model_weights_new/test'
+            load_weights = False
+            load_weights_filepath = './model_weights_new/test'
 
-        #######################################################################################
+            #######################################################################################
 
-        model = deepLOB(T, 
-                        NF, 
-                        horizon, 
-                        number_of_lstm, 
-                        data, 
-                        data_dir, 
-                        files, 
-                        model_inputs, 
-                        task, 
-                        alphas, 
-                        multihorizon, 
-                        decoder, 
-                        n_horizons,
-                        batch_size, 
-                        train_roll_window)
+            model = deepLOB(T = T, 
+                    NF = NF, 
+                    horizon = horizon, 
+                    number_of_lstm = number_of_lstm, 
+                    data = data, 
+                    data_dir = data_dir, 
+                    files = files, 
+                    model_inputs = model_inputs, 
+                    queue_depth = queue_depth,
+                    task = task, 
+                    alphas = alphas, 
+                    multihorizon = multihorizon, 
+                    decoder = decoder, 
+                    n_horizons = n_horizons,
+                    batch_size = batch_size,
+                    train_roll_window = train_roll_window,
+                    imbalances = imbalances)
 
-        model.create_model()
+            model.create_model()
 
-        # model.model.summary()
+            # model.model.summary()
 
-        model.fit_model(epochs = epochs,
-                        checkpoint_filepath = checkpoint_filepath,
-                        load_weights = load_weights,
-                        load_weights_filepath = load_weights_filepath,
-                        verbose = training_verbose)
+            model.fit_model(epochs = epochs,
+                            checkpoint_filepath = checkpoint_filepath,
+                            load_weights = load_weights,
+                            load_weights_filepath = load_weights_filepath,
+                            verbose = training_verbose)
 
-        model.evaluate_model(load_weights_filepath=load_weights_filepath)
-    
-    for dec in decoders:
-        print("##################### deepLOB", dec, "#####################")
-        #################################### SETTINGS ########################################
-        model_inputs = "order book"                 # options: "order book", "order flow", "volumes"
-        data = "LOBSTER"                            # options: "FI2010", "LOBSTER", "simulated"
-        data_dir = "data/AAL_orderbooks"
-        csv_file_list = glob.glob(os.path.join(data_dir, "*.{}").format("csv"))
-        csv_file_list.sort()
-        files = {
-            "val": csv_file_list[:5],
-            "train": csv_file_list[5:25],
-            "test": csv_file_list[25:30]
-        }
-        # alphas = get_alphas(files["train"])
-        alphas = np.array([0.0000000e+00, 0.0000000e+00, 0.0000000e+00, 0.0000000e+00, 3.2942814e-05])
-        task = "classification"
-        multihorizon = True                         # options: True, False
-        decoder = dec                               # options: "seq2seq", "attention"
-
-        T = 100
-        NF = 40                                     # remember to change this when changing features
-        n_horizons = 5
-        horizon = 0                                 # prediction horizon (0, 1, 2, 3, 4) -> (10, 20, 30, 50, 100) order book events
-        epochs = 50
-        training_verbose = 2
-        train_roll_window = 100
-        batch_size = 256                            # note we use 256 for LOBSTER, 32 for FI2010 or simulated
-        number_of_lstm = 64
-
-        checkpoint_filepath = './model_weights_new/deepOB_weights_AAL_W1/weights' + dec
-        load_weights = False
-        load_weights_filepath = './model_weights_new/deepOB_weights_AAL_W1/weights' + dec
-
-        #######################################################################################
-
-        model = deepLOB(T, 
-                        NF, 
-                        horizon, 
-                        number_of_lstm, 
-                        data, 
-                        data_dir, 
-                        files, 
-                        model_inputs, 
-                        task, 
-                        alphas, 
-                        multihorizon, 
-                        decoder, 
-                        n_horizons,
-                        batch_size, 
-                        train_roll_window)
-
-        model.create_model()
-
-        # model.model.summary()
-
-        model.fit_model(epochs = epochs,
-                        checkpoint_filepath = checkpoint_filepath,
-                        load_weights = load_weights,
-                        load_weights_filepath = load_weights_filepath,
-                        verbose = training_verbose)
-
-        model.evaluate_model(load_weights_filepath=load_weights_filepath)
+            model.evaluate_model(load_weights_filepath=load_weights_filepath)
                     

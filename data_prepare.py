@@ -1,8 +1,7 @@
 import pandas as pd
 import numpy as np
-from tensorflow.keras.utils import to_categorical
 import os
-import glob
+import tensorflow as tf
 
 import multiprocess as mp
 
@@ -24,7 +23,7 @@ def prepare_y(data, T):
     all_label = []
     for i in range(labels.shape[1]):
         one_label = labels[:, i] - 1 
-        one_label = to_categorical(one_label, 3)
+        one_label = tf.keras.utils.to_categorical(one_label, 3)
         one_label = one_label.reshape(len(one_label), 1, 3)
         all_label.append(one_label)
     y = np.hstack(all_label)
@@ -35,7 +34,7 @@ def get_label(y_reg, alphas):
     all_label = []
     for i in range(y_reg.shape[1]):
         one_label = (+1)*(y_reg[:, i]>=-alphas[i]) + (+1)*(y_reg[:, i]>alphas[i])
-        one_label = to_categorical(one_label, 3)
+        one_label = tf.keras.utils.to_categorical(one_label, 3)
         one_label = one_label.reshape(len(one_label), 1, 3)
         all_label.append(one_label)
     y = np.hstack(all_label)
@@ -91,7 +90,7 @@ def get_class_distributions(files, alphas):
 
 def prepare_decoder_input(data, teacher_forcing):
     if teacher_forcing:
-        first_decoder_input = to_categorical(np.zeros(len(data)), 3)
+        first_decoder_input = tf.keras.utils.to_categorical(np.zeros(len(data)), 3)
         first_decoder_input = first_decoder_input.reshape(len(first_decoder_input), 1, 3)
         decoder_input_data = np.hstack((data[:, :-1, :], first_decoder_input))
 
