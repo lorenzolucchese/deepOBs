@@ -9,10 +9,11 @@ import os
 if __name__ == '__main__':
     # limit gpu memory
     gpus = tf.config.experimental.list_physical_devices('GPU')
+    print(gpus)
     if gpus:
         try:
             # Use only one GPUs
-            tf.config.set_visible_devices(gpus[1], 'GPU')
+            tf.config.set_visible_devices(gpus[0], 'GPU')
             logical_gpus = tf.config.list_logical_devices('GPU')
 
             # Or use all GPUs, memory growth needs to be the same across GPUs
@@ -64,8 +65,8 @@ if __name__ == '__main__':
             decoder = "seq2seq"                         # options: "seq2seq", "attention"
 
             T = 100
-            NF = 40                                     # remember to change this when changing features
-            queue_depth = None
+            levels = 10                                 # remember to change this when changing features
+            queue_depth = 10
             n_horizons = 5
             horizon = 0                                 # prediction horizon (0, 1, 2, 3, 4) -> (10, 20, 30, 50, 100) order book events
             epochs = 50
@@ -82,7 +83,7 @@ if __name__ == '__main__':
             #######################################################################################
 
             model = deepLOB(T = T, 
-                    NF = NF, 
+                    levels = levels, 
                     horizon = horizon, 
                     number_of_lstm = number_of_lstm, 
                     data = data, 

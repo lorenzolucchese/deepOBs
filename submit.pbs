@@ -1,7 +1,8 @@
-#PBS -l walltime=01:00:00
-#PBS -l select=1:ncpus=16:mem=96gb:ngpus=1
+#PBS -l walltime=10:00:00
+#PBS -l select=1:ncpus=32:mem=96gb:ngpus=1
 
 module load anaconda3/personal
+source activate deepLOBs_env
 
 cd $PBS_O_WORKDIR
 python model_AAL_OB_classification.py > model_AAL_OB_classification3.txt
