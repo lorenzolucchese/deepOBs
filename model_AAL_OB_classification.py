@@ -1,4 +1,3 @@
-import queue
 from model import deepLOB
 
 import tensorflow as tf
