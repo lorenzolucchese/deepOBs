@@ -5,4 +5,4 @@ module load anaconda3/personal
 source activate deepLOBs_env
 
 cd $PBS_O_WORKDIR
-python model_AAL_OB_classification.py > model_AAL_OB_classification3.txt
+python model.py > model_test.txt

@@ -601,7 +601,7 @@ if __name__ == '__main__':
     if gpus:
         try:
             # Use only one GPUs
-            tf.config.set_visible_devices(gpus[2], 'GPU')
+            tf.config.set_visible_devices(gpus[0], 'GPU')
             logical_gpus = tf.config.list_logical_devices('GPU')
 
             # Or use all GPUs, memory growth needs to be the same across GPUs
