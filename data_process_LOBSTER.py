@@ -223,6 +223,7 @@ def process_data(TICKER, input_path, output_path, log_path, time_index="seconds"
 
             # remove all price-volume features and add in orderflow
             df_orderbook = df_orderbook.drop(feature_names, axis=1).iloc[1:, :]
+            mid_seconds_columns = list(df_orderbook.columns)
             feature_names_raw = ["ASK_OF", "BID_OF"]
             feature_names = []
             for feature_name in feature_names_raw:
@@ -231,11 +232,12 @@ def process_data(TICKER, input_path, output_path, log_path, time_index="seconds"
             df_orderbook[feature_names] = np.concatenate([ASK_OF, BID_OF], axis=1)
             
             # re-order columns
-            feature_names_reordered = []*len(feature_names)
+            feature_names_reordered = [[]]*len(feature_names)
             feature_names_reordered[::2] = feature_names[:levels]
             feature_names_reordered[1::2] = feature_names[levels:]
+            feature_names = feature_names_reordered
 
-            df_orderbook = df_orderbook[feature_names_reordered]
+            df_orderbook = df_orderbook[mid_seconds_columns + feature_names]
 
         elif features == "volumes":
             # Assumes tick_size = 0.01 $, as per LOBSTER data
@@ -269,23 +271,22 @@ def process_data(TICKER, input_path, output_path, log_path, time_index="seconds"
 
         if features in ["orderbooks", "orderflows"]:
             # dynamic z-score normalization
-            orderbook_mean_df = df_orderbook[feature_names].mean()
-            orderbook_mean2_df = (df_orderbook[feature_names] ** 2).mean()
-            orderbook_nsamples_df = pd.DataFrame(np.array([[len(df_orderbook)]] * len(feature_names)).T,
-                                                columns=feature_names)
+            orderbook_mean_df = pd.DataFrame(df_orderbook[feature_names].mean().values.reshape(-1, len(feature_names)), columns=feature_names)
+            orderbook_mean2_df = pd.DataFrame((df_orderbook[feature_names] ** 2).mean().values.reshape(-1, len(feature_names)), columns=feature_names)
+            orderbook_nsamples_df = pd.DataFrame(np.array([[len(df_orderbook)]] * len(feature_names)).T, columns=feature_names)
 
             if len(mean_df) < 5:
                 logs.append(orderbook_name + ' skipped. Initializing rolling z-score normalization.')
                 # don't save the first five days as we don't have enough days to normalize
-                mean_df = mean_df.append(orderbook_mean_df, ignore_index=True)
-                mean2_df = mean2_df.append(orderbook_mean2_df, ignore_index=True)
-                nsamples_df = nsamples_df.append(orderbook_nsamples_df, ignore_index=True)
+                mean_df = pd.concat([mean_df, orderbook_mean_df], ignore_index=True)
+                mean2_df = pd.concat([mean2_df, orderbook_mean2_df], ignore_index=True)
+                nsamples_df = pd.concat([nsamples_df, orderbook_nsamples_df], ignore_index=True)
                 continue
             else:
                 # z-score normalization
                 z_mean_df = pd.DataFrame((nsamples_df * mean_df).sum(axis=0) / nsamples_df.sum(axis=0)).T
-                z_stdev_df = pd.DataFrame(
-                    np.sqrt((nsamples_df * mean2_df).sum(axis=0) / nsamples_df.sum(axis=0) - z_mean_df ** 2))
+                z_stdev_df = pd.DataFrame(np.sqrt((nsamples_df * mean2_df).sum(axis=0) / nsamples_df.sum(axis=0) - z_mean_df ** 2))
+                
                 # broadcast to df_orderbook size
                 z_mean_df = z_mean_df.loc[z_mean_df.index.repeat(len(df_orderbook))]
                 z_stdev_df = z_stdev_df.loc[z_stdev_df.index.repeat(len(df_orderbook))]
@@ -298,9 +299,9 @@ def process_data(TICKER, input_path, output_path, log_path, time_index="seconds"
                 mean2_df = mean2_df.iloc[1:, :]
                 nsamples_df = nsamples_df.iloc[1:, :]
 
-                mean_df = mean_df.append(orderbook_mean_df, ignore_index=True)
-                mean2_df = mean2_df.append(orderbook_mean2_df, ignore_index=True)
-                nsamples_df = nsamples_df.append(orderbook_nsamples_df, ignore_index=True)
+                mean_df = pd.concat([mean_df, orderbook_mean_df], ignore_index=True)
+                mean2_df = pd.concat([mean2_df, orderbook_mean2_df], ignore_index=True)
+                nsamples_df = pd.concat([nsamples_df, orderbook_nsamples_df], ignore_index=True)
 
         if smoothing == "horizon":
             # create labels for returns with smoothing labelling method
