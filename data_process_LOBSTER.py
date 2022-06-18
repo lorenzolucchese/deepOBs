@@ -10,7 +10,7 @@ from data_prepare import prepare_x_y, prepare_decoder_input
 from multiprocessing import Pool
 import h5py
 
-def process_data(TICKER, input_path, output_path, time_index="seconds", output_extension="csv",
+def process_data(TICKER, input_path, output_path, log_path, time_index="seconds", output_extension="csv",
                   horizons=np.array([10, 20, 30, 50, 100]), features = "orderbooks", smoothing="uniform", k=10):
     """
     Function for pre-processing LOBSTER data. The data must be stored in the input_path
@@ -19,8 +19,8 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
     - each state in the orderbook is time-stamped, with states occurring at the same time collapsed
       onto the last state.
     - the first and last 10 minutes of market activity are dropped.
-    - rolling z-score normalisation is applied to the data, i.e. the mean and standard deviation of the previous 5 days
-      is used to normalise current day's data. Hence drop first 5 days.
+    - rolling z-score normalization is applied to the data, i.e. the mean and standard deviation of the previous 5 days
+      is used to normalize current day's data. Hence drop first 5 days.
     - the smoothed returns at the requested horizons (in order book changes) are returned
       if smoothing = "horizon": l = (m+ - m)/m, where m+ denotes the mean of the next h mid-prices, m(.) is current mid price.
       if smoothing = "uniform": l = (m+ - m)/m, where m+ denotes the mean of the k+1 mid-prices centered at m(. + h), m(.) is current mid price.
@@ -37,7 +37,7 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
     :param horizons: forecasting horizons for labels
     :param features: whether to return order book, order flow or volume features
            if volume: return the volumes of the first 2*levels ticks on each side of the mid, even if these are empty. 
-                      Apply horizontal normalisation in data preparation step.
+                      Apply horizontal normalization in data preparation step.
     :param k: smoothing window
     :return: saves the processed features in output_path, each file consists of:
              if orderbook:
@@ -62,28 +62,23 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
 
     print("started loop")
 
-    orderbook_with_problems = []
-    messages_with_problems = []
-    opening_closing_times = []
+    logs = []
     df_statistics = pd.DataFrame([], columns=["Updates (000)", "Trades (000)", "Price Changes (000)",
                                               "Price (USD)", "Spread (bps)", "Volume (USD MM)", "Tick Size"], dtype=float)
 
-    # dataframes for dynamic z-score normalisation
+    # dataframes for dynamic z-score normalization
     mean_df = pd.DataFrame()
     mean2_df = pd.DataFrame()
     nsamples_df = pd.DataFrame()
 
     for orderbook_name in csv_orderbook:
-
         print(orderbook_name)
 
         # read the orderbook. keep a record of problematic files
         try:
             df_orderbook = pd.read_csv(orderbook_name, header=None)
         except:
-            orderbook_with_problems.append(orderbook_name)
-            print("the following file has been skipped:  " + orderbook_name)
-            continue
+            return logs.append(orderbook_name + ' skipped. Error: failed to read orderbook.')
 
         levels = int(df_orderbook.shape[1] / 4)
         feature_names_raw = ["ASKp", "ASKs", "BIDp", "BIDs"]
@@ -105,9 +100,7 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
         try:
             df_message = pd.read_csv(message_name, usecols=[0, 1, 2, 3, 4, 5], header=None)
         except:
-            messages_with_problems.append(message_name)
-            print("the following file has been skipped:  " + message_name)
-            continue
+            return logs.append(orderbook_name + ' skipped. Error: failed to read messagebook.')
 
         # check the two df have the same length
         assert (len(df_message) == len(df_orderbook))
@@ -134,8 +127,7 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
         market_close = (int(df_orderbook["seconds"].iloc[-1] / 60) + 1) / 60  # close at minute after last transaction
 
         if not (market_open == 9.5 and market_close == 16):
-            opening_closing_times.append(str(market_open) + " - " + str(market_close))
-            print("the following date has been skipped due to strange opening times: ", date)
+            logs.append(orderbook_name + ' skipped. Error: unusual opening times: ' + str(market_open) + ' - ' + str(market_close))
             continue
 
         if time_index == "seconds":
@@ -276,20 +268,21 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
             raise ValueError('features must be one of "orderbooks", "orderflows", or "volumes".')
 
         if features in ["orderbooks", "orderflows"]:
-            # dynamic z-score normalisation
+            # dynamic z-score normalization
             orderbook_mean_df = df_orderbook[feature_names].mean()
             orderbook_mean2_df = (df_orderbook[feature_names] ** 2).mean()
             orderbook_nsamples_df = pd.DataFrame(np.array([[len(df_orderbook)]] * len(feature_names)).T,
                                                 columns=feature_names)
 
             if len(mean_df) < 5:
-                # don't save the first five days as we don't have enough days to normalise
+                logs.append(orderbook_name + ' skipped. Initializing rolling z-score normalization.')
+                # don't save the first five days as we don't have enough days to normalize
                 mean_df = mean_df.append(orderbook_mean_df, ignore_index=True)
                 mean2_df = mean2_df.append(orderbook_mean2_df, ignore_index=True)
                 nsamples_df = nsamples_df.append(orderbook_nsamples_df, ignore_index=True)
                 continue
             else:
-                # z-score normalisation
+                # z-score normalization
                 z_mean_df = pd.DataFrame((nsamples_df * mean_df).sum(axis=0) / nsamples_df.sum(axis=0)).T
                 z_stdev_df = pd.DataFrame(
                     np.sqrt((nsamples_df * mean2_df).sum(axis=0) / nsamples_df.sum(axis=0) - z_mean_df ** 2))
@@ -323,14 +316,12 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
             for h in horizons:
                 smooth_pct_change = rolling_mid[h:]/df_orderbook["mid price"][:-h] - 1
                 df_orderbook[str(h)] = smooth_pct_change
-        
-        df_orderbook.to_csv('test' + ".csv", header=True, index=False)
 
         # drop seconds and mid price columns
         df_orderbook = df_orderbook.drop(["seconds", "mid price"], axis=1)
 
         # drop elements with na predictions at the end which cannot be used for training
-        df_orderbook = df_orderbook.iloc[:-max(horizons), :]
+        df_orderbook = df_orderbook.dropna()
 
         # save
         output_name = os.path.join(output_path, TICKER + "_" + features + "_" + str(date.date()))
@@ -342,30 +333,22 @@ def process_data(TICKER, input_path, output_path, time_index="seconds", output_e
         else:
             raise ValueError("output_extension must be hdf5 or csv")
 
+        logs.append(orderbook_name + ' completed')
+
+        break
+
     print("finished loop")
 
-    supplementary_path = os.path.join(output_path, TICKER + "_supplementary_files")
-    skipped_files_path = os.path.join(supplementary_path, "skipped")
-    open_close_files_path = os.path.join(supplementary_path, "opening_closing_times")
-    statistics_files_path = os.path.join(supplementary_path, TICKER + "statistics.csv")
+    with open(log_path + "/" + features + "_processing_logs.txt", "w") as f:
+        for log in logs:
+            f.write(log + "\n")
 
-    os.mkdir(supplementary_path)
+    print("please check processing logs.")
 
-    with open(skipped_files_path + "_orderbook.txt", "wb") as fp:
-        pickle.dump(orderbook_with_problems, fp)
-
-    with open(skipped_files_path + "_messages.txt", "wb") as fp:
-        pickle.dump(messages_with_problems, fp)
-
-    with open(open_close_files_path + ".txt", "wb") as fp:
-        pickle.dump(opening_closing_times, fp)
-
-    df_statistics.to_csv(statistics_files_path, header=True, index=True)
-
-    print("please check supplementary files before performing analysis")
+    df_statistics.to_csv(log_path + "/" + features + "_statistics.csv", header=True, index=True)
 
 
-def multiprocess_L3(TICKER, input_path, output_path, horizons=np.array([10, 20, 30, 50, 100]), queue_depth=5):
+def multiprocess_L3(TICKER, input_path, output_path, log_path, horizons=np.array([10, 20, 30, 50, 100]), queue_depth=10, smoothing="uniform", k=10):
     csv_file_list = glob.glob(os.path.join(input_path, "*.{}".format("csv")))
 
     csv_orderbook = [name for name in csv_file_list if "orderbook" in name]
@@ -382,35 +365,36 @@ def multiprocess_L3(TICKER, input_path, output_path, horizons=np.array([10, 20, 
     
     try:
         pool = Pool(os.cpu_count - 2)  # leave 2 cpus free
-        engine = ProcessL3(queue_depth, horizons)
-        outputs = pool.map(engine, csv_orderbook)
+        engine = ProcessL3(TICKER, output_path, queue_depth, horizons, smoothing, k)
+        logs = pool.map(engine, csv_orderbook)
     finally: # To make sure processes are closed in the end, even if errors happen
         pool.close()
         pool.join()
 
     print("finished multiprocessing")
 
-    supplementary_path = os.path.join(output_path, TICKER + "_supplementary_files")
+    with open(log_path + "/volumes_processing_logs.txt", "w") as f:
+        for log in logs:
+            f.write(log + "\n")
 
-    os.mkdir(supplementary_path)
-
-    with open(supplementary_path + "/processing_outputs.txt", "wb") as fp:
-        pickle.dump(outputs, fp)
-
-    print("please check supplementary files before performing analysis")
+    print("please check processing logs.")
 
 
 class ProcessL3(object):
-    def __init__(self, queue_depth, horizons):
+    def __init__(self, TICKER, output_path, queue_depth, horizons, smoothing, k):
+        self.TICKER = TICKER
+        self.output_path = output_path
         self.queue_depth = queue_depth
         self.horizons = horizons
+        self.smoothing = smoothing
+        self.k = k
 
     def __call__(self, orderbook_name):
-        output = process_L3_orderbook(orderbook_name, self.queue_depth, self.horizons)
+        output = process_L3_orderbook(orderbook_name, self.TICKER, self.output_path, self.queue_depth, self.horizons, self.smoothing, self.k)
         return output
 
 
-def process_L3_orderbook(orderbook_name, queue_depth, horizons):
+def process_L3_orderbook(orderbook_name, TICKER, output_path, queue_depth, horizons, smoothing, k):
     print(orderbook_name)
     try:
         df_orderbook = pd.read_csv(orderbook_name, header=None)
@@ -607,34 +591,44 @@ def process_L3_orderbook(orderbook_name, queue_depth, horizons):
     # need then to remove all same timestamps and first/last 10 minutes (collpse to last)
     orderbook_L3 = orderbook_L3[df_orderbook_full.index.isin(df_orderbook.index), :, :]
 
-    # create labels for returns with smoothing labelling method
-    for h in horizons:
-        rolling_mid = df_orderbook["mid price"].rolling(h).mean().dropna()[1:]
-        rolling_mid = rolling_mid.to_numpy().reshape(len(rolling_mid),)
-        smooth_pct_change = rolling_mid/df_orderbook["mid price"][0:-h] - 1
-        df_orderbook[str(h)] = np.concatenate((smooth_pct_change, np.repeat(np.NaN, int(h))))
+    if smoothing == "horizon":
+        # create labels for returns with smoothing labelling method
+        for h in horizons:
+            rolling_mid = df_orderbook["mid price"].rolling(h).mean().dropna()[1:]
+            rolling_mid = rolling_mid.to_numpy().flatten()
+            smooth_pct_change = rolling_mid/df_orderbook["mid price"][:-h] - 1
+            df_orderbook[str(h)] = np.concatenate((smooth_pct_change, np.repeat(np.NaN, int(h))))
+    elif smoothing == "uniform":
+        # create labels for returns with smoothing labelling method
+        rolling_mid = df_orderbook["mid price"].rolling(k+1, center=True).mean()
+        rolling_mid = rolling_mid.to_numpy().flatten()
+        for h in horizons:
+            smooth_pct_change = rolling_mid[h:]/df_orderbook["mid price"][:-h] - 1
+            df_orderbook[str(h)] = smooth_pct_change
 
     # drop seconds and mid price columns
     df_orderbook = df_orderbook.drop(["seconds", "mid price"], axis=1)
 
     # drop elements with na predictions at the end which cannot be used for training
-    orderbook_L3 = orderbook_L3[:-max(horizons), :, :]
-    returns = df_orderbook.iloc[:-max(horizons), -len(horizons):].values
+    if smoothing == "horizon":
+        k = 0
+    orderbook_L3 = orderbook_L3[:-(max(horizons)+k//2), :, :]
+    returns = df_orderbook.iloc[:-(max(horizons)+k//2), -len(horizons):].values
 
     # save
     output_name = os.path.join(output_path, TICKER + "_" + "volume_L3" + "_" + str(date.date()))
     np.savez(output_name + ".npz", features=orderbook_L3, responses=returns)
 
-    return orderbook_name + 'completed'
+    return orderbook_name + ' completed'
 
 
 def process_simulated_data(input_path, output_path, levels = 10, T = 100, horizons=np.array([10, 20, 30, 50, 100]), features = "orderbooks"):
     """
     Function for pre-processing simulated data. The data must be stored in the input_path directory as daily order book files. 
     The data is processed in the following way:
-    - training set based z-score normalisation is applied to the data, i.e. the mean and standard deviation of the training set features
-      is used to normalise training, testing and validation data. 
-      If volume features are selected data is normalised in the preparation phase ("horizontal" normalisation).
+    - training set based z-score normalization is applied to the data, i.e. the mean and standard deviation of the training set features
+      is used to normalize training, testing and validation data. 
+      If volume features are selected data is normalized in the preparation phase ("horizontal" normalization).
     - the smoothed returns at the requested horizons (in order book changes) are returned
       l = (m+ - m)/m, where m+ denotes the mean of the next k mid-prices, m is current mid price.
     :param input_path: the path where the order book and message book files are stores in monthly
@@ -645,7 +639,7 @@ def process_simulated_data(input_path, output_path, levels = 10, T = 100, horizo
     :param horizons: forecasting horizons for labels
     :param features: whether to return order book, order flow or volume features
            if volume: return the volumes of the first 10 ticks on each side of the mid, even if these are empty. 
-                      Apply horizontal normalisation in data preparation step.
+                      Apply horizontal normalization in data preparation step.
     :return: saves the processed features in output_path as test, train and val npz files containing tensors ready to feed into the model
              if orderbook:
              "ASKp1", "ASKs1", "BIDp1",  "BIDs1", ..., "ASKpN", "ASKsN", "BIDpN",  "BIDsN", "horizons[0]", ..., "horizons[-1]"
@@ -759,7 +753,7 @@ def process_simulated_data(input_path, output_path, levels = 10, T = 100, horizo
         else:
             raise ValueError("features must be one of orderbooks, orderflows or volumes")
     
-    # normalise features by mean and sd of training set
+    # normalize features by mean and sd of training set
     train_df = pd.concat(df_data[train])
     train_means = train_df.iloc[:, :-len(horizons)].mean()
     train_stds = train_df.iloc[:, :-len(horizons)].std()
@@ -804,15 +798,15 @@ def process_simulated_data(input_path, output_path, levels = 10, T = 100, horizo
 
     for df in df_data:
         if features in ["orderbooks", "orderflows"]:
-            # normalise features
+            # normalize features
             df.iloc[:, :-len(horizons)] = (df.iloc[:, :-len(horizons)] - train_means)/train_stds
         
             # produce inputs ready for model
-            X, Y = prepare_x_y(df.to_numpy(), T, NF, alphas, normalise=False)
+            X, Y = prepare_x_y(df.to_numpy(), T, NF, alphas, normalize=False)
 
         elif features == "volumes":
-            # normalise features and produce inputs ready for model
-            X, Y = prepare_x_y(df.to_numpy(), T, NF, alphas, normalise=True)
+            # normalize features and produce inputs ready for model
+            X, Y = prepare_x_y(df.to_numpy(), T, NF, alphas, normalize=True)
 
         else:
             raise ValueError("features must be one of orderbooks, orderflows or volumes")
@@ -866,22 +860,25 @@ def reconstruct_orderbook_from_hdf5(file):
 
 
 if __name__ == "__main__":
-    # set parameters
+    # set global parameters
     TICKER = "AAL"
     input_path = "data_raw/" + TICKER + "_data_dwn"
+    log_path = "data/" + TICKER + "_processing_logs"
     horizons = np.array([10, 20, 30, 50, 100, 200, 300, 500, 1000])
+
+    os.mkdir(log_path)
 
     # ============================================================================
     # LOBSTER DATA - ORDERBOOKS
 
     output_path = "data/" + TICKER + "_orderbooks"
-    # os.mkdir(output_path)
+    os.mkdir(output_path)
 
     startTime = time.time()
     process_data(TICKER=TICKER, 
                  input_path=input_path, 
-                 output_path=output_path, 
-                 output_extension="csv", 
+                 output_path=output_path,
+                 log_path=log_path,
                  features="orderbooks",
                  horizons=horizons)
     executionTime = (time.time() - startTime)
@@ -889,37 +886,38 @@ if __name__ == "__main__":
     print("Orderbooks execution time in minutes: " + str(executionTime/60))
 
     # ============================================================================
-    # # LOBSTER DATA - ORDERFLOWS
+    # LOBSTER DATA - ORDERFLOWS
 
-    # output_path = "data/" + TICKER + "_orderflows"
-    # os.mkdir(output_path)
+    output_path = "data/" + TICKER + "_orderflows"
+    os.mkdir(output_path)
 
-    # startTime = time.time()
-    # process_data(TICKER=TICKER, 
-    #              input_path=input_path, 
-    #              output_path=output_path, 
-    #              output_extension="csv", 
-    #              features="orderflows",
-    #              horizons=horizons)
-    # executionTime = (time.time() - startTime)
+    startTime = time.time()
+    process_data(TICKER=TICKER, 
+                 input_path=input_path, 
+                 output_path=output_path,
+                 log_path=log_path,
+                 features="orderflows",
+                 horizons=horizons)
+    executionTime = (time.time() - startTime)
 
-    # print("Orderflows execution time in minutes: " + str(executionTime/60))
+    print("Orderflows execution time in minutes: " + str(executionTime/60))
 
-    # #============================================================================
-    # # LOBSTER DATA - VOLUMES L3 (multiprocess)
+    # ============================================================================
+    # LOBSTER DATA - VOLUMES L3 (multiprocess)
 
-    # output_path = "data/" + TICKER + "_volumes"
-    # os.mkdir(output_path)
+    output_path = "data/" + TICKER + "_volumes"
+    os.mkdir(output_path)
 
-    # startTime = time.time()
-    # multiprocess_L3(TICKER=TICKER,
-    #                 input_path=input_path, 
-    #                 output_path=output_path, 
-    #                 queue_depth=10, 
-    #                 horizons=horizons)
-    # executionTime = (time.time() - startTime)
+    startTime = time.time()
+    multiprocess_L3(TICKER=TICKER,
+                    input_path=input_path, 
+                    output_path=output_path,
+                    log_path=log_path, 
+                    queue_depth=10, 
+                    horizons=horizons)
+    executionTime = (time.time() - startTime)
 
-    # print("Volumes execution time in minutes: " + str(executionTime/60))
+    print("Volumes execution time in minutes: " + str(executionTime/60))
 
     # #============================================================================
     # # SIMULATED DATA
