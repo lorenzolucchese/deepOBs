@@ -335,8 +335,6 @@ def process_data(TICKER, input_path, output_path, log_path, time_index="seconds"
 
         logs.append(orderbook_name + ' completed')
 
-        break
-
     print("finished loop")
 
     with open(log_path + "/" + features + "_processing_logs.txt", "w") as f:
