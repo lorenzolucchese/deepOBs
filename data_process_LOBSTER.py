@@ -363,7 +363,7 @@ def multiprocess_L3(TICKER, input_path, output_path, log_path, horizons=np.array
     print("started multiprocessing")
     
     try:
-        pool = Pool(os.cpu_count - 2)  # leave 2 cpus free
+        pool = Pool(os.cpu_count() - 2)  # leave 2 cpus free
         engine = ProcessL3(TICKER, output_path, queue_depth, horizons, smoothing, k)
         logs = pool.map(engine, csv_orderbook)
     finally: # To make sure processes are closed in the end, even if errors happen
@@ -615,7 +615,7 @@ def process_L3_orderbook(orderbook_name, TICKER, output_path, queue_depth, horiz
     returns = df_orderbook.iloc[:-(max(horizons)+k//2), -len(horizons):].values
 
     # save
-    output_name = os.path.join(output_path, TICKER + "_" + "volume_L3" + "_" + str(date.date()))
+    output_name = os.path.join(output_path, TICKER + "_" + "volumes" + "_" + str(date.date()))
     np.savez(output_name + ".npz", features=orderbook_L3, responses=returns)
 
     return orderbook_name + ' completed'
