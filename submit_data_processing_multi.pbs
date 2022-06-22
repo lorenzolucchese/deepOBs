@@ -1,5 +1,6 @@
 #PBS -l walltime=06:00:00
 #PBS -l select=1:ncpus=256:mem=920gb
+#PBS -J 0-9
 
 cd $PBS_O_WORKDIR
 
@@ -10,4 +11,4 @@ mkdir data/logs
 
 # TICKERS = ["LILAK", "QRTEA", "XRAY", "CHTR", "PCAR", "EXC", "AAL", "WBA", "ATVI", "AAPL"]
 
-python submit_data_process.py 6
+python submit_data_process.py $PBS_ARRAY_INDEX
