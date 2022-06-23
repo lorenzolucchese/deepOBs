@@ -6,8 +6,6 @@ cd $PBS_O_WORKDIR
 module load anaconda3/personal
 source activate deepLOBs_env
 
-mkdir data/logs
-
 # TICKERS = ["LILAK", "QRTEA", "XRAY", "CHTR", "PCAR", "EXC", "AAL", "WBA", "ATVI", "AAPL"]
 
-python submit_data_process.py 6
+python submit_data_process.py 8

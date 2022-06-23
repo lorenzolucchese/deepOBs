@@ -78,7 +78,7 @@ def process_data(TICKER, input_path, output_path, log_path, time_index="seconds"
         try:
             df_orderbook = pd.read_csv(orderbook_name, header=None)
         except:
-            return logs.append(orderbook_name + ' skipped. Error: failed to read orderbook.')
+            logs.append(orderbook_name + ' skipped. Error: failed to read orderbook.')
 
         levels = int(df_orderbook.shape[1] / 4)
         feature_names_raw = ["ASKp", "ASKs", "BIDp", "BIDs"]
@@ -100,7 +100,7 @@ def process_data(TICKER, input_path, output_path, log_path, time_index="seconds"
         try:
             df_message = pd.read_csv(message_name, usecols=[0, 1, 2, 3, 4, 5], header=None)
         except:
-            return logs.append(orderbook_name + ' skipped. Error: failed to read messagebook.')
+            logs.append(orderbook_name + ' skipped. Error: failed to read messagebook.')
 
         # check the two df have the same length
         assert (len(df_message) == len(df_orderbook))
