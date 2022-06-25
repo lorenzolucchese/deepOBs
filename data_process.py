@@ -519,9 +519,6 @@ def process_L3_orderbook(orderbook_name, TICKER, output_path, queue_depth, horiz
         flags = (orderbook_states_prices == np.repeat(ticks[:, i].reshape((len(orderbook_states_prices), 1)), orderbook_states_prices.shape[1], axis=1))
         volumes[flags.sum(axis=1) > 0, i] = orderbook_states_volumes[flags]
 
-    print(ticks[11210:11215, 16:24])
-    print(volumes[11210:11215, 16:24])
-
     orderbook_L3 = np.zeros((len(df_orderbook_full), 4*levels, queue_depth))
 
     prices_dict = {}
