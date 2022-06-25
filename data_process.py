@@ -18,16 +18,30 @@ def process_data(TICKER, input_path, output_path, log_path, time_index="seconds"
     - order book states with crossed quotes are removed.
     - each state in the orderbook is time-stamped, with states occurring at the same time collapsed
       onto the last state.
-    - the first and last 10 minutes of market activity are dropped.
+    - the first and last 10 minutes of market activity (inside usual opening times) are dropped.
     - rolling z-score normalization is applied to the data, i.e. the mean and standard deviation of the previous 5 days
       is used to normalize current day's data. Hence drop first 5 days.
     - the smoothed returns at the requested horizons (in order book changes) are returned
       if smoothing = "horizon": l = (m+ - m)/m, where m+ denotes the mean of the next h mid-prices, m(.) is current mid price.
       if smoothing = "uniform": l = (m+ - m)/m, where m+ denotes the mean of the k+1 mid-prices centered at m(. + h), m(.) is current mid price.
-    Moreover supplementary files are produced for:
+    A log file is produced tracking:
     - order book files with problems
     - message book files with problems
     - trading days with unusual open - close times
+    - trading days with crossed quotes
+    A statistics.csv file summarizes the following (daily) statistics:
+        # Updates (000): the total number of changes in the orderbook file
+        # Trades (000): the total number of trades, computed by counting the number of message book events
+                        corresponding to the execution of (possibly hidden) limit orders (Event Type 4 or 5
+                        in LOBSTER)
+        # Price Changes (000): the total number of price changes per day
+        # Price (USD): average price on the day, weighted average by time
+        # Spread (bps): average spread on the day, weighted average by time
+        # Volume (USD MM): total volume traded on the day, computed as the sum of the volumes of
+                           all the executed trades (Event Type 4 or 5). The volume of a single trade
+                           is given by Size*Price
+        # Tick size: the fraction of time that the bid-ask spread is equal to one tick for each stock
+                     (Curato et al., 2015).
     :param TICKER: the TICKER to be considered
     :param input_path: the path where the order book and message book files are stores in monthly
                        directories
@@ -108,9 +122,25 @@ def process_data(TICKER, input_path, output_path, log_path, time_index="seconds"
         # add column names to message book
         df_message.columns = ["seconds", "event type", "order ID", "volume", "price", "direction"]
 
+        # remove trading halts
+        trading_halts_start = df_message[(df_message["event type"] == 7)&(df_message["price"] == -1)].index
+        trading_halts_end = df_message[(df_message["event type"] == 7)&(df_message["price"] == 1)].index
+        trading_halts_index = np.array([])
+        for halt_start, halt_end in zip(trading_halts_start, trading_halts_end):
+            trading_halts_index = np.append(trading_halts_index, df_message.index[(df_message.index >= halt_start)&(df_message.index < halt_end)])
+        if len(trading_halts_index) > 0:
+            for halt_start, halt_end in zip(trading_halts_start, trading_halts_end):
+                logs.append('Warning: trading halt between ' + str(df_message.loc[halt_start, "seconds"]) + ' and ' + str(df_message.loc[halt_end, "seconds"]) + ' in ' + orderbook_name + '.')
+        df_orderbook = df_orderbook.drop(trading_halts_index)
+        df_message = df_message.drop(trading_halts_index)
+
+
         # remove crossed quotes
-        df_orderbook.drop(df_orderbook[(df_orderbook["BIDp1"] > df_orderbook["ASKp1"])].index)
-        df_message.drop(df_message[(df_orderbook["BIDp1"] > df_orderbook["ASKp1"])].index)
+        crossed_quotes_index = df_orderbook[(df_orderbook["BIDp1"] > df_orderbook["ASKp1"])].index
+        if len(crossed_quotes_index) > 0:
+            logs.append('Warning: ' + str(len(crossed_quotes_index)) + ' crossed quotes removed in ' + orderbook_name + '.')
+        df_orderbook = df_orderbook.drop(crossed_quotes_index)
+        df_message = df_message.drop(crossed_quotes_index)
 
         # add the seconds since midnight column to the order book from the message book
         df_orderbook.insert(0, "seconds", df_message["seconds"])
@@ -127,8 +157,7 @@ def process_data(TICKER, input_path, output_path, log_path, time_index="seconds"
         market_close = (int(df_orderbook["seconds"].iloc[-1] / 60) + 1) / 60  # close at minute after last transaction
 
         if not (market_open == 9.5 and market_close == 16):
-            logs.append(orderbook_name + ' skipped. Error: unusual opening times: ' + str(market_open) + ' - ' + str(market_close))
-            continue
+            logs.append('Warning: unusual opening times in ' + orderbook_name + ': ' + str(market_open) + ' - ' + str(market_close) + '.')
 
         if time_index == "seconds":
             # drop values outside of market hours using seconds
@@ -168,37 +197,25 @@ def process_data(TICKER, input_path, output_path, log_path, time_index="seconds"
         else:
             raise Exception("time_index must be seconds or datetime")
 
-        # We keep track of the following (daily) statistics:
-        # Updates (000): the total number of changes in the orderbook file
-        # Trades (000): the total number of trades, computed by counting the number of message book events
-        #               corresponding to the execution of (possibly hidden) limit orders (Event Type 4 or 5
-        #               in LOBSTER)
-        # Price Changes (000): the total number of price changes per day
-        # Price (USD): average price on the day, weighted average by time
-        # Spread (bps): average spread on the day, weighted average by time
-        # Volume (USD MM): total volume traded on the day, computed as the sum of the volumes of
-        #                  all the executed trades (Event Type 4 or 5). The volume of a single trade
-        #                  is given by Size*Price
-        # Tick size: the fraction of time that the bid-ask spread is equal to one tick for each stock
-        #            (Curato et al., 2015).
-
         if time_index == "seconds":
-            updates = df_orderbook.shape[0] / 1000
-            trades = np.sum((df_message["event type"] == 4) | (df_message["event type"] == 5)) / 1000
-            price_changes = np.sum(~(np.diff(df_orderbook["mid price"]) == 0.0)) / 1000
-            time_deltas = np.append(np.diff(df_orderbook["seconds"]),
-                                    market_close_seconds - df_orderbook["seconds"].iloc[-1])
-            price = np.average(df_orderbook["mid price"] / 10 ** 4, weights=time_deltas)
-            spread = np.average((df_orderbook["ASKp1"] - df_orderbook["BIDp1"]) / df_orderbook["mid price"] * 10000,
-                                weights=time_deltas)
-            volume = np.sum(
-                df_message.loc[(df_message["event type"] == 4) | (df_message["event type"] == 5)]["volume"] *
-                df_message.loc[(df_message["event type"] == 4) | (df_message["event type"] == 5)][
-                    "price"] / 10 ** 4) / 10 ** 6
-            tick_size = np.average((df_orderbook["ASKp1"] - df_orderbook["BIDp1"]) == 100.0,
-                                   weights=time_deltas)
+            if len(df_orderbook) > 0:
+                updates = df_orderbook.shape[0] / 1000
+                trades = np.sum((df_message["event type"] == 4) | (df_message["event type"] == 5)) / 1000
+                price_changes = np.sum(~(np.diff(df_orderbook["mid price"]) == 0.0)) / 1000
+                time_deltas = np.append(np.diff(df_orderbook["seconds"]), market_close_seconds - df_orderbook["seconds"].iloc[-1])
+                price = np.average(df_orderbook["mid price"] / 10 ** 4, weights=time_deltas)
+                spread = np.average((df_orderbook["ASKp1"] - df_orderbook["BIDp1"]) / df_orderbook["mid price"] * 10000,
+                                    weights=time_deltas)
+                volume = np.sum(
+                    df_message.loc[(df_message["event type"] == 4) | (df_message["event type"] == 5)]["volume"] *
+                    df_message.loc[(df_message["event type"] == 4) | (df_message["event type"] == 5)]["price"] / 10 ** 4) / 10 ** 6
+                tick_size = np.average((df_orderbook["ASKp1"] - df_orderbook["BIDp1"]) == 100.0,
+                                    weights=time_deltas)
 
-            df_statistics.loc[date] = [updates, trades, price_changes, price, spread, volume, tick_size]
+                df_statistics.loc[date] = [updates, trades, price_changes, price, spread, volume, tick_size]
+            
+            else:
+                df_statistics.loc[date] = [None]*7
         
         if features == "orderbooks":
             pass
@@ -244,15 +261,18 @@ def process_data(TICKER, input_path, output_path, log_path, time_index="seconds"
 
             ticks = np.hstack((np.outer(np.round((df_orderbook["mid price"] - 25) / 100) * 100, np.ones(2*levels)) + 100 * np.outer(np.ones(len(df_orderbook)), np.arange(-2*levels+1, 1)),
                                np.outer(np.round((df_orderbook["mid price"] + 25) / 100) * 100, np.ones(2*levels)) + 100 * np.outer(np.ones(len(df_orderbook)), np.arange(2*levels))))
-            
+            ticks = ticks.astype(int)
+
             volumes = np.zeros((len(df_orderbook), 4*levels))
 
             orderbook_states = df_orderbook[feature_names]
+            orderbook_states_prices = orderbook_states.values[:, ::2]
+            orderbook_states_volumes = orderbook_states.values[:, 1::2]
 
             for i in range(4*levels):
-                flags = (orderbook_states.values == np.repeat(ticks[:, i].reshape((len(orderbook_states), 1)), orderbook_states.shape[1], axis=1))
-                flags = np.hstack((np.repeat(False, flags.shape[0]).reshape((flags.shape[0], 1)), flags[:, :-1]))
-                volumes[flags.sum(axis=1) > 0, i] = orderbook_states.values[flags]
+                # match tick prices with prices in levels of orderbook
+                flags = (orderbook_states_prices == np.repeat(ticks[:, i].reshape((len(orderbook_states_prices), 1)), orderbook_states_prices.shape[1], axis=1))
+                volumes[flags.sum(axis=1) > 0, i] = orderbook_states_volumes[flags]
             
             df_orderbook = df_orderbook.drop(feature_names, axis=1).iloc[:, :]
             feature_names_raw = ["BIDs", "ASKs"]
@@ -334,7 +354,7 @@ def process_data(TICKER, input_path, output_path, log_path, time_index="seconds"
         else:
             raise ValueError("output_extension must be hdf5 or csv")
 
-        logs.append(orderbook_name + ' completed')
+        logs.append(orderbook_name + ' completed.')
 
     print("finished loop")
 
@@ -395,6 +415,7 @@ class ProcessL3(object):
 
 def process_L3_orderbook(orderbook_name, TICKER, output_path, queue_depth, horizons, smoothing, k):
     print(orderbook_name)
+    log = ''
     try:
         df_orderbook = pd.read_csv(orderbook_name, header=None)
     except:
@@ -428,9 +449,24 @@ def process_L3_orderbook(orderbook_name, TICKER, output_path, queue_depth, horiz
     # add column names to message book
     df_message.columns = ["seconds", "event type", "order ID", "volume", "price", "direction"]
 
+    # remove trading halts
+    trading_halts_start = df_message[(df_message["event type"] == 7)&(df_message["price"] == -1)].index
+    trading_halts_end = df_message[(df_message["event type"] == 7)&(df_message["price"] == 1)].index
+    trading_halts_index = np.array([])
+    for halt_start, halt_end in zip(trading_halts_start, trading_halts_end):
+        trading_halts_index = np.append(trading_halts_index, df_message.index[(df_message.index >= halt_start)&(df_message.index < halt_end)])
+    if len(trading_halts_index) > 0:
+        for halt_start, halt_end in zip(trading_halts_start, trading_halts_end):
+            log = log + 'Warning: trading halt between ' + str(df_message.loc[halt_start, "seconds"]) + ' and ' + str(df_message.loc[halt_end, "seconds"]) + ' in ' + orderbook_name + '.\n'
+    df_orderbook = df_orderbook.drop(trading_halts_index)
+    df_message = df_message.drop(trading_halts_index)
+
     # remove crossed quotes
-    df_orderbook.drop(df_orderbook[(df_orderbook["BIDp1"] > df_orderbook["ASKp1"])].index)
-    df_message.drop(df_message[(df_orderbook["BIDp1"] > df_orderbook["ASKp1"])].index)
+    crossed_quotes_index = df_orderbook[(df_orderbook["BIDp1"] > df_orderbook["ASKp1"])].index
+    if len(crossed_quotes_index) > 0:
+        log = log + 'Warning: ' + str(len(crossed_quotes_index)) + ' crossed quotes removed in ' + orderbook_name + '.\n'
+    df_orderbook = df_orderbook.drop(crossed_quotes_index)
+    df_message = df_message.drop(crossed_quotes_index)
 
     # add the seconds since midnight column to the order book from the message book
     df_orderbook.insert(0, "seconds", df_message["seconds"])
@@ -450,7 +486,7 @@ def process_L3_orderbook(orderbook_name, TICKER, output_path, queue_depth, horiz
     market_close = (int(df_orderbook["seconds"].iloc[-1] / 60) + 1) / 60  # close at minute after last transaction
 
     if not (market_open == 9.5 and market_close == 16):
-        return orderbook_name + ' skipped. Error: unusual opening times: ' + str(market_open) + ' - ' + str(market_close)
+        log = log + 'Warning: unusual opening times in ' + orderbook_name + ': ' + str(market_open) + ' - ' + str(market_close) + '.\n'
     
     # drop values outside of market hours using seconds
     df_orderbook = df_orderbook.loc[(df_orderbook["seconds"] >= 34200) &
@@ -468,21 +504,28 @@ def process_L3_orderbook(orderbook_name, TICKER, output_path, queue_depth, horiz
                                 (df_message["seconds"] <= market_close_seconds)]
 
     # Assumes tick_size = 0.01 $, as per LOBSTER data
-
     ticks = np.hstack((np.outer(np.round((df_orderbook_full["mid price"] - 25) / 100) * 100, np.ones(2*levels)) + 100 * np.outer(np.ones(len(df_orderbook_full)), np.arange(-2*levels+1, 1)),
                         np.outer(np.round((df_orderbook_full["mid price"] + 25) / 100) * 100, np.ones(2*levels)) + 100 * np.outer(np.ones(len(df_orderbook_full)), np.arange(2*levels))))
+    ticks = ticks.astype(int)
     
     volumes = np.zeros((len(df_orderbook_full), 4*levels))
 
     orderbook_states = df_orderbook_full[feature_names]
+    orderbook_states_prices = orderbook_states.values[:, ::2]
+    orderbook_states_volumes = orderbook_states.values[:, 1::2]
 
     for i in range(4*levels):
-        flags = (orderbook_states.values == np.repeat(ticks[:, i].reshape((len(orderbook_states), 1)), orderbook_states.shape[1], axis=1))
-        flags = np.hstack((np.repeat(False, flags.shape[0]).reshape((flags.shape[0], 1)), flags[:, :-1]))
-        volumes[flags.sum(axis=1) > 0, i] = orderbook_states.values[flags]
+        # match tick prices with prices in levels of orderbook
+        flags = (orderbook_states_prices == np.repeat(ticks[:, i].reshape((len(orderbook_states_prices), 1)), orderbook_states_prices.shape[1], axis=1))
+        volumes[flags.sum(axis=1) > 0, i] = orderbook_states_volumes[flags]
+
+    print(ticks[11210:11215, 16:24])
+    print(volumes[11210:11215, 16:24])
 
     orderbook_L3 = np.zeros((len(df_orderbook_full), 4*levels, queue_depth))
+
     prices_dict = {}
+    
     # skip first message_df row
     skip = True
     
@@ -494,12 +537,12 @@ def process_L3_orderbook(orderbook_name, TICKER, output_path, queue_depth, horiz
         volume = df_message_full.loc[index, "volume"]
 
         # if new price is entering range (re-)initialize dict
-        for price_ in df_orderbook_full.iloc[i, 2::2]:
-            if (price_ in df_orderbook_full.iloc[i - 1, 2::2].values) and (price_ in prices_dict.keys()):
+        for price_ in orderbook_states_prices[i, :]:
+            if (price_ in orderbook_states_prices[i - 1, :]) and (price_ in prices_dict.keys()):
                 pass
             else:
-                j = np.where(df_orderbook_full.iloc[i, 2::2]==price_)[0]
-                volume_ = df_orderbook_full.iloc[i, 2 + 2*j + 1].values[0]
+                j = np.where(orderbook_states_prices[i, :]==price_)[0][0]
+                volume_ = orderbook_states_volumes[i, j]
                 prices_dict[price_] = pd.DataFrame(np.array([[volume_, 0]]), index = ['id'], columns = ["volume", "seconds"])
                 if price_ == price:
                     skip = True
@@ -509,6 +552,11 @@ def process_L3_orderbook(orderbook_name, TICKER, output_path, queue_depth, horiz
         # if new price also corresponds to message_df price skip to avoid double counting
         if skip:
             skip = False
+            pass
+        
+        # if the price from message_df is not in df_orderbook prices, i.e. a failure in LOBSTER reconstruction system, treat as hidden market order
+        elif (not price in orderbook_states_prices[(i-1):(i+1), :])&(event_type in [1, 2, 3, 4, 5]):
+            event_type = 5
             pass
 
         # new limit order
@@ -554,6 +602,12 @@ def process_L3_orderbook(orderbook_name, TICKER, output_path, queue_depth, horiz
         
         # trading halt
         elif event_type == 7:
+            # re-initialize prices_dict
+            prices_dict = {}
+            for price_ in orderbook_states_prices[i, :]:
+                j = np.where(orderbook_states_prices[i, :]==price_)[0][0]
+                volume_ = orderbook_states_volumes[i, j]
+                prices_dict[price_] = pd.DataFrame(np.array([[volume_, 0]]), index = ['id'], columns = ["volume", "seconds"])
             pass
         
         else:
@@ -563,19 +617,22 @@ def process_L3_orderbook(orderbook_name, TICKER, output_path, queue_depth, horiz
         prices_dict[price] = price_df
 
         # update orderbooks_L3
-        if event_type in [5, 6, 7]:
+        if event_type in [5, 6]:
             orderbook_L3[i, :, :] = orderbook_L3[i - 1, :, :] 
-        elif (ticks[i, :] == ticks[i - 1, :]).all():
-            j = np.where(ticks[i, :] == price)[0]
-            orderbook_L3[i, :, :] = orderbook_L3[i - 1, :, :] 
-            if len(price_df) == 0:
-                orderbook_L3[i, j, :] = np.zeros(queue_depth)
-            elif len(price_df) < queue_depth:
-                orderbook_L3[i, j, :len(price_df)] = price_df["volume"].values
-                orderbook_L3[i, j, len(price_df):] = 0
+        elif (ticks[i, :] == ticks[i - 1, :]).all() & (not event_type == 7):
+            if price in ticks[i, :]:
+                j = np.where(ticks[i, :] == price)[0][0]
+                orderbook_L3[i, :, :] = orderbook_L3[i - 1, :, :] 
+                if len(price_df) == 0:
+                    orderbook_L3[i, j, :] = np.zeros(queue_depth)
+                elif len(price_df) < queue_depth:
+                    orderbook_L3[i, j, :len(price_df)] = price_df["volume"].values
+                    orderbook_L3[i, j, len(price_df):] = 0
+                else:
+                    orderbook_L3[i, j, :(queue_depth-1)] = price_df["volume"].values[:(queue_depth-1)]
+                    orderbook_L3[i, j, queue_depth-1] = np.sum(price_df["volume"].values[(queue_depth-1):])
             else:
-                orderbook_L3[i, j, :(queue_depth-1)] = price_df["volume"].values[:(queue_depth-1)]
-                orderbook_L3[i, j, queue_depth-1] = np.sum(price_df["volume"].values[(queue_depth-1):])
+                orderbook_L3[i, :, :] = orderbook_L3[i - 1, :, :]
         else:
             for j, price_ in enumerate(ticks[i, :]):
                 price_df_ = prices_dict.get(price_, [])
@@ -587,7 +644,7 @@ def process_L3_orderbook(orderbook_name, TICKER, output_path, queue_depth, horiz
                     orderbook_L3[i, j, :(queue_depth-1)] = price_df_["volume"].values[:(queue_depth-1)]
                     orderbook_L3[i, j, queue_depth-1] = np.sum(price_df_["volume"].values[(queue_depth-1):])
         
-    # need then to remove all same timestamps and first/last 10 minutes (collpse to last)
+    # need then to remove all same timestamps and first/last 10 minutes (collapse to last)
     orderbook_L3 = orderbook_L3[df_orderbook_full.index.isin(df_orderbook.index), :, :]
 
     if smoothing == "horizon":
@@ -618,7 +675,7 @@ def process_L3_orderbook(orderbook_name, TICKER, output_path, queue_depth, horiz
     output_name = os.path.join(output_path, TICKER + "_" + "volumes" + "_" + str(date.date()))
     np.savez(output_name + ".npz", features=orderbook_L3, responses=returns)
 
-    return orderbook_name + ' completed'
+    return log + orderbook_name + ' completed.'
 
 
 def process_simulated_data(input_path, output_path, levels = 10, T = 100, horizons=np.array([10, 20, 30, 50, 100]), features = "orderbooks"):
@@ -730,14 +787,13 @@ def process_simulated_data(input_path, output_path, levels = 10, T = 100, horizo
             df_orderbook = df_orderbook.drop(["mid price"], axis=1)
             orderbook_states = df_orderbook.iloc[:, :-len(horizons)].to_numpy()
 
-            # use negatives "trick"
-            orderbook_states[:, ::2] = (-1) * orderbook_states[:, ::2]
-            ticks = (-1) * ticks
+            orderbook_states_prices = orderbook_states[:, ::2]
+            orderbook_states_volumes = orderbook_states[:, 1::2]
 
             for i in range(4*levels):
-                flags = (orderbook_states == np.repeat(ticks[:, i].reshape((orderbook_states.shape[0], 1)), orderbook_states.shape[1], axis=1))
-                flags = np.hstack((np.repeat(False, flags.shape[0]).reshape((flags.shape[0], 1)), flags[:, :-1]))
-                volumes[flags.sum(axis=1) > 0, i] = orderbook_states[flags]
+                # match tick prices with prices in levels of orderbook
+                flags = (orderbook_states_prices == np.repeat(ticks[:, i].reshape((len(orderbook_states_prices), 1)), orderbook_states_prices.shape[1], axis=1))
+                volumes[flags.sum(axis=1) > 0, i] = orderbook_states_volumes[flags]
             
             # create volumes dataframe
             feature_names = ["BIDvol" + str(i) for i in range(2*levels, 0, -1)] + ["ASKvol" + str(i) for i in range(1, 2*levels + 1)]

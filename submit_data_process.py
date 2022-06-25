@@ -65,18 +65,4 @@ if __name__ == "__main__":
     executionTime = (time.time() - startTime)
 
     print("Volumes execution time in minutes: " + str(executionTime/60))
-
-    # #============================================================================
-    # # SIMULATED DATA
-
-    # # set parameters
-    # input_path = r"/scratch/lucchese/deepLOBs/data/simulated"
-    # output_path = r"/scratch/lucchese/deepLOBs/data/model/simulated_orderflows"
-
-    # startTime = time.time()
-    # process_simulated_data(input_path=input_path, 
-    #              output_path=output_path,
-    #              features="orderflows")
-    # executionTime = (time.time() - startTime)
-
-    # print("Execution time in seconds: " + str(executionTime))
+    
