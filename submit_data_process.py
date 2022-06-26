@@ -13,41 +13,41 @@ if __name__ == "__main__":
     log_path = "data/logs/" + TICKER + "_processing_logs"
     horizons = np.array([10, 20, 30, 50, 100, 200, 300, 500, 1000])
 
-    os.mkdir(log_path)
+    # os.mkdir(log_path)
 
-    # ============================================================================
-    # LOBSTER DATA - ORDERBOOKS
+    # # ============================================================================
+    # # LOBSTER DATA - ORDERBOOKS
 
-    output_path = "data/" + TICKER + "_orderbooks"
-    os.mkdir(output_path)
+    # output_path = "data/" + TICKER + "_orderbooks"
+    # os.mkdir(output_path)
 
-    startTime = time.time()
-    process_data(TICKER=TICKER, 
-                 input_path=input_path, 
-                 output_path=output_path,
-                 log_path=log_path,
-                 features="orderbooks",
-                 horizons=horizons)
-    executionTime = (time.time() - startTime)
+    # startTime = time.time()
+    # process_data(TICKER=TICKER, 
+    #              input_path=input_path, 
+    #              output_path=output_path,
+    #              log_path=log_path,
+    #              features="orderbooks",
+    #              horizons=horizons)
+    # executionTime = (time.time() - startTime)
 
-    print("Orderbooks execution time in minutes: " + str(executionTime/60))
+    # print("Orderbooks execution time in minutes: " + str(executionTime/60))
 
-    # ============================================================================
-    # LOBSTER DATA - ORDERFLOWS
+    # # ============================================================================
+    # # LOBSTER DATA - ORDERFLOWS
 
-    output_path = "data/" + TICKER + "_orderflows"
-    os.mkdir(output_path)
+    # output_path = "data/" + TICKER + "_orderflows"
+    # os.mkdir(output_path)
 
-    startTime = time.time()
-    process_data(TICKER=TICKER, 
-                 input_path=input_path, 
-                 output_path=output_path,
-                 log_path=log_path,
-                 features="orderflows",
-                 horizons=horizons)
-    executionTime = (time.time() - startTime)
+    # startTime = time.time()
+    # process_data(TICKER=TICKER, 
+    #              input_path=input_path, 
+    #              output_path=output_path,
+    #              log_path=log_path,
+    #              features="orderflows",
+    #              horizons=horizons)
+    # executionTime = (time.time() - startTime)
 
-    print("Orderflows execution time in minutes: " + str(executionTime/60))
+    # print("Orderflows execution time in minutes: " + str(executionTime/60))
 
     # ============================================================================
     # LOBSTER DATA - VOLUMES L3 (multiprocess)
