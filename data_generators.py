@@ -6,7 +6,7 @@ def CustomtfDataset(files,
                     NF, 
                     horizon, 
                     n_horizons = 5,
-                    model_inputs = "orderbook",
+                    model_inputs = "orderbooks",
                     task = "classification", 
                     alphas = np.array([]), 
                     multihorizon = False, 
@@ -64,7 +64,7 @@ def CustomtfDataset(files,
     # create combined dataset
     tf_datasets = []
     for file in files:
-        if model_inputs in ["orderbook", "orderflow"]:
+        if model_inputs in ["orderbooks", "orderflows"]:
             dataset = pd.read_csv(file).to_numpy()
 
             features = dataset[:, :NF]
@@ -107,7 +107,7 @@ def CustomtfDataset(files,
     # features_list = []
     # y_list = []
     # for file in files:
-    #     if model_inputs in ["orderbook", "orderflow"]:
+    #     if model_inputs in ["orderbooks", "orderflows"]:
     #         dataset = pd.read_csv(file).to_numpy()
 
     #         features = dataset[:, :NF]

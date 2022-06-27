@@ -132,7 +132,7 @@ class deepLOB:
                  data, 
                  data_dir, 
                  files = None, 
-                 model_inputs = "orderbook", 
+                 model_inputs = "orderbooks", 
                  T = 100,
                  levels = 10, 
                  queue_depth = None,
@@ -146,7 +146,7 @@ class deepLOB:
                  imbalances = None):
         """Initialization.
         :param T: time window 
-        :param levels: number of levels (note these have different meaning for orderbook/orderflow and volumes)
+        :param levels: number of levels (note these have different meaning for orderbooks/orderflows and volumes)
         :param horizon: when not multihorizon, the horizon to consider
         :param number_of_lstm: number of nodes in lstm
         :param data: whether the data fits in the RAM and is thus divided in train, val, test datasets (and, if multihorizon, corresponding decoder_input) - "FI2010", "simulated"
@@ -160,9 +160,9 @@ class deepLOB:
         """
         self.T = T
         self.levels = levels
-        if model_inputs == "orderbook":
+        if model_inputs == "orderbooks":
             self.NF = 4*levels
-        elif model_inputs in ["orderflow", "volumes", "volumes_L3"]:
+        elif model_inputs in ["orderflows", "volumes", "volumes_L3"]:
             self.NF = 2*levels
         else:
             raise ValueError("model_inputs must be orderbook, orderflow, volumes or volumes_L3")
@@ -215,7 +215,7 @@ class deepLOB:
             self.test_generator = generator.flow(testX, testY, batch_size=batch_size, shuffle=False)
     
         elif data == "LOBSTER":
-            if model_inputs in ["orderbook", "orderflow"]:
+            if model_inputs in ["orderbooks", "orderflows"]:
                 normalise = False
             elif model_inputs in ["volumes", "volumes_L3"]:
                 normalise = True
@@ -268,13 +268,13 @@ class deepLOB:
 
         adam = tf.keras.optimizers.Adam(learning_rate=0.01, epsilon=1)
 
-        if self.model_inputs in ["orderbook", "orderflow", "volumes"]:
+        if self.model_inputs in ["orderbooks", "orderflows", "volumes"]:
             input_lmd = Input(shape=(self.T, self.NF, 1), name='input')
         elif self.model_inputs == "volumes_L3":
             input_lmd = Input(shape=(self.T, self.NF, self.queue_depth, 1), name='input')
 
         # build the convolutional block
-        if self.model_inputs == "orderbook":
+        if self.model_inputs == "orderbooks":
             # [batch_size, T, NF, 1] -> [batch_size, T, NF, 32]
             conv_first1 = Conv2D(32, (1, 2), strides=(1, 2))(input_lmd)
             conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
@@ -325,12 +325,12 @@ class deepLOB:
 
             conv_first1 = BatchNormalization(momentum=0.6)(conv_first1)
 
-        elif self.model_inputs == "orderflow":
+        elif self.model_inputs == "orderflows":
             # [batch_size, T, NF, 1] -> [batch_size, T, NF, 1]
             conv_first1 = input_lmd
 
         else:
-            raise ValueError('task must be either orderbook, orderflow or volumes.')
+            raise ValueError('task must be either orderbooks, orderflows or volumes.')
 
         conv_first1 = Conv2D(32, (1, 2), strides=(1, 2))(conv_first1)
         conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
@@ -529,7 +529,7 @@ class deepLOB:
             if self.multihorizon:
                 evalY = evalY.reshape(0, self.n_horizons)
             for file in eval_files:
-                if self.model_inputs in ["orderbook", "orderflow"]:
+                if self.model_inputs in ["orderbooks", "orderflows"]:
                     data = pd.read_csv(file).to_numpy()
                     responses = data[:, -self.n_horizons:]
                 elif self.model_inputs[:7] == "volumes":
@@ -623,7 +623,7 @@ if __name__ == '__main__':
     orderbook_updates = [10, 20, 30, 50, 100]
     
     #################################### SETTINGS ########################################
-    model_inputs = "orderbook"                    # options: "orderbook", "orderflow", "volumes", "volumes_L3"
+    model_inputs = "orderbooks"                    # options: "orderbooks", "orderflows", "volumes", "volumes_L3"
     data = "LOBSTER"                              # options: "FI2010", "LOBSTER", "simulated"
     data_dir = "data/AAL_orderbooks"
     csv_file_list = glob.glob(os.path.join(data_dir, "*.{}").format("csv"))
