@@ -4,6 +4,7 @@ from data_prepare import get_alphas
 import tensorflow as tf
 import pandas as pd
 import numpy as np
+import pickle
 import random
 import itertools
 import os
@@ -14,7 +15,7 @@ from keras.layers import Dense, Dropout, LeakyReLU, Activation, Input, LSTM, CuD
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.metrics import CategoricalAccuracy, Precision, Recall, MeanSquaredError, MeanMetricWrapper
 
-from sklearn.metrics import classification_report, accuracy_score, mean_absolute_error, mean_squared_error, r2_score
+from sklearn.metrics import classification_report, accuracy_score, confusion_matrix, mean_absolute_error, mean_squared_error, r2_score
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import glob
@@ -110,7 +111,7 @@ def sparse_categorical_matches(y_true, y_pred):
 
 
 class MultihorizonCategoricalAccuracy(MeanMetricWrapper):
-  def __init__(self, h, name='multihorizon_categorical_accuracy', dtype=None):
+  def __init__(self, h, name="multihorizon_categorical_accuracy", dtype=None):
     super(MultihorizonCategoricalAccuracy, self).__init__(
         lambda y_true, y_pred: sparse_categorical_matches(tf.math.argmax(y_true[:, h, :], axis=-1), y_pred[:, h, :]),
         name,
@@ -118,7 +119,7 @@ class MultihorizonCategoricalAccuracy(MeanMetricWrapper):
 
 
 class MultihorizonMeanSquaredError(MeanMetricWrapper):
-  def __init__(self, h, name='multihorizon_mse', dtype=None):
+  def __init__(self, h, name="multihorizon_mse", dtype=None):
     super(MultihorizonMeanSquaredError, self).__init__(
         lambda y_true, y_pred: mean_squared_error(y_true[:, h], y_pred[:, h]),
         name,
@@ -137,7 +138,7 @@ class deepLOB:
                  levels = 10, 
                  queue_depth = None,
                  task = "classification", 
-                 alphas = None, 
+                 alphas = np.array([]), 
                  multihorizon = False, 
                  decoder = "seq2seq", 
                  n_horizons = 5,
@@ -224,7 +225,7 @@ class deepLOB:
             self.test_generator = CustomtfDataset(files = self.files["test"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, alphas = self.alphas, multihorizon = self.multihorizon, window = self.T, normalise=normalise,  batch_size=batch_size, roll_window=1)
 
         else:
-            raise ValueError('data must be either FI2010, simulated or LOBSTER.')
+            raise ValueError("data must be either FI2010, simulated or LOBSTER.")
 
 
     def create_model(self):
@@ -245,7 +246,7 @@ class deepLOB:
                 if self.imbalances is None:
                     loss = "categorical_crossentropy"
                 else:
-                    weights = np.vstack([1 / imbalances[:, self.horizon]]*3).T
+                    weights = np.vstack([1 / self.imbalances[:, self.horizon]]*3).T
                     loss = partial(weighted_categorical_crossentropy, weights=weights)
                 h = str(self.orderbook_updates[self.horizon])
                 metrics = [CategoricalAccuracy(name = "accuracy" + h)]
@@ -263,15 +264,15 @@ class deepLOB:
                 h = str(self.orderbook_updates[self.horizon])
                 metrics = [MeanSquaredError(name = "mse"+ h)]
         else:
-            raise ValueError('task must be either classification or regression.')
+            raise ValueError("task must be either classification or regression.")
         self.metrics = metrics
 
         adam = tf.keras.optimizers.Adam(learning_rate=0.01, epsilon=1)
 
         if self.model_inputs in ["orderbooks", "orderflows", "volumes"]:
-            input_lmd = Input(shape=(self.T, self.NF, 1), name='input')
+            input_lmd = Input(shape=(self.T, self.NF, 1), name="input")
         elif self.model_inputs == "volumes_L3":
-            input_lmd = Input(shape=(self.T, self.NF, self.queue_depth, 1), name='input')
+            input_lmd = Input(shape=(self.T, self.NF, self.queue_depth, 1), name="input")
 
         # build the convolutional block
         if self.model_inputs == "orderbooks":
@@ -279,10 +280,10 @@ class deepLOB:
             conv_first1 = Conv2D(32, (1, 2), strides=(1, 2))(input_lmd)
             conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
             # [batch_size, T, NF, 32] -> [batch_size, T, NF, 32]
-            conv_first1 = Conv2D(32, (4, 1), padding='same')(conv_first1)
+            conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
             conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
             # [batch_size, T, NF, 32] -> [batch_size, T, NF, 32]
-            conv_first1 = Conv2D(32, (4, 1), padding='same')(conv_first1)
+            conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
             conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
 
             conv_first1 = BatchNormalization(momentum=0.6)(conv_first1)
@@ -296,10 +297,10 @@ class deepLOB:
             conv_first1 = Reshape((int(conv_first1.shape[1]), int(conv_first1.shape[2]), int(conv_first1.shape[4])))(conv_first1)
             conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
             # [batch_size, T, NF/2-1, 32] -> [batch_size, T, NF/2-1, 32]
-            conv_first1 = Conv2D(32, (4, 1), padding='same')(conv_first1)
+            conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
             conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
             # [batch_size, T, NF/2-1, 32] -> [batch_size, T, NF/2-1, 32]
-            conv_first1 = Conv2D(32, (4, 1), padding='same')(conv_first1)
+            conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
             conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
 
             conv_first1 = BatchNormalization(momentum=0.6)(conv_first1)
@@ -317,10 +318,10 @@ class deepLOB:
             conv_first1 = Reshape((int(conv_first1.shape[1]), int(conv_first1.shape[2]), int(conv_first1.shape[4])))(conv_first1)
             conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
             # [batch_size, T, NF/2-1, 32] -> [batch_size, T, NF/2-1, 32]
-            conv_first1 = Conv2D(32, (4, 1), padding='same')(conv_first1)
+            conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
             conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
             # [batch_size, T, NF/2-1, 32] -> [batch_size, T, NF/2-1, 32]
-            conv_first1 = Conv2D(32, (4, 1), padding='same')(conv_first1)
+            conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
             conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
 
             conv_first1 = BatchNormalization(momentum=0.6)(conv_first1)
@@ -330,43 +331,43 @@ class deepLOB:
             conv_first1 = input_lmd
 
         else:
-            raise ValueError('task must be either orderbooks, orderflows or volumes.')
+            raise ValueError("task must be either orderbooks, orderflows or volumes.")
 
         conv_first1 = Conv2D(32, (1, 2), strides=(1, 2))(conv_first1)
         conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
-        conv_first1 = Conv2D(32, (4, 1), padding='same')(conv_first1)
+        conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
         conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
-        conv_first1 = Conv2D(32, (4, 1), padding='same')(conv_first1)
+        conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
         conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
 
         conv_first1 = BatchNormalization(momentum=0.6)(conv_first1)
 
         conv_first1 = Conv2D(32, (1, conv_first1.shape[2]))(conv_first1)
         conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
-        conv_first1 = Conv2D(32, (4, 1), padding='same')(conv_first1)
+        conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
         conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
-        conv_first1 = Conv2D(32, (4, 1), padding='same')(conv_first1)
+        conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
         conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
 
         conv_first1 = BatchNormalization(momentum=0.6)(conv_first1)
 
         # build the inception module
-        convsecond_1 = Conv2D(64, (1, 1), padding='same')(conv_first1)
+        convsecond_1 = Conv2D(64, (1, 1), padding="same")(conv_first1)
         convsecond_1 = LeakyReLU(alpha=0.01)(convsecond_1)
-        convsecond_1 = Conv2D(64, (3, 1), padding='same')(convsecond_1)
+        convsecond_1 = Conv2D(64, (3, 1), padding="same")(convsecond_1)
         convsecond_1 = LeakyReLU(alpha=0.01)(convsecond_1)
 
         convsecond_1 = BatchNormalization(momentum=0.6)(convsecond_1)
 
-        convsecond_2 = Conv2D(64, (1, 1), padding='same')(conv_first1)
+        convsecond_2 = Conv2D(64, (1, 1), padding="same")(conv_first1)
         convsecond_2 = LeakyReLU(alpha=0.01)(convsecond_2)
-        convsecond_2 = Conv2D(64, (5, 1), padding='same')(convsecond_2)
+        convsecond_2 = Conv2D(64, (5, 1), padding="same")(convsecond_2)
         convsecond_2 = LeakyReLU(alpha=0.01)(convsecond_2)
 
         convsecond_2 = BatchNormalization(momentum=0.6)(convsecond_2)
 
-        convsecond_3 = MaxPooling2D((3, 1), strides=(1, 1), padding='same')(conv_first1)
-        convsecond_3 = Conv2D(64, (1, 1), padding='same')(convsecond_3)
+        convsecond_3 = MaxPooling2D((3, 1), strides=(1, 1), padding="same")(conv_first1)
+        convsecond_3 = Conv2D(64, (1, 1), padding="same")(convsecond_3)
         convsecond_3 = LeakyReLU(alpha=0.01)(convsecond_3)
 
         convsecond_3 = BatchNormalization(momentum=0.6)(convsecond_3)
@@ -380,7 +381,7 @@ class deepLOB:
             conv_lstm = CuDNNLSTM(self.number_of_lstm)(conv_reshape)
             out = Dense(output_dim, activation=output_activation)(conv_lstm)
             # send to float32 for stability
-            out = Activation('linear', dtype='float32')(out)
+            out = Activation("linear", dtype="float32")(out)
             self.model = Model(inputs=input_lmd, outputs=out)
         
         else:
@@ -392,7 +393,7 @@ class deepLOB:
                 states = [state_h, state_c]
 
                 # Set up the decoder, which will only process one time step at a time.
-                decoder_inputs = Input(shape=(1, output_dim), name = 'decoder_input')
+                decoder_inputs = Input(shape=(1, output_dim), name = "decoder_input")
                 decoder_lstm = CuDNNLSTM(self.number_of_lstm, return_sequences=True, return_state=True)
                 decoder_dense = Dense(output_dim, activation=output_activation)
 
@@ -432,7 +433,7 @@ class deepLOB:
                 # The attention decoder will have a different context vector at each time step, depending on attention weights.
                 decoder_inputs = Input(shape=(1, output_dim))
                 decoder_lstm = CuDNNLSTM(self.number_of_lstm, return_sequences=True, return_state=True)
-                decoder_dense = Dense(output_dim, activation=output_activation, name='output_layer')
+                decoder_dense = Dense(output_dim, activation=output_activation, name="output_layer")
 
                 # start off decoder with
                 # inputs: y_0 = decoder_inputs (exogenous), c = encoder_state_h (h_T[0], final hidden state only)
@@ -450,7 +451,7 @@ class deepLOB:
 
                     # dot attention weights, alpha_{i,t} = exp(h_i h'_{t}) / sum_{i=1}^T exp(h_i h'_{t})
                     attention = dot([outputs, encoder_outputs], axes=2)
-                    attention = Activation('softmax')(attention)
+                    attention = Activation("softmax")(attention)
 
                     # context vector, weighted average of all hidden states of encoder, weights determined by attention
                     # c_{t} = sum_{i=1}^T alpha_{i, t} h_i
@@ -469,29 +470,29 @@ class deepLOB:
                     states = [state_h, state_c]
 
                 # Concatenate all predictions
-                decoder_outputs = Lambda(lambda x: K.concatenate(x, axis=1), name='outputs')(all_outputs)
-                # decoder_attention = Lambda(lambda x: K.concatenate(x, axis=1), name='attentions')(all_attention)
+                decoder_outputs = Lambda(lambda x: K.concatenate(x, axis=1), name="outputs")(all_outputs)
+                # decoder_attention = Lambda(lambda x: K.concatenate(x, axis=1), name="attentions")(all_attention)
             
             elif self.decoder == None:
                 pass
 
             else:
-                raise ValueError('decoder must be either seq2seq or attention.')
+                raise ValueError("decoder must be either seq2seq or attention.")
 
             # send to float32 for stability
-            decoder_outputs = Activation('linear', dtype='float32')(decoder_outputs)
+            decoder_outputs = Activation("linear", dtype="float32")(decoder_outputs)
             self.model = Model(inputs=[input_lmd, decoder_inputs], outputs=decoder_outputs)
         
         self.model.compile(loss=loss, metrics=metrics, optimizer=adam)
 
-    def fit_model(self, epochs, checkpoint_filepath, load_weights, load_weights_filepath, verbose=1, batch_size = 256, patience=5):
+    def fit_model(self, epochs, checkpoint_filepath, load_weights=False, load_weights_filepath = None, verbose=1, batch_size = 256, patience=5):
         model_checkpoint_callback = ModelCheckpoint(filepath=checkpoint_filepath,
         					                        save_weights_only=True,
-						                            monitor='val_loss',
-                                                    mode='auto',
+						                            monitor="val_loss",
+                                                    mode="auto",
                                                     save_best_only=True)
         
-        early_stopping = EarlyStopping(monitor='val_loss', patience=patience, mode='auto')
+        early_stopping = EarlyStopping(monitor="val_loss", patience=patience, mode="auto")
 
         if load_weights == True:
             self.model.load_weights(load_weights_filepath)
@@ -501,7 +502,7 @@ class deepLOB:
                        max_queue_size=10, use_multiprocessing=True,
                        callbacks=[model_checkpoint_callback, early_stopping])
 
-    def evaluate_model(self, load_weights_filepath, eval_set = "test"):
+    def evaluate_model(self, load_weights_filepath, results_filepath, eval_set = "test"):
         self.model.load_weights(load_weights_filepath)
 
         print("Evaluating performance on ", eval_set, "set...")
@@ -534,7 +535,7 @@ class deepLOB:
                     responses = data[:, -self.n_horizons:]
                 elif self.model_inputs[:7] == "volumes":
                     data = np.load(file)
-                    responses = data['responses']
+                    responses = data["responses"]
                 evalY = np.concatenate([evalY, responses[(self.T-1)::roll_window, self.horizon]])
                 # evalY = np.concatenate([evalY, responses[:, self.horizon]])
             # evalY = evalY[(self.T-1)::roll_window]
@@ -554,40 +555,58 @@ class deepLOB:
             
         if self.task == "classification":
             if not self.multihorizon:
+                classification_report_dict = classification_report(np.argmax(evalY, axis=1), np.argmax(predY, axis=1), digits=4)
+                confusion_matrix_array = confusion_matrix(np.argmax(evalY, axis=1), np.argmax(predY, axis=1))
+                pickle.dump(classification_report_dict, open(results_filepath + "/classification_report_" + eval_set + ".pkl", "wb"))
+                pickle.dump(confusion_matrix_array, open(results_filepath + "/confusion_matrix_" + eval_set + ".pkl", "wb"))
+                
                 print("Prediction horizon:", self.orderbook_updates[self.horizon], " orderbook updates")
-                print('accuracy_score:', accuracy_score(np.argmax(evalY, axis=1), np.argmax(predY, axis=1)))
-                print(classification_report(np.argmax(evalY, axis=1), np.argmax(predY, axis=1), digits=4))
+                print(classification_report_dict)
+                print(confusion_matrix_array)
             else:
                 for h in range(self.n_horizons):
+                    classification_report_dict = classification_report(np.argmax(evalY[:, h, :], axis=1), np.argmax(predY[:, h, :], axis=1), digits=4)
+                    confusion_matrix_array = confusion_matrix(np.argmax(evalY[:, h, :], axis=1), np.argmax(predY[:, h, :], axis=1))
+                    pickle.dump(classification_report_dict, open(results_filepath + "/classification_report_" + eval_set + "_h"+ self.orderbook_updates[h] + ".pkl", "wb"))
+                    pickle.dump(confusion_matrix_array, open(results_filepath + "/confusion_matrix_" + eval_set + "_h"+ self.orderbook_updates[h] + ".pkl", "wb"))
+                    
                     print("Prediction horizon:", self.orderbook_updates[h], " orderbook updates")
-                    print('accuracy_score:', accuracy_score(np.argmax(evalY[:, h, :], axis=1), np.argmax(predY[:, h, :], axis=1)))
-                    print(classification_report(np.argmax(evalY[:, h, :], axis=1), np.argmax(predY[:, h, :], axis=1), digits=4))
+                    print(classification_report_dict)
+                    print(confusion_matrix_array)
         elif self.task == "regression":
             if not self.multihorizon:
+                mse = mean_squared_error(evalY, predY)
+                mae = mean_absolute_error(evalY, predY)
+                r2 = r2_score(evalY, predY)
+                results = {"MSE": mse, "MAE": mae, "r2": r2}
+                pickle.dump(results, open(results_filepath + "/regression_metrics_" + eval_set + ".pkl", "wb"))
+
                 print("Prediction horizon:", self.orderbook_updates[self.horizon], " orderbook updates")
-                print('MSE:', mean_squared_error(evalY, predY))
-                print('MAE:', mean_absolute_error(evalY, predY))
-                print('r2:', r2_score(evalY, predY))
+                print(results)
                 regression_fit_plot(evalY, predY, title = eval_set + str(self.orderbook_updates[self.horizon]), 
-                                    path = os.path.join("plots", self.data, "single-horizon", eval_set + str(self.orderbook_updates[self.horizon]) + '.png'))
+                                    path = results_filepath + "/fit_plot_" + eval_set + ".png")
                 
             else:
                 for h in range(self.n_horizons):
+                    mse = mean_squared_error(evalY[:, h], predY[:, h])
+                    mae = mean_absolute_error(evalY[:, h], predY[:, h])
+                    r2 = r2_score(evalY[:, h], predY[:, h])
+                    results = {"MSE": mse, "MAE": mae, "r2": r2}
+                    pickle.dump(results, open(results_filepath + "/regression_metrics_" + eval_set + "_h" + str(self.orderbook_updates[h]) + ".pkl", "wb"))
+                    
                     print("Prediction horizon:", self.orderbook_updates[h], " orderbook updates")
-                    print('MSE:', mean_squared_error(evalY[:, h], predY[:, h]))
-                    print('MAE:', mean_absolute_error(evalY[:, h], predY[:, h]))
-                    print('r2:', r2_score(evalY[:, h], predY[:, h]))
+                    print(results)
                     regression_fit_plot(evalY, predY, title = eval_set + str(self.orderbook_updates[h]), 
-                                        path=os.path.join("plots", self.data, "multi-horizon", self.decoder, eval_set + str(self.orderbook_updates[h]) + '.png'))
+                                        path = results_filepath + "/fit_plot_" + eval_set + "_h" + str(self.orderbook_updates[h]) + ".png")
 
 
 def regression_fit_plot(evalY, predY, title, path):
     fig, ax = plt.subplots()
-    mpl.rcParams['agg.path.chunksize'] = len(evalY)
-    ax.scatter(evalY, predY, s=10, c='k', alpha=0.5)
+    mpl.rcParams["agg.path.chunksize"] = len(evalY)
+    ax.scatter(evalY, predY, s=10, c="k", alpha=0.5)
     lims = [np.min([evalY, predY]), np.max([evalY, predY])]
-    ax.plot(lims, lims, linestyle='--', color='k', alpha=0.75, zorder=0)
-    ax.set_aspect('equal')
+    ax.plot(lims, lims, linestyle="--", color="k", alpha=0.75, zorder=0)
+    ax.set_aspect("equal")
     ax.set_xlim(lims)
     ax.set_ylim(lims)
     ax.set_title(title)
@@ -595,19 +614,19 @@ def regression_fit_plot(evalY, predY, title, path):
     ax.set_ylabel("Pred y")
     fig.savefig(path)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # limit gpu memory
-    gpus = tf.config.experimental.list_physical_devices('GPU')
+    gpus = tf.config.experimental.list_physical_devices("GPU")
     if gpus:
         try:
             # Use only one GPUs
-            tf.config.set_visible_devices(gpus[0], 'GPU')
-            logical_gpus = tf.config.list_logical_devices('GPU')
+            tf.config.set_visible_devices(gpus[0], "GPU")
+            logical_gpus = tf.config.list_logical_devices("GPU")
 
             # Or use all GPUs, memory growth needs to be the same across GPUs
             # for gpu in gpus:
             #     tf.config.experimental.set_memory_growth(gpu, True)
-            # logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+            # logical_gpus = tf.config.experimental.list_logical_devices("GPU")
             print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
         except RuntimeError as e:
             # Memory growth must be set before GPUs have been initialized
@@ -618,7 +637,7 @@ if __name__ == '__main__':
     np.random.seed(1)
     tf.random.set_seed(2)
 
-    tf.keras.mixed_precision.set_global_policy('mixed_float16')
+    tf.keras.mixed_precision.set_global_policy("mixed_float16")
     
     orderbook_updates = [10, 20, 30, 50, 100]
     
@@ -661,9 +680,9 @@ if __name__ == '__main__':
     batch_size = 256                            # note we use 256 for LOBSTER, 32 for FI2010 or simulated
     number_of_lstm = 64
 
-    checkpoint_filepath = './model_weights/test_model'
+    checkpoint_filepath = "./model_weights/test_model"
     load_weights = False
-    load_weights_filepath = './model_weights/test_model'
+    load_weights_filepath = "./model_weights/test_model"
 
     #######################################################################################
 

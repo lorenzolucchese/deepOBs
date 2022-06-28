@@ -1,113 +1,163 @@
-# from model import deepLOB
+from model import deepLOB
+from data_prepare import get_alphas
 import datetime as dt
 import sys
 import numpy as np
-import pandas as pd
-import glob
+import pickle
 import os
 import random
+import tensorflow as tf
 
 if __name__ == "__main__":
+    # limit gpu memory
+    visible_gpus = tf.config.experimental.get_visible_devices("GPU")
+    physical_gpus = tf.config.experimental.list_physical_devices("GPU")
+    print("This machine has", len(visible_gpus), "visible gpus.")
+    print("This machine has", len(physical_gpus), "physical gpus.")
+    if visible_gpus:
+        try:
+            # Use only one GPUs
+            tf.config.set_visible_devices(visible_gpus[0], "GPU")
+            logical_gpus = tf.config.list_logical_devices("GPU")
+        except RuntimeError as e:
+            # Memory growth must be set before GPUs have been initialized
+            print(e)
+
+    # set random seeds
+    random.seed(0)
+    np.random.seed(1)
+    tf.random.set_seed(2)
+
+    tf.keras.mixed_precision.set_global_policy("mixed_float16")
+
     # set global parameters
     TICKERS = ["LILAK", "QRTEA", "XRAY", "CHTR", "PCAR", "EXC", "AAL", "WBA", "ATVI", "AAPL"]
+    Ws = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    # TICKER = TICKERS[int(sys.argv[1]) % 10]
+    # W = Ws[int(sys.argv[1]) // 10]
 
-    # TICKER = TICKERS[int(sys.argv[1])]
     TICKER = "AAL"
+    W = 0
+
+    orderbook_updates = [10, 20, 30, 50, 100, 200, 300, 500, 1000]
+    data = "LOBSTER"                                                
+    task = "classification"
+    multihorizon = False                              
+    decoder = "seq2seq"                                            
+    T = 100
+    queue_depth = 10                                          
+    n_horizons = len(orderbook_updates)
+    epochs = 50
+    patience = 10
+    training_verbose = 2
+    train_roll_window = 10
+    batch_size = 256
+    number_of_lstm = 64
     model_list = ["deepLOB_L1", "deepOF_L1", "deepLOB_L2", "deepOF_L2", "deepVOL_L2", "deepVOL_L3"]
     features_list = ["orderbooks", "orderflows", "orderbooks", "orderflows", "volumes", "volumes"]
     model_inputs_list = ["orderbooks", "orderflows", "orderbooks", "orderflows", "volumes", "volumes_L3"]
-    levels = [1, 1, 10, 10, 10, 10]
-
-    horizons = np.array([10, 20, 30, 50, 100, 200, 300, 500, 1000])
-    orderbook_updates = [10, 20, 30, 50, 100, 200, 300, 500, 1000]
+    levels_list = [1, 1, 10, 10, 10, 10]
 
     start_date = dt.date(2019, 1, 14)
     end_date = dt.date(2020, 1, 31)
+    slide_by = 5
     dates = [str(start_date + dt.timedelta(days=_)) for _ in range((end_date - start_date).days + 1)]
     weeks = list(zip(*[dates[i::7] for i in range(5)]))
 
-    for i in range(0, len(weeks), 5):
-        train_val_dates = [date for week in weeks[i:i+4] for date in week]
-        test_dates = [date for date in weeks[i+4]]
+    TICKER_filepath = "results/" + TICKER
+    os.makedirs(TICKER_filepath, exist_ok=True)
 
-        for i, model in enumerate(model_list):
-            #################################### SETTINGS ########################################
-            features = features_list[i]
-            model_inputs = model_inputs_list[i]           # options: "orderbooks", "orderflows", "volumes", "volumes_L3"
-            data = "LOBSTER"                              # options: "FI2010", "LOBSTER", "simulated"
+    for d in range(0, len(weeks), slide_by):
+        window = d // slide_by
+        if window == "all":
+            pass
+        elif window == W:
+            pass
+        else:
+            continue
+        train_val_dates = [date for week in weeks[d:d+4] for date in week]
+        test_dates = [date for date in weeks[d+4]]
+        random.shuffle(train_val_dates)
+        val_dates = train_val_dates[:5]
+        train_dates = train_val_dates[5:]
+
+        window_filepath = TICKER_filepath + "/W" + str(window)
+        os.makedirs(window_filepath, exist_ok=True)
+        pickle.dump([val_dates, train_dates, test_dates], open(window_filepath + "/val_train_test_dates.pkl", "wb"))
+
+        alphas = np.array([])
+
+        for m, model_type in enumerate(model_list):
+            model_filepath = window_filepath + "/" + model_type
+            os.makedirs(model_filepath, exist_ok=True)
+            # set local parameters
+            features = features_list[m]
+            model_inputs = model_inputs_list[m]
+            levels = levels_list[m]
+            
             data_dir = "data/" + TICKER + "_" + features
             file_list = os.listdir(data_dir)
-            val_train_list = [file for date in train_val_dates for file in file_list if date in file]
-            random.shuffle(val_train_list)
-            test_list = [file for date in train_val_dates for file in file_list if date in file]
-            print(val_train_list)
-            print(test_list)
             files = {
-                "val": val_train_list[:5],
-                "train": val_train_list[5:25],
-                "test": test_list
+                "val": [os.path.join(data_dir, file) for date in val_dates for file in file_list if date in file],
+                "train": [os.path.join(data_dir, file) for date in train_dates for file in file_list if date in file],
+                "test": [os.path.join(data_dir, file) for date in test_dates for file in file_list if date in file]
             }
-            # alphas, distributions = get_alphas(files["train"])
-            alphas = np.array([0.0000000e+00, 0.0000000e+00, 0.0000000e+00, 0.0000000e+00, 3.2942814e-05])
-            distributions = pd.DataFrame(np.vstack([np.array([0.121552, 0.194825, 0.245483, 0.314996, 0.334330]), 
-                                                    np.array([0.752556, 0.604704, 0.504695, 0.368647, 0.330456]),
-                                                    np.array([0.125893, 0.200471, 0.249821, 0.316357, 0.335214])]), 
-                                        index=["down", "stationary", "up"], 
-                                        columns=["10", "20", "30", "50", "100"])
+            
+            # on first iteration compute alphas
+            if alphas.size == 0:
+                print("getting alphas...")
+                alphas, distributions = get_alphas(files["train"], orderbook_updates)
+                pickle.dump(alphas, open(window_filepath + "/alphas.pkl", "wb"))
+                pickle.dump(distributions, open(window_filepath + "/distributions.pkl", "wb"))
+            else:
+                pass
             imbalances = distributions.to_numpy()
-            # imbalances = None
-            task = "classification"
-            multihorizon = True                         # options: True, False
-            decoder = "seq2seq"                         # options: "seq2seq", "attention"
+            
+            for h in range(n_horizons):
+                horizon = h
+                results_filepath = model_filepath + "/" + "h" + str(orderbook_updates[h])
+                checkpoint_filepath = results_filepath + "/" + "weights"
+                os.makedirs(results_filepath, exist_ok=True)
 
-            T = 100
-            levels = 1                                  # remember to change this when changing models
-            queue_depth = 10                            # for L3 data only
-            n_horizons = 5
-            horizon = 0                                 # prediction horizon (0, 1, 2, 3, 4, 5, 6, 7) -> (10, 20, 30, 50, 100, 200, 300, 500, 1000) orderbook events
-            epochs = 50
-            patience = 10
-            training_verbose = 2
-            train_roll_window = 100
-            batch_size = 256                            # note we use 256 for LOBSTER, 32 for FI2010 or simulated
-            number_of_lstm = 64
+                model = deepLOB(T = T, 
+                                levels = levels, 
+                                horizon = horizon, 
+                                number_of_lstm = number_of_lstm, 
+                                data = data, 
+                                data_dir = data_dir, 
+                                files = files, 
+                                model_inputs = model_inputs, 
+                                queue_depth = queue_depth,
+                                task = task, 
+                                alphas = alphas, 
+                                multihorizon = multihorizon, 
+                                decoder = decoder, 
+                                n_horizons = n_horizons,
+                                train_roll_window = train_roll_window,
+                                imbalances = imbalances)
 
-            checkpoint_filepath = './model_weights/test_model'
-            load_weights = False
-            load_weights_filepath = './model_weights/test_model'
+                model.create_model()
 
+                print("training model:", results_filepath)
+
+                model.fit_model(epochs = epochs,
+                                checkpoint_filepath = checkpoint_filepath,
+                                verbose = training_verbose,
+                                batch_size = batch_size,
+                                patience = patience)
+                
+                print("testing model:", results_filepath)
+
+                model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+                                     eval_set = "test",
+                                     results_filepath = results_filepath)
+                model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+                                     eval_set = "train",
+                                     results_filepath = results_filepath)
+                model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+                                     eval_set = "val",
+                                     results_filepath = results_filepath)
+                
+                break
             break
         break
-
-            #######################################################################################
-
-            # model = deepLOB(T = T, 
-            #                 levels = levels, 
-            #                 horizon = horizon, 
-            #                 number_of_lstm = number_of_lstm, 
-            #                 data = data, 
-            #                 data_dir = data_dir, 
-            #                 files = files, 
-            #                 model_inputs = model_inputs, 
-            #                 queue_depth = queue_depth,
-            #                 task = task, 
-            #                 alphas = alphas, 
-            #                 multihorizon = multihorizon, 
-            #                 decoder = decoder, 
-            #                 n_horizons = n_horizons,
-            #                 train_roll_window = train_roll_window,
-            #                 imbalances = imbalances)
-
-            # model.create_model()
-
-            # model.fit_model(epochs = epochs,
-            #                 checkpoint_filepath = checkpoint_filepath,
-            #                 load_weights = load_weights,
-            #                 load_weights_filepath = load_weights_filepath,
-            #                 verbose = training_verbose,
-            #                 batch_size = batch_size,
-            #                 patience = patience)
-
-            # model.evaluate_model(load_weights_filepath = load_weights_filepath, eval_set = "test")
-            # model.evaluate_model(load_weights_filepath = load_weights_filepath, eval_set = "train")
-            # model.evaluate_model(load_weights_filepath = load_weights_filepath, eval_set = "val")

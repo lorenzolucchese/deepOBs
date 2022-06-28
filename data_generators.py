@@ -5,7 +5,7 @@ import numpy as np
 def CustomtfDataset(files, 
                     NF, 
                     horizon, 
-                    n_horizons = 5,
+                    n_horizons,
                     model_inputs = "orderbooks",
                     task = "classification", 
                     alphas = np.array([]), 

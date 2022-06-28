@@ -1,2 +1,0 @@
-model_checkpoint_path: "weightsseq2seq"
-all_model_checkpoint_paths: "weightsseq2seq"

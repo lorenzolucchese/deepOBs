@@ -18,8 +18,8 @@ def prepare_x(data, NF, T, normalise=False):
     return x
 
 
-def prepare_y(data, T):
-    labels = data[(T-1):, -5:]
+def prepare_y(data, T, n_horizons = 5):
+    labels = data[(T-1):, -n_horizons:]
     all_label = []
     for i in range(labels.shape[1]):
         one_label = labels[:, i] - 1 
@@ -41,50 +41,52 @@ def get_label(y_reg, alphas):
     return y
 
 
-def prepare_x_y(data, T, NF, alphas, normalise=False):
+def prepare_x_y(data, T, NF, alphas, n_horizons = 5, normalise=False):
     x = prepare_x(data, NF, T, normalise=normalise)
-    y_reg = data[(T - 1):, -5:]
+    y_reg = data[(T - 1):, -n_horizons:]
     y_class = get_label(y_reg, alphas)
     return x, y_reg, y_class
 
 
-def get_alphas(files, distribution=True):
+def get_alphas(files, orderbook_updates, distribution=True):
+    n_horizons = len(orderbook_updates)
     returns = []
     for file in files:
         print(file)
         df = pd.read_csv(file)
         df = df.dropna()
         df = df.to_numpy()
-        returns.append(df[:, -5:])
+        returns.append(df[:, -n_horizons:])
     returns = np.vstack(returns)
     alphas = (np.abs(np.quantile(returns, 0.33, axis = 0)) + np.quantile(returns, 0.66, axis = 0))/2
     if distribution:
         n = returns.shape[0]
-        class0 = np.array([sum(returns[:, i] < -alphas[i])/n for i in range(5)])
-        class2 = np.array([sum(returns[:, i] > alphas[i])/n for i in range(5)])
+        class0 = np.array([sum(returns[:, i] < -alphas[i])/n for i in range(n_horizons)])
+        class2 = np.array([sum(returns[:, i] > alphas[i])/n for i in range(n_horizons)])
         class1 = 1 - (class0 + class2)
         distributions = pd.DataFrame(np.vstack([class0, class1, class2]), 
                                     index=["down", "stationary", "up"], 
-                                    columns=["10", "20", "30", "50", "100"])
+                                    columns=orderbook_updates)
         return alphas, distributions
     return alphas
 
 
-def get_class_distributions(files, alphas):
+def get_class_distributions(files, alphas, orderbook_updates):
+    n_horizons = len(orderbook_updates)
     returns = []
     for file in files:
         df = pd.read_csv(file)
         df = df.dropna()
         df = df.to_numpy()
-        returns.append(df[:, -5:])
+        returns.append(df[:, -n_horizons:])
     returns = np.vstack(returns)
     n = returns.shape[0]
-    class0 = np.array([sum(returns[:, i] < -alphas[i])/n for i in range(5)])
-    class2 = np.array([sum(returns[:, i] > alphas[i])/n for i in range(5)])
+    class0 = np.array([sum(returns[:, i] < -alphas[i])/n for i in range(n_horizons)])
+    class2 = np.array([sum(returns[:, i] > alphas[i])/n for i in range(n_horizons)])
     class1 = 1 - (class0 + class2)
     distributions = pd.DataFrame(np.vstack([class0, class1, class2]), 
                                  index = ["down", "stationary", "up"], 
-                                 columns = ["10", "20", "30", "50", "100"])
+                                 columns = orderbook_updates)
     return distributions
 
 
@@ -177,9 +179,9 @@ if __name__ == '__main__':
 
         test = np.vstack((test1, test2, test3))
 
-        trainX, trainY = prepare_x(train, NF, T), prepare_y(train, T)
-        valX, valY = prepare_x(val, NF, T), prepare_y(val, T)
-        testX, testY = prepare_x(test, NF, T), prepare_y(test, T)
+        trainX, trainY = prepare_x(train, NF, T, n_horizons=5), prepare_y(train, T, n_horizons=5)
+        valX, valY = prepare_x(val, NF, T, n_horizons=5), prepare_y(val, T, n_horizons=5)
+        testX, testY = prepare_x(test, NF, T, n_horizons=5), prepare_y(test, T, n_horizons=5)
 
         np.savez(os.path.join(processed_data_dir, "train"), X=trainX, Y=trainY)        
         np.savez(os.path.join(processed_data_dir, "val"), X=valX, Y=valY)
