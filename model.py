@@ -138,7 +138,7 @@ class deepLOB:
                  levels = 10, 
                  queue_depth = None,
                  task = "classification", 
-                 orderbook_updates = orderbook_updates,
+                 orderbook_updates = [10, 20, 30, 50, 100],
                  alphas = np.array([]), 
                  multihorizon = False, 
                  decoder = "seq2seq", 
