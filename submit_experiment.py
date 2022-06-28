@@ -33,11 +33,8 @@ if __name__ == "__main__":
     # set global parameters
     TICKERS = ["LILAK", "QRTEA", "XRAY", "CHTR", "PCAR", "EXC", "AAL", "WBA", "ATVI", "AAPL"]
     Ws = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    # TICKER = TICKERS[int(sys.argv[1]) % 10]
-    # W = Ws[int(sys.argv[1]) // 10]
-
-    TICKER = "AAL"
-    W = 0
+    TICKER = TICKERS[int(sys.argv[1]) % 10]
+    W = Ws[int(sys.argv[1]) // 10]
 
     orderbook_updates = [10, 20, 30, 50, 100, 200, 300, 500, 1000]
     data = "LOBSTER"                                                
@@ -157,7 +154,4 @@ if __name__ == "__main__":
                 model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
                                      eval_set = "val",
                                      results_filepath = results_filepath)
-                
-                break
-            break
-        break
+                                     
