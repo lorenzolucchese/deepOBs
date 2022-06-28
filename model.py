@@ -138,6 +138,7 @@ class deepLOB:
                  levels = 10, 
                  queue_depth = None,
                  task = "classification", 
+                 orderbook_updates = orderbook_updates,
                  alphas = np.array([]), 
                  multihorizon = False, 
                  decoder = "seq2seq", 
@@ -180,7 +181,7 @@ class deepLOB:
         self.multihorizon = multihorizon
         self.decoder = decoder
         self.n_horizons = n_horizons
-        self.orderbook_updates = [10, 20, 30, 50, 100]
+        self.orderbook_updates = orderbook_updates
         self.data_dir = data_dir
         self.files = files
         self.data = data
@@ -613,6 +614,7 @@ def regression_fit_plot(evalY, predY, title, path):
     ax.set_xlabel("True y")
     ax.set_ylabel("Pred y")
     fig.savefig(path)
+
 
 if __name__ == "__main__":
     # limit gpu memory

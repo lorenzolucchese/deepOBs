@@ -13,7 +13,7 @@ def CustomtfDataset(files,
                     normalise = False,
                     teacher_forcing = False, 
                     window = 100, 
-                    batch_size=256, 
+                    batch_size = 256, 
                     roll_window = 1):
     """
     :param dir: directory of files

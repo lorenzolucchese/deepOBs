@@ -127,6 +127,7 @@ if __name__ == "__main__":
                                 queue_depth = queue_depth,
                                 task = task, 
                                 alphas = alphas, 
+                                orderbook_updates = orderbook_updates,
                                 multihorizon = multihorizon, 
                                 decoder = decoder, 
                                 n_horizons = n_horizons,
@@ -154,4 +155,3 @@ if __name__ == "__main__":
                 model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
                                      eval_set = "val",
                                      results_filepath = results_filepath)
-                                     
