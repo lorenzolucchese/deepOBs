@@ -277,76 +277,94 @@ class deepLOB:
 
         # build the convolutional block
         if self.model_inputs == "orderbooks":
-            # [batch_size, T, NF, 1] -> [batch_size, T, NF, 32]
+            # [batch_size, T, 4L, 1] -> [batch_size, T, 2L, 32]
             conv_first1 = Conv2D(32, (1, 2), strides=(1, 2))(input_lmd)
             conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
-            # [batch_size, T, NF, 32] -> [batch_size, T, NF, 32]
+            # [batch_size, T, 2L, 32] -> [batch_size, T, 2L, 32]
             conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
             conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
-            # [batch_size, T, NF, 32] -> [batch_size, T, NF, 32]
+            # [batch_size, T, 2L, 32] -> [batch_size, T, 2L, 32]
+            conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
+            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+
+            conv_first1 = BatchNormalization(momentum=0.6)(conv_first1)
+
+            # [batch_size, T, 2L, 32] -> [batch_size, T, L, 32]
+            conv_first1 = Conv2D(32, (1, 2), strides=(1, 2))(conv_first1)
+            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+            # [batch_size, T, L, 32] -> [batch_size, T, L, 32]
+            conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
+            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+            # [batch_size, T, L, 32] -> [batch_size, T, L, 32]
             conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
             conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
 
             conv_first1 = BatchNormalization(momentum=0.6)(conv_first1)
 
         elif self.model_inputs == "volumes":
-            # [batch_size, T, NF, 1] -> [batch_size, T, NF/2, 2, 1]
+            # [batch_size, T, 2W, 1] -> [batch_size, T, W, 2, 1]
             input_reshaped = CustomReshape(0)(input_lmd)
-            # [batch_size, T, NF/2, 2, 1] -> [batch_size, T, NF/2-1, 1, 32]
+            # [batch_size, T, W, 2, 1] -> [batch_size, T, W-1, 1, 32]
             conv_first1 = Conv3D(32, (1, 2, 2), strides=(1, 1, 1))(input_reshaped)
-            # [batch_size, T, NF/2-1, 1, 32] -> [batch_size, T, NF/2-1, 32]
+            # [batch_size, T, W-1, 1, 32] -> [batch_size, T, W-1, 32]
             conv_first1 = Reshape((int(conv_first1.shape[1]), int(conv_first1.shape[2]), int(conv_first1.shape[4])))(conv_first1)
             conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
-            # [batch_size, T, NF/2-1, 32] -> [batch_size, T, NF/2-1, 32]
+            # [batch_size, T, W-1, 32] -> [batch_size, T, W-1, 32]
             conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
             conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
-            # [batch_size, T, NF/2-1, 32] -> [batch_size, T, NF/2-1, 32]
+            # [batch_size, T, W-1, 32] -> [batch_size, T, W-1, 32]
             conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
             conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
 
             conv_first1 = BatchNormalization(momentum=0.6)(conv_first1)
 
         elif self.model_inputs == "volumes_L3":
-            # [batch_size, T, NF, Q, 1] -> [batch_size, T, NF, 1, 1]
+            # [batch_size, T, 2W, Q, 1] -> [batch_size, T, 2W, 1, 1]
             conv_queue = Conv3D(32, (1, 1, self.queue_depth), strides = (1, 1, 1))(input_lmd)
-            # [batch_size, T, NF, 1, 1] -> [batch_size, T, NF, 1]
+            # [batch_size, T, 2W, 1, 1] -> [batch_size, T, 2W, 1]
             conv_queue = Reshape((int(conv_queue.shape[1]), int(conv_queue.shape[2]), int(conv_queue.shape[4])))(conv_queue)
-            # [batch_size, T, NF, 1] -> [batch_size, T, NF/2, 2, 1]
+            # [batch_size, T, 2W, 1] -> [batch_size, T, W, 2, 1]
             input_reshaped = CustomReshape(0)(conv_queue)
-            # [batch_size, T, NF/2, 2, 1] -> [batch_size, T, NF/2-1, 1, 32]
+            # [batch_size, T, W, 2, 1] -> [batch_size, T, W-1, 1, 32]
             conv_first1 = Conv3D(32, (1, 2, 2), strides=(1, 1, 1))(input_reshaped)
-            # [batch_size, T, NF/2-1, 1, 32] -> [batch_size, T, NF/2-1, 32]
+            # [batch_size, T, W-1, 1, 32] -> [batch_size, T, W-1, 32]
             conv_first1 = Reshape((int(conv_first1.shape[1]), int(conv_first1.shape[2]), int(conv_first1.shape[4])))(conv_first1)
             conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
-            # [batch_size, T, NF/2-1, 32] -> [batch_size, T, NF/2-1, 32]
+            # [batch_size, T, W-1, 32] -> [batch_size, T, W-1, 32]
             conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
             conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
-            # [batch_size, T, NF/2-1, 32] -> [batch_size, T, NF/2-1, 32]
+            # [batch_size, T, W-1, 32] -> [batch_size, T, W-1, 32]
             conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
             conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
 
             conv_first1 = BatchNormalization(momentum=0.6)(conv_first1)
 
         elif self.model_inputs == "orderflows":
-            # [batch_size, T, NF, 1] -> [batch_size, T, NF, 1]
+            # [batch_size, T, 2L, 1] -> [batch_size, T, 2L, 1]
             conv_first1 = input_lmd
+
+            # [batch_size, T, 2L, 1] -> [batch_size, T, L, 32]
+            conv_first1 = Conv2D(32, (1, 2), strides=(1, 2))(conv_first1)
+            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+            # [batch_size, T, L, 32] -> [batch_size, T, L, 32]
+            conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
+            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+            # [batch_size, T, L, 32] -> [batch_size, T, L, 32]
+            conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
+            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+
+            conv_first1 = BatchNormalization(momentum=0.6)(conv_first1)
 
         else:
             raise ValueError("task must be either orderbooks, orderflows or volumes.")
 
-        conv_first1 = Conv2D(32, (1, 2), strides=(1, 2))(conv_first1)
-        conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
-        conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
-        conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
-        conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
-        conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
-
-        conv_first1 = BatchNormalization(momentum=0.6)(conv_first1)
-
+        # [batch_size, T, L/(W-1), 32] -> [batch_size, T, 1, 32]
         conv_first1 = Conv2D(32, (1, conv_first1.shape[2]))(conv_first1)
         conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+        # [batch_size, T, 1, 32] -> [batch_size, T, 1, 32]
         conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
         conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+        # [batch_size, T, 1, 32] -> [batch_size, T, 1, 32]
         conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
         conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
 
