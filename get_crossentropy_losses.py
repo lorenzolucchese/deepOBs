@@ -144,4 +144,5 @@ if __name__ == "__main__":
                 model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
                                     eval_set = "val",
                                     results_filepath = results_filepath)
+                                    
                 tf.keras.backend.clear_session()
