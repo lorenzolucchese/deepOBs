@@ -522,7 +522,7 @@ class deepLOB:
                        callbacks=[model_checkpoint_callback, early_stopping])
 
     def evaluate_model(self, load_weights_filepath, results_filepath, eval_set = "test"):
-        self.model.load_weights(load_weights_filepath)
+        self.model.load_weights(load_weights_filepath).expect_partial()
 
         print("Evaluating performance on ", eval_set, "set...")
 
