@@ -1,5 +1,5 @@
 from model import deepLOB
-from data_prepare import get_alphas
+from data_prepare import get_alphas, get_class_distributions
 import datetime as dt
 import sys
 import numpy as np
@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
     for d in range(0, len(weeks), slide_by):
         window = d // slide_by
-        if window == "all":
+        if W == "all":
             pass
         elif window == W:
             pass
@@ -106,6 +106,11 @@ if __name__ == "__main__":
                 alphas, distributions = get_alphas(files["train"], orderbook_updates)
                 pickle.dump(alphas, open(window_filepath + "/alphas.pkl", "wb"))
                 pickle.dump(distributions, open(window_filepath + "/distributions.pkl", "wb"))
+
+                val_distributions = get_class_distributions(files["val"], alphas, orderbook_updates)
+                test_distributions = get_class_distributions(files["test"], alphas, orderbook_updates)
+                pickle.dump(val_distributions, open(window_filepath + "/val_distributions.pkl", "wb"))
+                pickle.dump(test_distributions, open(window_filepath + "/test_distributions.pkl", "wb"))
             else:
                 pass
             imbalances = distributions.to_numpy()
