@@ -2,8 +2,9 @@ import pickle
 import os
 import numpy as np
 import pandas as pd
+import random
 
-def classification_report_str_to_df(report):
+def classification_report_str_to_df(report:str):
     report_data = []
     lines = report.split('\n')
     row_labels = [0, 1, 2, 'macro avg', 'weighted avg']
@@ -21,9 +22,25 @@ def classification_report_str_to_df(report):
         row['support'] = int(row_data[3])
         report_data.append(row)
     dataframe = pd.DataFrame.from_dict(report_data)
+    dataframe.set_index('class', inplace=True)
     return dataframe
 
-def all_classification_reports_str_to_df():
+def classification_report_dict_to_df(report:dict):
+    if type(report) is pd.DataFrame: 
+        return report
+    else:
+        report.pop('accuracy')
+        dataframe = pd.DataFrame.from_dict(report).T
+        dataframe.index = [0, 1, 2, 'macro avg', 'weighted avg']                                                        
+        return dataframe
+
+def all_classification_reports_to_df(from_type='str'):
+    if from_type == 'str':
+        classification_report_converter = classification_report_str_to_df
+    elif from_type == 'dict':
+        classification_report_converter = classification_report_dict_to_df
+    else:
+        raise ValueError('from_type must be str or dict.')
     tickers = ['AAL', 'AAPL', 'ATVI', 'CHTR', 'EXC', 'LILAK', 'PCAR', 'QRTEA', 'WBA', 'XRAY']
     periods = ['W0', 'W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7', 'W8', 'W9', 'W10']
     models = ['deepLOB_L1', 'deepOF_L1', 'deepLOB_L2', 'deepOF_L2', 'deepVOL_L2', 'deepVOL_L3']
@@ -34,11 +51,11 @@ def all_classification_reports_str_to_df():
                 for horizon in horizons:
                     for set_ in ['val', 'train', 'test']:
                         classification_report = pickle.load(open('results/' + ticker + '/' + period + '/' + model + '/' + horizon + '/' + 'classification_report_' + set_ + '.pkl', 'rb'))
-                        classification_report = classification_report_str_to_df(classification_report)
-                        classification_report.set_index('class', inplace=True)
+                        classification_report = classification_report_converter(classification_report)
                         pickle.dump(classification_report, open('results/' + ticker + '/' + period + '/' + model + '/' + horizon + '/' + 'classification_report_' + set_ + '.pkl', 'wb'))
 
-def make_test_val_distributions():
+# DEPRECATED
+def make_test_val_distributions_old():
     tickers = ['AAL', 'AAPL', 'ATVI', 'CHTR', 'EXC', 'LILAK', 'PCAR', 'QRTEA', 'WBA', 'XRAY']
     periods = ['W0', 'W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7', 'W8', 'W9', 'W10']
     horizons = ['h10', 'h20', 'h30', 'h50', 'h100', 'h200', 'h300', 'h500', 'h1000']
@@ -66,8 +83,27 @@ def make_test_val_distributions():
             pickle.dump(test_distributions, open('results/' + ticker + '/' + period + '/test_distributions.pkl', 'wb'))
             pickle.dump(val_distributions, open('results/' + ticker + '/' + period + '/val_distributions.pkl', 'wb'))
 
-#TODO: make train_val_distributions from submit_experiment output.
-#TODO: make classification_report_dict_to_df
+
+def make_train_val_distributions():
+    tickers = ['AAL', 'AAPL', 'ATVI', 'CHTR', 'EXC', 'LILAK', 'PCAR', 'QRTEA', 'WBA', 'XRAY']
+    periods = ['W0', 'W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7', 'W8', 'W9', 'W10']
+    horizons = ['h10', 'h20', 'h30', 'h50', 'h100', 'h200', 'h300', 'h500', 'h1000']
+    orderbook_updates = [10, 20, 30, 50, 100, 200, 300, 500, 1000]
+    for ticker in tickers:
+        for period in periods:
+            # note that since val and train are sub-sampled these may not correspond exactly to those given by submit_experiment.py 
+            val_distributions = pickle.load(open('results/' + ticker + '/' + period + '/val_distributions.pkl', 'rb'))
+            train_distributions = pickle.load(open('results/' + ticker + '/' + period + '/distributions.pkl', 'rb'))
+            train_val_distributions = pd.DataFrame(np.zeros((3, len(orderbook_updates))),
+                                     index = ["down", "stationary", "up"], 
+                                     columns = orderbook_updates)
+            for j, horizon in enumerate(horizons):
+                # note true support might be x10/x100 but since taking wavg this is the same
+                support_train = pickle.load(open('results/' + ticker + '/' + period + '/deepLOB_L1/' + horizon + '/classification_report_train.pkl', 'rb')).loc['macro avg', 'support']
+                support_val = pickle.load(open('results/' + ticker + '/' + period + '/deepLOB_L1/' + horizon + '/classification_report_val.pkl', 'rb')).loc['macro avg', 'support']
+                train_val_distributions.iloc[:, j] = (train_distributions.iloc[:, j].values * support_train + val_distributions.iloc[:, j].values * support_val)/(support_train + support_val)
+            pickle.dump(train_val_distributions, open('results/' + ticker + '/' + period + '/train_val_distributions.pkl', 'wb'))
+
 
 def make_benchmark():
     tickers = ['AAL', 'AAPL', 'ATVI', 'CHTR', 'EXC', 'LILAK', 'PCAR', 'QRTEA', 'WBA', 'XRAY']
@@ -99,6 +135,7 @@ def make_benchmark():
                     pickle.dump(confusion_matrix, open('results/' + ticker + '/' + period + '/benchmark/' + horizon + '/confusion_matrix_' + set_ + '.pkl', 'wb'))
                     pickle.dump(classification_report, open('results/' + ticker + '/' + period + '/benchmark/' + horizon + '/classification_report_' + set_ + '.pkl', 'wb'))
 
+
 def f1_dataframe(TICKER, horizon, set_='test', avg_type = 'macro avg'):
     models = ['benchmark', 'deepLOB_L1', 'deepOF_L1', 'deepLOB_L2', 'deepOF_L2', 'deepVOL_L2', 'deepVOL_L3']
     periods = ['W0', 'W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7', 'W8', 'W9', 'W10']
@@ -109,9 +146,171 @@ def f1_dataframe(TICKER, horizon, set_='test', avg_type = 'macro avg'):
             dataframe.loc[period, model] = classification_report.loc[avg_type, 'f1_score']
     return dataframe
 
+
+def accuracy_dataframe(TICKER, horizon, set_='test'):
+    models = ['benchmark', 'deepLOB_L1', 'deepOF_L1', 'deepLOB_L2', 'deepOF_L2', 'deepVOL_L2', 'deepVOL_L3']
+    periods = ['W0', 'W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7', 'W8', 'W9', 'W10']
+    dataframe = pd.DataFrame(np.zeros((len(periods), len(models))), columns = models, index = periods)
+    for period in periods:
+        for model in models:
+            confusion_matrix = pickle.load(open('results/' + TICKER + '/' + period + '/' + model + '/' + horizon + '/confusion_matrix_' + set_ + '.pkl', 'rb'))
+            dataframe.loc[period, model] = np.trace(confusion_matrix) / np.sum(confusion_matrix)
+    return dataframe
+
+def cost_dataframe(TICKER, horizon, cost, set_='test',):
+    models = ['benchmark', 'deepLOB_L1', 'deepOF_L1', 'deepLOB_L2', 'deepOF_L2', 'deepVOL_L2', 'deepVOL_L3']
+    periods = ['W0', 'W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7', 'W8', 'W9', 'W10']
+    dataframe = pd.DataFrame(np.zeros((len(periods), len(models))), columns = models, index = periods)
+    for period in periods:
+        for model in models:
+            confusion_matrix = pickle.load(open('results/' + TICKER + '/' + period + '/' + model + '/' + horizon + '/confusion_matrix_' + set_ + '.pkl', 'rb'))
+            dataframe.loc[period, model] = np.sum(confusion_matrix * cost) / np.sum(confusion_matrix)
+    return dataframe
+
+
+def class_cost_dataframe(TICKER, horizon, set_='test'):
+    models = ['benchmark', 'deepLOB_L1', 'deepOF_L1', 'deepLOB_L2', 'deepOF_L2', 'deepVOL_L2', 'deepVOL_L3']
+    periods = ['W0', 'W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7', 'W8', 'W9', 'W10']
+    dataframe = pd.DataFrame(np.zeros((len(periods), len(models))), columns = models, index = periods)
+    for period in periods:
+        for model in models:
+            confusion_matrix = pickle.load(open('results/' + TICKER + '/' + period + '/' + model + '/' + horizon + '/confusion_matrix_' + set_ + '.pkl', 'rb'))
+            class_distributions = pickle.load(open('results/' + TICKER + '/' + period + '/' + set_ + '_distributions.pkl', 'rb'))[int(horizon[1:])]
+            class_cost = np.array([1/class_distributions.values]*3).T
+            np.fill_diagonal(class_cost, 0)
+            dataframe.loc[period, model] = np.sum(confusion_matrix * class_cost) / np.sum(confusion_matrix)
+    return dataframe
+
+
+def MCS(dataframe:pd.DataFrame, l=5, B=100):
+    # use t-test rejection with bootstrap
+    W = len(dataframe)
+    full_model_set = dataframe.columns
+
+    # bootstrap indices, could vectorize
+    # these are computed once so that common random numbers for the bootstrap resamples in each iteration of the MCS sequential testing
+    full_bootstrap_indices = np.zeros((B, W))
+    for b in range(B):
+        boot_indices = np.zeros((l*(W//l+1),))
+        for j in range(W//l+1):
+            init = random.sample(range(W), 1)[0]
+            boot_indices[j*l:(j+1)*l] = range(init, init + l)
+        full_bootstrap_indices[b, :] = np.mod(boot_indices[:W], W)
+    
+    # compute sample and bootstrap statistics
+    bar_L = dataframe.mean(axis = 0).to_frame().T
+    bar_L_bootstrap = pd.DataFrame([], columns = full_model_set)
+    for boot_indices in full_bootstrap_indices:
+        bootstrap_dataframe = dataframe.iloc[boot_indices, :]
+        bar_L_bootstrap = pd.concat([bar_L_bootstrap, bootstrap_dataframe.mean(axis = 0).to_frame().T], ignore_index=True)
+    bootstrap_indexer = bar_L_bootstrap.index
+    zeta_bootstrap = pd.DataFrame([], index=bootstrap_indexer, columns = full_model_set)
+    zeta_bootstrap.loc[:, :] = bar_L_bootstrap.values - bar_L.values
+
+    # carry out MCS procedure
+    model_set = list(full_model_set)
+    MCS_results = pd.DataFrame([], columns = ['avg loss', 'p-value equiv. test', 'MCS p-value'])
+    p_value_MCS = 0 
+    for _ in range(len(full_model_set)):
+        if len(model_set) > 1:
+            # reduce sample and bootstrap statistics to remaining models
+            bar_L = bar_L[model_set]
+            zeta_bootstrap = zeta_bootstrap[model_set]
+
+            # compute average loss and estimate var(\bar{d}_{i.}) using bootstrap samples
+            bar_L_dot = bar_L.values.mean(axis = 1)
+            zeta_bootstrap_dot = zeta_bootstrap.mean(axis = 1)
+            var_bar_d_dot = pd.DataFrame([], index=bootstrap_indexer, columns = model_set)
+            var_bar_d_dot.loc[:, :] = (zeta_bootstrap.values - zeta_bootstrap_dot.values[..., np.newaxis])**2
+            var_bar_d_dot = var_bar_d_dot.mean(axis = 0)
+
+            # compute sample T_max statistic
+            bar_d_dot = pd.DataFrame([], index = [0], columns = model_set)
+            bar_d_dot.loc[:, :] = bar_L.values - bar_L_dot
+            t_dot = bar_d_dot / np.sqrt(var_bar_d_dot)
+            T_max = np.max(t_dot.values)
+
+            # estimate distribution of T_max statistic using bootstrap samples
+            t_dot_bootstrap = pd.DataFrame([], index=bootstrap_indexer, columns = model_set)
+            t_dot_bootstrap.loc[:, :] = (zeta_bootstrap.values - zeta_bootstrap_dot.values[..., np.newaxis]) / np.sqrt(var_bar_d_dot.values)
+            T_max_bootstrap = t_dot_bootstrap.max(axis = 1)
+
+            # compute p-value of equivalence test and MCS p-value
+            p_value_test = np.mean(T_max < T_max_bootstrap.values)
+            p_value_MCS = np.max(np.array([p_value_MCS, p_value_test]))
+
+            # drop model based on elimination rule and uppdate MCS results
+            eliminate_model = model_set[np.argmax(t_dot.values)]
+            MCS_results.loc[eliminate_model, :] = bar_L[eliminate_model].values[0], p_value_test, p_value_MCS
+            model_set.remove(eliminate_model)
+        else:
+            MCS_results.loc[model_set[0], :] = bar_L[model_set[0]].values[0], 1, 1
+    return MCS_results
+
+            
+
 if __name__ == '__main__':
-    # all_classification_reports_str_to_df()
-    # make_test_val_distributions()
+    # all_classification_reports_to_df(from_type='dict')
+    make_train_val_distributions()
     # make_benchmark()
-    f1_df = f1_dataframe('AAL', 'h10')
-    print(f1_df)
+    TICKER = 'WBA'
+    tickers = ['AAL', 'AAPL', 'ATVI', 'CHTR', 'EXC', 'LILAK', 'PCAR', 'QRTEA', 'WBA', 'XRAY']
+    horizons = ['h10', 'h20', 'h30', 'h50', 'h100', 'h200', 'h300', 'h500', 'h1000']
+    # for horizon in horizons:
+    #     print('_________________________________________________________________________')
+    #     print(TICKER, horizon)
+    #     f1_df = f1_dataframe(TICKER, horizon, avg_type = 'weighted avg')
+    #     print(f1_df)
+
+    #     random.seed(0)
+    #     MCS_results = MCS(1-f1_df, l=3, B=100)
+    #     print(MCS_results[['avg loss', 'MCS p-value']])
+    
+    # for horizon in horizons:
+    #     print('_________________________________________________________________________')
+    #     print(TICKER, horizon)
+    #     acc_df = accuracy_dataframe(TICKER, horizon)
+    #     print(acc_df)
+
+    #     random.seed(0)
+    #     MCS_results = MCS(1-acc_df, l=3, B=100)
+    #     print(MCS_results[['avg loss', 'MCS p-value']])
+
+    #TODO: these predictions are not ok, for both benchmark and models when we change cost matrix
+    # cost = np.array([[0, 3, 3], [1, 0, 1], [3, 3, 0]])
+    # for horizon in horizons:
+    #     print('_________________________________________________________________________')
+    #     print(TICKER, horizon)
+    #     cost_df = cost_dataframe(TICKER, horizon, cost)
+    #     print(cost_df)
+
+    #     random.seed(0)
+    #     MCS_results = MCS(cost_df, l=3, B=100)
+    #     print(MCS_results[['avg loss', 'MCS p-value']])
+
+    #TODO: these predictions are not ok, for both benchmark and models when we change cost matrix
+    # for horizon in horizons:
+    #     print('_________________________________________________________________________')
+    #     print(TICKER, horizon)
+    #     cost_df = class_cost_dataframe(TICKER, horizon)
+    #     print(cost_df)
+
+    #     random.seed(0)
+    #     MCS_results = MCS(cost_df, l=3, B=100)
+    #     print(MCS_results[['avg loss', 'MCS p-value']])
+
+    # alpha = 0.01
+    # for horizon in horizons:
+    #     print(horizon)
+    #     count_benchmark = 0
+    #     for TICKER in tickers:
+    #         acc_df = accuracy_dataframe(TICKER, horizon)
+
+    #         random.seed(0)
+    #         MCS_results = MCS(1-acc_df, l=3, B=100)
+    #         MCS_ = MCS_results.index[MCS_results['MCS p-value'] >= alpha]
+    #         if 'benchmark' in MCS_:
+    #             count_benchmark +=1
+    #     print(count_benchmark)
+
+
