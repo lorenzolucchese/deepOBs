@@ -18,7 +18,7 @@ def classification_report_str_to_df(report:str):
         i += 1
         row['precision'] = float(row_data[0])
         row['recall'] = float(row_data[1])
-        row['f1_score'] = float(row_data[2])
+        row['f1-score'] = float(row_data[2])
         row['support'] = int(row_data[3])
         report_data.append(row)
     dataframe = pd.DataFrame.from_dict(report_data)
@@ -125,15 +125,18 @@ def make_benchmark():
                     confusion_matrix = np.zeros_like(confusion_matrix)
                     confusion_matrix[:, pred_benchmark] = support
                     # benchmark classification report
-                    classification_report[['precision', 'recall', 'f1_score']] = 0
+                    classification_report[['precision', 'recall', 'f1-score']] = 0
                     classification_report.loc[pred_benchmark, 'precision'] = support[pred_benchmark] / support.sum()
                     classification_report.loc[pred_benchmark, 'recall'] = 1.0
-                    classification_report.loc[pred_benchmark, 'f1_score'] = 2 * support[pred_benchmark] / (support[pred_benchmark] + support.sum())
-                    classification_report.loc['macro avg', ['precision', 'recall', 'f1_score']] = np.average(classification_report.loc[[0, 1, 2], ['precision', 'recall', 'f1_score']].values, axis=0)
-                    classification_report.loc['weighted avg', ['precision', 'recall', 'f1_score']] = np.average(classification_report.loc[[0, 1, 2], ['precision', 'recall', 'f1_score']].values, axis=0, weights=support)
+                    classification_report.loc[pred_benchmark, 'f1-score'] = 2 * support[pred_benchmark] / (support[pred_benchmark] + support.sum())
+                    classification_report.loc['macro avg', ['precision', 'recall', 'f1-score']] = np.average(classification_report.loc[[0, 1, 2], ['precision', 'recall', 'f1-score']].values, axis=0)
+                    classification_report.loc['weighted avg', ['precision', 'recall', 'f1-score']] = np.average(classification_report.loc[[0, 1, 2], ['precision', 'recall', 'f1-score']].values, axis=0, weights=support)
                     classification_report = classification_report.round(4)
+                    # benchamark categorical cross entropy loss
+                    cce = - np.sum(support * np.log(train_val_distributions.iloc[:, j].values)) / support.sum()
                     pickle.dump(confusion_matrix, open('results/' + ticker + '/' + period + '/benchmark/' + horizon + '/confusion_matrix_' + set_ + '.pkl', 'wb'))
                     pickle.dump(classification_report, open('results/' + ticker + '/' + period + '/benchmark/' + horizon + '/classification_report_' + set_ + '.pkl', 'wb'))
+                    pickle.dump(cce, open('results/' + ticker + '/' + period + '/benchmark/' + horizon + '/categorical_crossentropy_' + set_ + '.pkl', 'wb'))
 
 
 def f1_dataframe(TICKER, horizon, set_='test', avg_type = 'macro avg'):
@@ -143,7 +146,7 @@ def f1_dataframe(TICKER, horizon, set_='test', avg_type = 'macro avg'):
     for period in periods:
         for model in models:
             classification_report = pickle.load(open('results/' + TICKER + '/' + period + '/' + model + '/' + horizon + '/classification_report_' + set_ + '.pkl', 'rb'))
-            dataframe.loc[period, model] = classification_report.loc[avg_type, 'f1_score']
+            dataframe.loc[period, model] = classification_report.loc[avg_type, 'f1-score']
     return dataframe
 
 
@@ -156,6 +159,18 @@ def accuracy_dataframe(TICKER, horizon, set_='test'):
             confusion_matrix = pickle.load(open('results/' + TICKER + '/' + period + '/' + model + '/' + horizon + '/confusion_matrix_' + set_ + '.pkl', 'rb'))
             dataframe.loc[period, model] = np.trace(confusion_matrix) / np.sum(confusion_matrix)
     return dataframe
+
+
+def cce_dataframe(TICKER, horizon, set_='test'):
+    models = ['benchmark', 'deepLOB_L1', 'deepOF_L1', 'deepLOB_L2', 'deepOF_L2', 'deepVOL_L2', 'deepVOL_L3']
+    periods = ['W0', 'W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7', 'W8', 'W9', 'W10']
+    dataframe = pd.DataFrame(np.zeros((len(periods), len(models))), columns = models, index = periods)
+    for period in periods:
+        for model in models:
+            cce = pickle.load(open('results/' + TICKER + '/' + period + '/' + model + '/' + horizon + '/categorical_crossentropy_' + set_ + '.pkl', 'rb'))
+            dataframe.loc[period, model] = float(cce)
+    return dataframe
+
 
 def cost_dataframe(TICKER, horizon, cost, set_='test',):
     models = ['benchmark', 'deepLOB_L1', 'deepOF_L1', 'deepLOB_L2', 'deepOF_L2', 'deepVOL_L2', 'deepVOL_L3']
@@ -251,9 +266,9 @@ def MCS(dataframe:pd.DataFrame, l=5, B=100):
 
 if __name__ == '__main__':
     # all_classification_reports_to_df(from_type='dict')
-    make_train_val_distributions()
+    # make_train_val_distributions()
     # make_benchmark()
-    TICKER = 'WBA'
+    TICKER = 'AAL'
     tickers = ['AAL', 'AAPL', 'ATVI', 'CHTR', 'EXC', 'LILAK', 'PCAR', 'QRTEA', 'WBA', 'XRAY']
     horizons = ['h10', 'h20', 'h30', 'h50', 'h100', 'h200', 'h300', 'h500', 'h1000']
     # for horizon in horizons:
@@ -274,6 +289,16 @@ if __name__ == '__main__':
 
     #     random.seed(0)
     #     MCS_results = MCS(1-acc_df, l=3, B=100)
+    #     print(MCS_results[['avg loss', 'MCS p-value']])
+
+    # for horizon in horizons:
+    #     print('_________________________________________________________________________')
+    #     print(TICKER, horizon)
+    #     cce_df = cce_dataframe(TICKER, horizon)
+    #     print(cce_df)
+
+    #     random.seed(0)
+    #     MCS_results = MCS(cce_df, l=3, B=100)
     #     print(MCS_results[['avg loss', 'MCS p-value']])
 
     #TODO: these predictions are not ok, for both benchmark and models when we change cost matrix
@@ -299,18 +324,33 @@ if __name__ == '__main__':
     #     MCS_results = MCS(cost_df, l=3, B=100)
     #     print(MCS_results[['avg loss', 'MCS p-value']])
 
-    # alpha = 0.01
-    # for horizon in horizons:
-    #     print(horizon)
-    #     count_benchmark = 0
-    #     for TICKER in tickers:
-    #         acc_df = accuracy_dataframe(TICKER, horizon)
+    ### Determining how far ahead there is predictability ###
+    alpha = 0.05
+    for horizon in horizons:
+        print(horizon)
+        count_benchmark = 0
+        for TICKER in tickers:
+            acc_df = accuracy_dataframe(TICKER, horizon)
 
-    #         random.seed(0)
-    #         MCS_results = MCS(1-acc_df, l=3, B=100)
-    #         MCS_ = MCS_results.index[MCS_results['MCS p-value'] >= alpha]
-    #         if 'benchmark' in MCS_:
-    #             count_benchmark +=1
-    #     print(count_benchmark)
+            random.seed(0)
+            MCS_results = MCS(1-acc_df, l=3, B=100)
+            MCS_ = MCS_results.index[MCS_results['MCS p-value'] >= alpha]
+            if 'benchmark' in MCS_:
+                count_benchmark +=1
+        print(count_benchmark/len(tickers))
+    
+    tickers = ['AAL', 'ATVI', 'EXC', 'LILAK', 'PCAR', 'QRTEA', 'WBA', 'XRAY']
+    for horizon in horizons:
+        print(horizon)
+        count_benchmark = 0
+        for TICKER in tickers:
+            cce_df = cce_dataframe(TICKER, horizon)
+
+            random.seed(0)
+            MCS_results = MCS(cce_df, l=3, B=100)
+            MCS_ = MCS_results.index[MCS_results['MCS p-value'] >= alpha]
+            if 'benchmark' in MCS_:
+                count_benchmark +=1
+        print(count_benchmark/len(tickers))
 
 
