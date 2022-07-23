@@ -3,6 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 import random
+from functools import *
 
 def classification_report_str_to_df(report:str):
     report_data = []
@@ -225,13 +226,19 @@ def MCS(dataframe:pd.DataFrame, l=5, B=100):
     # carry out MCS procedure
     model_set = list(full_model_set)
     MCS_results = pd.DataFrame([], columns = ['avg loss', 'p-value equiv. test', 'MCS p-value'])
-    p_value_MCS = 0 
+    p_value_MCS = 0.0
     for _ in range(len(full_model_set)):
-        if len(model_set) > 1:
-            # reduce sample and bootstrap statistics to remaining models
-            bar_L = bar_L[model_set]
-            zeta_bootstrap = zeta_bootstrap[model_set]
+        # reduce sample and bootstrap statistics to remaining models
+        bar_L = bar_L[model_set]
+        zeta_bootstrap = zeta_bootstrap[model_set]
 
+        if np.isnan(bar_L.values).any():
+            eliminate_model = model_set[np.argwhere(np.isnan(bar_L.values))[0][-1]]
+            MCS_results.loc[eliminate_model, :] = bar_L[eliminate_model].values[0], 0.0, p_value_MCS
+            model_set.remove(eliminate_model)
+            continue
+
+        if len(model_set) > 1:
             # compute average loss and estimate var(\bar{d}_{i.}) using bootstrap samples
             bar_L_dot = bar_L.values.mean(axis = 1)
             zeta_bootstrap_dot = zeta_bootstrap.mean(axis = 1)
@@ -262,15 +269,48 @@ def MCS(dataframe:pd.DataFrame, l=5, B=100):
             MCS_results.loc[model_set[0], :] = bar_L[model_set[0]].values[0], 1, 1
     return MCS_results
 
+
+def summarize_MCS_results(tickers, horizons, metric):
+    if metric == "accuracy":
+        metric_dataframe = accuracy_dataframe
+    elif metric == "weighted_f1":
+        metric_dataframe = partial(f1_dataframe, avg_type="weighted avg")
+    elif metric == "macro_f1":
+        metric_dataframe = partial(f1_dataframe, avg_type="macro avg")
+    elif metric == "cce":
+        metric_dataframe = cce_dataframe
+    else:
+        raise ValueError("Only accuracy, weighted_f1, macro_f1 and cce metrics supported.")
+    col_names = [" "]*3*len(horizons)
+    col_names[::3] = horizons
+    row_names = [" "]*(7*len(tickers)+1)
+    row_names[1::7] = tickers
+    full_df = pd.DataFrame(np.zeros((len(row_names), len(col_names))), index = row_names, columns = col_names)
+    full_df.iloc[0, :] = [" ", "avg loss", "MCS p-value"] * len(horizons)
+    for i, TICKER in enumerate(tickers):
+        for j, horizon in enumerate(horizons):
+            df = metric_dataframe(TICKER, horizon)
+            if metric in ["accuracy", "weighted_f1", "macro_f1"]:
+                MCS_results = MCS(1-df, l=3, B=100)[['avg loss', 'MCS p-value']]
+            elif metric in ["cce"]:
+                MCS_results = MCS(df, l=3, B=100)[['avg loss', 'MCS p-value']]
+            MCS_results = MCS_results.reset_index()
+            full_df.iloc[(1 + 7*i):(1 + 7*(i+1)), 3*j:3*(j+1)] = MCS_results.values
+    full_df.to_csv("MCS_results/" + metric + "_MCS_results.csv")
+    return full_df
+
             
 
 if __name__ == '__main__':
     # all_classification_reports_to_df(from_type='dict')
     # make_train_val_distributions()
     # make_benchmark()
-    TICKER = 'AAL'
-    tickers = ['AAL', 'AAPL', 'ATVI', 'CHTR', 'EXC', 'LILAK', 'PCAR', 'QRTEA', 'WBA', 'XRAY']
+    tickers = ['LILAK', 'QRTEA', 'XRAY', 'CHTR', 'PCAR', 'EXC', 'AAL', 'WBA', 'ATVI', 'AAPL']
     horizons = ['h10', 'h20', 'h30', 'h50', 'h100', 'h200', 'h300', 'h500', 'h1000']
+    # summarize_MCS_results(tickers, horizons, metric = "accuracy")
+    # summarize_MCS_results(tickers, horizons, metric = "weighted_f1")
+    # summarize_MCS_results(tickers, horizons, metric = "macro_f1")
+    # summarize_MCS_results(tickers, horizons, metric = "cce")
     # for horizon in horizons:
     #     print('_________________________________________________________________________')
     #     print(TICKER, horizon)
@@ -325,32 +365,32 @@ if __name__ == '__main__':
     #     print(MCS_results[['avg loss', 'MCS p-value']])
 
     ### Determining how far ahead there is predictability ###
-    alpha = 0.05
-    for horizon in horizons:
-        print(horizon)
-        count_benchmark = 0
-        for TICKER in tickers:
-            acc_df = accuracy_dataframe(TICKER, horizon)
+    # alpha = 0.05
+    # for horizon in horizons:
+    #     print(horizon)
+    #     count_benchmark = 0
+    #     for TICKER in tickers:
+    #         acc_df = accuracy_dataframe(TICKER, horizon)
 
-            random.seed(0)
-            MCS_results = MCS(1-acc_df, l=3, B=100)
-            MCS_ = MCS_results.index[MCS_results['MCS p-value'] >= alpha]
-            if 'benchmark' in MCS_:
-                count_benchmark +=1
-        print(count_benchmark/len(tickers))
+    #         random.seed(0)
+    #         MCS_results = MCS(1-acc_df, l=3, B=100)
+    #         MCS_ = MCS_results.index[MCS_results['MCS p-value'] >= alpha]
+    #         if 'benchmark' in MCS_:
+    #             count_benchmark +=1
+    #     print(count_benchmark/len(tickers))
     
-    tickers = ['AAL', 'ATVI', 'EXC', 'LILAK', 'PCAR', 'QRTEA', 'WBA', 'XRAY']
-    for horizon in horizons:
-        print(horizon)
-        count_benchmark = 0
-        for TICKER in tickers:
-            cce_df = cce_dataframe(TICKER, horizon)
+    # tickers = ['AAL', 'ATVI', 'EXC', 'LILAK', 'PCAR', 'QRTEA', 'WBA', 'XRAY']
+    # for horizon in horizons:
+    #     print(horizon)
+    #     count_benchmark = 0
+    #     for TICKER in tickers:
+    #         cce_df = cce_dataframe(TICKER, horizon)
 
-            random.seed(0)
-            MCS_results = MCS(cce_df, l=3, B=100)
-            MCS_ = MCS_results.index[MCS_results['MCS p-value'] >= alpha]
-            if 'benchmark' in MCS_:
-                count_benchmark +=1
-        print(count_benchmark/len(tickers))
+    #         random.seed(0)
+    #         MCS_results = MCS(cce_df, l=3, B=100)
+    #         MCS_ = MCS_results.index[MCS_results['MCS p-value'] >= alpha]
+    #         if 'benchmark' in MCS_:
+    #             count_benchmark +=1
+    #     print(count_benchmark/len(tickers))
 
 
