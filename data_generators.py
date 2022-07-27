@@ -19,14 +19,13 @@ def CustomtfDataset(files,
     :param dir: directory of files
     :param files: list of files in directory to use
     :param NF: number of features
-    :param horizon: prediction horizon, 0, 1, 2, 3, 4
+    :param horizon: prediction horizon, 0, 1, 2, 3, 4 
     :param task: regression or classification
     :param alphas: array of alphas for class boundaries if task = classification.
     :param multihorizon: whether the predictions are multihorizon, if True overrides horizon
                          In this case trainX is [trainX, decoder]
     :param samples_per_file: how many samples are in each file
     :param teacher_forcing: when using multihorizon, whether to use teacher forcing on the decoder
-    Need batch_size to be divisible by samples_per_file
     """
     # methods to be used
     def scale_fn(x, y):
@@ -56,7 +55,7 @@ def CustomtfDataset(files,
         return {'input': x, 'decoder_input': decoder_input_data}, y
     
     if multihorizon:
-        horizon = slice(0, 5)
+        horizon = slice(0, n_horizons)
 
     if (task == "classification")&(alphas.size == 0):
         raise ValueError('alphas must be assigned if task is classification.')
@@ -69,7 +68,7 @@ def CustomtfDataset(files,
 
             features = dataset[:, :NF]
             features = np.expand_dims(features, axis=-1)
-            responses = dataset[(window-1):, -n_horizons:]
+            responses = dataset[(window-1):, NF:]
             responses = responses[:, horizon]
 
         elif model_inputs[:7] == "volumes":
@@ -89,7 +88,7 @@ def CustomtfDataset(files,
         if task == "classification":
             if multihorizon:
                 all_label = []
-                for h in range(responses.shape[1]):
+                for h in range(n_horizons):
                     one_label = (+1)*(responses[:, h]>=-alphas[h]) + (+1)*(responses[:, h]>alphas[h])
                     one_label = tf.keras.utils.to_categorical(one_label, 3)
                     one_label = one_label.reshape(len(one_label), 1, 3)
