@@ -9,7 +9,7 @@ if __name__ == "__main__":
     # set global parameters 
     TICKERS = ["LILAK", "QRTEA", "XRAY", "CHTR", "PCAR", "EXC", "AAL", "WBA", "ATVI", "AAPL"] 
 
-    TICKER = "WBA" 
+    TICKER = "LILAK" 
     input_path = "data_raw/" + TICKER + "_data_dwn" 
     log_path = "data/logs/" + TICKER + "_processing_logs" 
     horizons = np.array([10, 20, 30, 50, 100, 200, 300, 500, 1000]) 
@@ -62,42 +62,36 @@ if __name__ == "__main__":
 
     # print("Volumes execution time in minutes: " + str(executionTime/60))
 
-    # # ============================================================================ 
-    # # LOBSTER DATA - VOLUMES L3 (multiprocess) 
+    ## ============================================================================
+    # LOBSTER DATA - VOLUMES L3 (multiprocess)
 
-    # output_path = "data/" + TICKER + "_volumes" 
+    output_path = "data/" + TICKER + "_volumes"
+    os.makedirs(output_path, exists_ok=True)
 
-    # startTime = time.time() 
-    # process_L3_orderbook(orderbook_name="data_raw\WBA_data_dwn\WBA_2019-11-05_34200000_57600000_orderbook_10.csv", 
-    #                      TICKER=TICKER,
-    #                      output_path=output_path,
-    #                      queue_depth=10, 
-    #                      horizons=horizons, 
-    #                      smoothing="uniform",
-    #                      k=10)
-    # # multiprocess_L3(TICKER=TICKER,
-    # #                 input_path=input_path, 
-    # #                 output_path=output_path,
-    # #                 log_path=log_path, 
-    # #                 queue_depth=10, 
-    # #                 horizons=horizons)
-    # executionTime = (time.time() - startTime) 
+    startTime = time.time()
+    multiprocess_L3(TICKER=TICKER,
+                    input_path=input_path, 
+                    output_path=output_path,
+                    log_path=log_path, 
+                    queue_depth=10, 
+                    horizons=horizons)
+    executionTime = (time.time() - startTime)
 
-    # print("Volumes execution time in minutes: " + str(executionTime/60)) 
+    print("Volumes execution time in minutes: " + str(executionTime/60))
 
-    # ================================================================================
-    # VOLUMES - OUTPUT CHECK
-    with np.load('data/WBA_volumes/WBA_volumes_2019-11-05.npz') as data:
-        L3_orderbook = data['features']
-        L3_response = data['responses']
+    # # ================================================================================
+    # # VOLUMES - OUTPUT CHECK
+    # with np.load('data/WBA_volumes/WBA_volumes_2019-11-05.npz') as data:
+    #     L3_orderbook = data['features']
+    #     L3_response = data['responses']
     
-    L2 = pd.read_csv('data/WBA_volumes_test/WBA_volumes_2019-11-05.csv')
+    # L2 = pd.read_csv('data/WBA_volumes_test/WBA_volumes_2019-11-05.csv')
 
-    L2_orderbook = L2.iloc[:, :-len(horizons)]
-    L2_response = L2.iloc[:, -len(horizons):]
+    # L2_orderbook = L2.iloc[:, :-len(horizons)]
+    # L2_response = L2.iloc[:, -len(horizons):]
 
-    print(len(L2_orderbook))
-    print(len(L3_orderbook))
+    # print(len(L2_orderbook))
+    # print(len(L3_orderbook))
 
-    print(L2_orderbook.iloc[210000, :].values)
-    print(np.sum(np.sum(L3_orderbook[:, :, :], axis=1)<0))
+    # print(L2_orderbook.iloc[210000, :].values)
+    # print(np.sum(np.sum(L3_orderbook[:, :, :], axis=1)<0))

@@ -89,6 +89,32 @@ def get_class_distributions(files, alphas, orderbook_updates):
                                  columns = orderbook_updates)
     return distributions
 
+def get_class_distributions_univ(dict_of_files, dict_of_alphas, orderbook_updates):
+    n_horizons = len(orderbook_updates)
+    returns = []
+    n = 0
+    class0 = np.array([0 for _ in range(n_horizons)])
+    class2 = np.array([0 for _ in range(n_horizons)])
+    for TICKER in dict_of_files.keys:
+        files = dict_of_files[TICKER]
+        alphas = dict_of_alphas[TICKER]
+        for file in files:
+            df = pd.read_csv(file)
+            df = df.dropna()
+            df = df.to_numpy()
+            returns.append(df[:, -n_horizons:])
+        returns = np.vstack(returns)
+        n += returns.shape[0]
+        class0 += np.array([sum(returns[:, i] < -alphas[i]) for i in range(n_horizons)])
+        class2 += np.array([sum(returns[:, i] > alphas[i]) for i in range(n_horizons)])
+    class0 = class0/n
+    class2 = class2/n
+    class1 = 1 - (class0 + class2)
+    distributions = pd.DataFrame(np.vstack([class0, class1, class2]), 
+                                 index = ["down", "stationary", "up"], 
+                                 columns = orderbook_updates)
+    return distributions
+
 
 def prepare_decoder_input(data, teacher_forcing):
     if teacher_forcing:

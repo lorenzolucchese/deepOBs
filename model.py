@@ -1,4 +1,4 @@
-from data_generators import CustomtfDataset
+from data_generators import CustomtfDataset, CustomtfDatasetUniv
 from data_prepare import get_alphas
 
 import tensorflow as tf
@@ -145,7 +145,8 @@ class deepLOB:
                  n_horizons = 5,
                  batch_size = 256,
                  train_roll_window = 1,
-                 imbalances = None):
+                 imbalances = None,
+                 universal = False):
         """Initialization.
         :param T: time window 
         :param levels: number of levels (note these have different meaning for orderbooks/orderflows and volumes)
@@ -221,9 +222,14 @@ class deepLOB:
                 normalise = False
             elif model_inputs in ["volumes", "volumes_L3"]:
                 normalise = True
-            self.train_generator = CustomtfDataset(files = self.files["train"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, alphas = self.alphas, multihorizon = self.multihorizon,window = self.T, normalise=normalise, batch_size=batch_size,  roll_window=train_roll_window)
-            self.val_generator = CustomtfDataset(files = self.files["val"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, alphas = self.alphas, multihorizon = self.multihorizon, window = self.T, normalise=normalise,  batch_size=batch_size, roll_window=train_roll_window)
-            self.test_generator = CustomtfDataset(files = self.files["test"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, alphas = self.alphas, multihorizon = self.multihorizon, window = self.T, normalise=normalise,  batch_size=batch_size, roll_window=1)
+            if not universal:
+                self.train_generator = CustomtfDataset(files = self.files["train"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, alphas = self.alphas, multihorizon = self.multihorizon,window = self.T, normalise=normalise, batch_size=batch_size,  roll_window=train_roll_window)
+                self.val_generator = CustomtfDataset(files = self.files["val"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, alphas = self.alphas, multihorizon = self.multihorizon, window = self.T, normalise=normalise,  batch_size=batch_size, roll_window=train_roll_window)
+                self.test_generator = CustomtfDataset(files = self.files["test"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, alphas = self.alphas, multihorizon = self.multihorizon, window = self.T, normalise=normalise,  batch_size=batch_size, roll_window=1)
+            else:
+                self.train_generator = CustomtfDatasetUniv(dict_of_files = self.files["train"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, dict_of_alphas = self.alphas, multihorizon = self.multihorizon,window = self.T, normalise=normalise, batch_size=batch_size,  roll_window=train_roll_window)
+                self.val_generator = CustomtfDatasetUniv(dict_of_files = self.files["val"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, window = self.T, normalise=normalise,  batch_size=batch_size, roll_window=train_roll_window)
+                self.test_generator = CustomtfDatasetUniv(dict_of_files = self.files["test"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, window = self.T, normalise=normalise,  batch_size=batch_size, roll_window=1)
 
         else:
             raise ValueError("data must be either FI2010, simulated or LOBSTER.")

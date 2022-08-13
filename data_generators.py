@@ -154,3 +154,38 @@ def CustomtfDataset(files,
         tf_dataset = tf_dataset.map(add_decoder_input)
 
     return tf_dataset
+
+def CustomtfDatasetUniv(dict_of_files, 
+                        NF, 
+                        horizon, 
+                        n_horizons,
+                        dict_of_alphas, 
+                        model_inputs = "orderbooks",
+                        task = "classification",
+                        multihorizon = False, 
+                        normalise = False,
+                        teacher_forcing = False, 
+                        window = 100, 
+                        batch_size = 256, 
+                        roll_window = 1):
+    tf_datasets = []
+    for TICKER in dict_of_files.keys:
+        files = dict_of_files[TICKER]
+        alphas = dict_of_alphas[TICKER]
+        tf_datasets.append(CustomtfDataset(files, 
+                                           NF, 
+                                           horizon, 
+                                           n_horizons,
+                                           model_inputs = model_inputs,
+                                           task = task, 
+                                           alphas = alphas, 
+                                           multihorizon = multihorizon, 
+                                           normalise = normalise,
+                                           teacher_forcing = teacher_forcing, 
+                                           window = window, 
+                                           batch_size = batch_size, 
+                                           roll_window = roll_window))
+
+    tf_dataset = tf.data.Dataset.from_tensor_slices(tf_datasets).flat_map(lambda x: x)  
+
+    return tf_dataset
