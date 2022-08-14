@@ -1,4 +1,4 @@
-#PBS -l walltime=72:00:00
+#PBS -l walltime=00:15:00
 #PBS -l select=1:ncpus=32:mem=96gb:ngpus=1:gpu_type=RTX6000
 #PBS -J 0-10
 

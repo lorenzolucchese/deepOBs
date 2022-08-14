@@ -72,10 +72,10 @@ if __name__ == "__main__":
 
     for TICKER in TICKERS:
         TICKER_filepath = "results/" + TICKER
-        window_filepath = TICKER_filepath + "/W" + str(window)
+        TICKER_window_filepath = TICKER_filepath + "/W" + str(window)
 
-        val_train_test_dates = pickle.load(open(window_filepath + "/val_train_test_dates.pkl", "rb"))
-        alphas[TICKER] = pickle.load(open(window_filepath + "/alphas.pkl", "rb"))
+        val_train_test_dates = pickle.load(open(TICKER_window_filepath + "/val_train_test_dates.pkl", "rb"))
+        alphas[TICKER] = pickle.load(open(TICKER_window_filepath + "/alphas.pkl", "rb"))
         
         val_dates[TICKER] = val_train_test_dates[0]
         train_dates[TICKER] = val_train_test_dates[1]
@@ -83,9 +83,10 @@ if __name__ == "__main__":
 
     univ_filepath = "results/universal"
     os.makedirs(univ_filepath, exist_ok=True)
+    window_filepath = univ_filepath + "/W" + str(window)
 
     for m, model_type in enumerate(model_list):
-        model_filepath = univ_filepath + "/" + model_type
+        model_filepath = window_filepath + "/" + model_type
         os.makedirs(model_filepath, exist_ok=True)
         
         # set local parameters
@@ -93,6 +94,7 @@ if __name__ == "__main__":
         model_inputs = model_inputs_list[m]
         levels = levels_list[m]
 
+        # in sample files
         val_files_dict = {}
         train_files_dict = {}
         test_files_dict = {}
@@ -101,8 +103,8 @@ if __name__ == "__main__":
             data_dir = "data/" + TICKER + "_" + features
             file_list = os.listdir(data_dir)
             val_files_dict[TICKER] = [os.path.join(data_dir, file) for date in val_dates for file in file_list if date in file]
-            train_files_dict[TICKER] = [os.path.join(data_dir, file) for date in val_dates for file in file_list if date in file]
-            test_files_dict[TICKER] = [os.path.join(data_dir, file) for date in val_dates for file in file_list if date in file]
+            train_files_dict[TICKER] = [os.path.join(data_dir, file) for date in train_dates for file in file_list if date in file]
+            test_files_dict[TICKER] = [os.path.join(data_dir, file) for date in test_dates for file in file_list if date in file]
 
         files = {
             "val": val_files_dict,
@@ -110,7 +112,7 @@ if __name__ == "__main__":
             "test": test_files_dict
         }
 
-        # TODO: now, test results on out of sample tickers // reload models and load trained weights
+        # out of sample files
         val_files_dict = {}
         train_files_dict = {}
         test_files_dict = {}
@@ -119,19 +121,36 @@ if __name__ == "__main__":
             data_dir = "data/" + TICKER + "_" + features
             file_list = os.listdir(data_dir)
             val_files_dict[TICKER] = [os.path.join(data_dir, file) for date in val_dates for file in file_list if date in file]
-            train_files_dict[TICKER] = [os.path.join(data_dir, file) for date in val_dates for file in file_list if date in file]
-            test_files_dict[TICKER] = [os.path.join(data_dir, file) for date in val_dates for file in file_list if date in file]
+            train_files_dict[TICKER] = [os.path.join(data_dir, file) for date in train_dates for file in file_list if date in file]
+            test_files_dict[TICKER] = [os.path.join(data_dir, file) for date in test_dates for file in file_list if date in file]
 
         files_outofsample = {
             "val": val_files_dict,
             "train": train_files_dict,
             "test": test_files_dict
         }
-        #==================
 
         if imbalances.size == None:
             distributions = get_class_distributions_univ(files["train"], alphas, orderbook_updates)   
+            val_distributions = get_class_distributions_univ(files["val"], alphas, orderbook_updates)
+            test_distributions = get_class_distributions_univ(files["test"], alphas, orderbook_updates)
+
             imbalances = distributions.to_numpy()
+
+            pickle.dump(distributions, open(window_filepath + "/distributions.pkl", "wb"))
+            pickle.dump(val_distributions, open(window_filepath + "/val_distributions.pkl", "wb"))
+            pickle.dump(test_distributions, open(window_filepath + "/test_distributions.pkl", "wb"))
+        
+        data_dir = "data"
+
+        print(model_filepath)
+        print("in sample train files:", files["train"])
+        print("in sample val files:", files["val"])
+        print("in sample test files:", files["test"])
+
+        print("out of sample train files:", files_outofsample["train"])
+        print("out of sample val files:", files_outofsample["val"])
+        print("out of sample test files:", files_outofsample["test"])
         
         for h in range(n_horizons):
             horizon = h
@@ -162,25 +181,119 @@ if __name__ == "__main__":
 
             print("training model:", results_filepath)
 
-            model.fit_model(epochs = epochs,
-                            checkpoint_filepath = checkpoint_filepath,
-                            verbose = training_verbose,
-                            batch_size = batch_size,
-                            patience = patience)
+            # model.fit_model(epochs = epochs,
+            #                 checkpoint_filepath = checkpoint_filepath,
+            #                 verbose = training_verbose,
+            #                 batch_size = batch_size,
+            #                 patience = patience)
+
+            # test in sample
+
+            results_filepath_insample = results_filepath + "/" + "TICKERS_in_sample"
+
+            print("testing model in sample:", results_filepath_insample)
+
+            # model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+            #                     eval_set = "test",
+            #                     results_filepath = results_filepath_insample)
+            # model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+            #                     eval_set = "train",
+            #                     results_filepath = results_filepath_insample)
+            # model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+            #                     eval_set = "val",
+            #                     results_filepath = results_filepath_insample)
+
+            # test out of sample
+
+            results_filepath_outofsample = results_filepath + "/" + "TICKERS_out_of_sample"
+
+            model = deepLOB(T = T, 
+                            levels = levels, 
+                            horizon = horizon, 
+                            number_of_lstm = number_of_lstm, 
+                            data = data, 
+                            data_dir = data_dir, 
+                            files = files_outofsample, 
+                            model_inputs = model_inputs, 
+                            queue_depth = queue_depth,
+                            task = task, 
+                            alphas = alphas, 
+                            orderbook_updates = orderbook_updates,
+                            multihorizon = multihorizon, 
+                            decoder = decoder, 
+                            n_horizons = n_horizons,
+                            train_roll_window = train_roll_window,
+                            imbalances = imbalances,
+                            universal = True)
             
-            print("testing model:", results_filepath)
+            model.create_model()
 
-            results_filepath = results_filepath + "/" + "TICKERS_in_sample"
+            print("testing model out of sample:", results_filepath_outofsample)
 
-            model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
-                                eval_set = "test",
-                                results_filepath = results_filepath)
-            model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
-                                eval_set = "train",
-                                results_filepath = results_filepath)
-            model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
-                                eval_set = "val",
-                                results_filepath = results_filepath)
+            # model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+            #                     eval_set = "test",
+            #                     results_filepath = results_filepath_outofsample)
+            # model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+            #                     eval_set = "train",
+            #                     results_filepath = results_filepath_outofsample)
+            # model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+            #                     eval_set = "val",
+            #                     results_filepath = results_filepath_outofsample)
 
-            # TODO: now, test results on stock by stock
+            # test results on each stock
+
+            for TICKER in TICKERS:        
+                data_dir = "data/" + TICKER + "_" + features
+                file_list = os.listdir(data_dir)
+                val_files_dict = [os.path.join(data_dir, file) for date in val_dates for file in file_list if date in file]
+                train_files_dict = [os.path.join(data_dir, file) for date in train_dates for file in file_list if date in file]
+                test_files_dict = [os.path.join(data_dir, file) for date in test_dates for file in file_list if date in file]
+
+                files_stock = {
+                    "val": val_files_dict,
+                    "train": train_files_dict,
+                    "test": test_files_dict
+                }
+
+                results_filepath_stock = results_filepath + "/" + TICKER
+
+                model = deepLOB(T = T, 
+                                levels = levels, 
+                                horizon = horizon, 
+                                number_of_lstm = number_of_lstm, 
+                                data = data, 
+                                data_dir = data_dir, 
+                                files = files_stock, 
+                                model_inputs = model_inputs, 
+                                queue_depth = queue_depth,
+                                task = task, 
+                                alphas = alphas, 
+                                orderbook_updates = orderbook_updates,
+                                multihorizon = multihorizon, 
+                                decoder = decoder, 
+                                n_horizons = n_horizons,
+                                train_roll_window = train_roll_window,
+                                imbalances = imbalances,
+                                universal = False)
+                
+                model.create_model()
+
+                print("testing model on single stock:", results_filepath_stock)
+
+                if h == 0:
+                    print(TICKER, " train files:", files_stock["train"])
+                    print(TICKER, " val files:", files_stock["val"])
+                    print(TICKER, " test files:", files_stock["test"])
+
+                # model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+                #                     eval_set = "test",
+                #                     results_filepath = results_filepath_stock)
+                # model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+                #                     eval_set = "train",
+                #                     results_filepath = results_filepath_stock)
+                # model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+                #                     eval_set = "val",
+                #                     results_filepath = results_filepath_stock)
+
+
 
