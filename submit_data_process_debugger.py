@@ -9,7 +9,7 @@ if __name__ == "__main__":
     # set global parameters 
     TICKERS = ["LILAK", "QRTEA", "XRAY", "CHTR", "PCAR", "EXC", "AAL", "WBA", "ATVI", "AAPL"] 
 
-    TICKER = "LILAK" 
+    TICKER = "AAPL" 
     input_path = "data_raw/" + TICKER + "_data_dwn" 
     log_path = "data/logs/" + TICKER + "_processing_logs" 
     horizons = np.array([10, 20, 30, 50, 100, 200, 300, 500, 1000]) 
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     # LOBSTER DATA - VOLUMES L3 (multiprocess)
 
     output_path = "data/" + TICKER + "_volumes"
-    os.makedirs(output_path, exists_ok=True)
+    os.makedirs(output_path, exist_ok=True)
 
     startTime = time.time()
     multiprocess_L3(TICKER=TICKER,
