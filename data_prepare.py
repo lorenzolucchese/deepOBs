@@ -95,7 +95,7 @@ def get_class_distributions_univ(dict_of_files, dict_of_alphas, orderbook_update
     n = 0
     class0 = np.array([0 for _ in range(n_horizons)])
     class2 = np.array([0 for _ in range(n_horizons)])
-    for TICKER in dict_of_files.keys:
+    for TICKER in dict_of_files.keys():
         files = dict_of_files[TICKER]
         alphas = dict_of_alphas[TICKER]
         for file in files:

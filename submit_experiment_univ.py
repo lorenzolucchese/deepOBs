@@ -63,7 +63,7 @@ if __name__ == "__main__":
     dates = [str(start_date + dt.timedelta(days=_)) for _ in range((end_date - start_date).days + 1)]
     weeks = list(zip(*[dates[i::7] for i in range(5)]))
 
-    # make universal training set
+    # make universal set
     val_dates = {}
     train_dates = {}
     test_dates = {}
@@ -80,6 +80,11 @@ if __name__ == "__main__":
         val_dates[TICKER] = val_train_test_dates[0]
         train_dates[TICKER] = val_train_test_dates[1]
         test_dates[TICKER] = val_train_test_dates[2]
+    
+    print(train_dates)
+    print(val_dates)
+    print(test_dates)
+
 
     univ_filepath = "results/universal"
     os.makedirs(univ_filepath, exist_ok=True)
@@ -102,9 +107,9 @@ if __name__ == "__main__":
         for TICKER in TICKERS_insample:        
             data_dir = "data/" + TICKER + "_" + features
             file_list = os.listdir(data_dir)
-            val_files_dict[TICKER] = [os.path.join(data_dir, file) for date in val_dates for file in file_list if date in file]
-            train_files_dict[TICKER] = [os.path.join(data_dir, file) for date in train_dates for file in file_list if date in file]
-            test_files_dict[TICKER] = [os.path.join(data_dir, file) for date in test_dates for file in file_list if date in file]
+            val_files_dict[TICKER] = [os.path.join(data_dir, file) for date in val_dates[TICKER] for file in file_list if date in file]
+            train_files_dict[TICKER] = [os.path.join(data_dir, file) for date in train_dates[TICKER] for file in file_list if date in file]
+            test_files_dict[TICKER] = [os.path.join(data_dir, file) for date in test_dates[TICKER] for file in file_list if date in file]
 
         files = {
             "val": val_files_dict,
@@ -120,9 +125,9 @@ if __name__ == "__main__":
         for TICKER in TICKERS_outofsample:        
             data_dir = "data/" + TICKER + "_" + features
             file_list = os.listdir(data_dir)
-            val_files_dict[TICKER] = [os.path.join(data_dir, file) for date in val_dates for file in file_list if date in file]
-            train_files_dict[TICKER] = [os.path.join(data_dir, file) for date in train_dates for file in file_list if date in file]
-            test_files_dict[TICKER] = [os.path.join(data_dir, file) for date in test_dates for file in file_list if date in file]
+            val_files_dict[TICKER] = [os.path.join(data_dir, file) for date in val_dates[TICKER] for file in file_list if date in file]
+            train_files_dict[TICKER] = [os.path.join(data_dir, file) for date in train_dates[TICKER] for file in file_list if date in file]
+            test_files_dict[TICKER] = [os.path.join(data_dir, file) for date in test_dates[TICKER] for file in file_list if date in file]
 
         files_outofsample = {
             "val": val_files_dict,
@@ -245,9 +250,9 @@ if __name__ == "__main__":
             for TICKER in TICKERS:        
                 data_dir = "data/" + TICKER + "_" + features
                 file_list = os.listdir(data_dir)
-                val_files_dict = [os.path.join(data_dir, file) for date in val_dates for file in file_list if date in file]
-                train_files_dict = [os.path.join(data_dir, file) for date in train_dates for file in file_list if date in file]
-                test_files_dict = [os.path.join(data_dir, file) for date in test_dates for file in file_list if date in file]
+                val_files_dict = [os.path.join(data_dir, file) for date in val_dates[TICKER] for file in file_list if date in file]
+                train_files_dict = [os.path.join(data_dir, file) for date in train_dates[TICKER] for file in file_list if date in file]
+                test_files_dict = [os.path.join(data_dir, file) for date in test_dates[TICKER] for file in file_list if date in file]
 
                 files_stock = {
                     "val": val_files_dict,

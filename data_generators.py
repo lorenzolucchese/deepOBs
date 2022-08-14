@@ -169,7 +169,7 @@ def CustomtfDatasetUniv(dict_of_files,
                         batch_size = 256, 
                         roll_window = 1):
     tf_datasets = []
-    for TICKER in dict_of_files.keys:
+    for TICKER in dict_of_files.keys():
         files = dict_of_files[TICKER]
         alphas = dict_of_alphas[TICKER]
         tf_datasets.append(CustomtfDataset(files, 
