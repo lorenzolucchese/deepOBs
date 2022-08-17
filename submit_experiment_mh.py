@@ -69,8 +69,11 @@ if __name__ == "__main__":
         window_filepath = TICKER_filepath + "/W" + str(window)
         os.makedirs(window_filepath, exist_ok=True)
         val_train_test_dates = pickle.load(open(window_filepath + "/val_train_test_dates.pkl", "rb"))
-        alphas = pickle.load(open(window_filepath + "/alphas.pkl", "rb"))
+        alphas = pickle.load(open(window_filepath + "/alphas.pkl", "rb"))[:len(orderbook_updates)]
         distributions = pickle.load(open(window_filepath + "/distributions.pkl", "rb"))
+        imbalances = distributions.to_numpy()[:, :len(orderbook_updates)]
+        print(alphas)
+        print(imbalances)
         val_dates = val_train_test_dates[0]
         train_dates = val_train_test_dates[1]
         test_dates = val_train_test_dates[2]
@@ -91,8 +94,6 @@ if __name__ == "__main__":
                 "train": [os.path.join(data_dir, file) for date in train_dates for file in file_list if date in file],
                 "test": [os.path.join(data_dir, file) for date in test_dates for file in file_list if date in file]
             }
-            
-            imbalances = distributions.to_numpy()
             
             horizon = slice(0, n_horizons)
             results_filepath = model_filepath + "/" + decoder
