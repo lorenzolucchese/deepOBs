@@ -596,9 +596,9 @@ class deepLOB:
                     classification_report_dict = classification_report(np.argmax(evalY[:, h, :], axis=1), np.argmax(predY[:, h, :], axis=1), digits=4, output_dict=True)
                     confusion_matrix_array = confusion_matrix(np.argmax(evalY[:, h, :], axis=1), np.argmax(predY[:, h, :], axis=1))
                     categorical_crossentropy = tf.keras.losses.CategoricalCrossentropy()(evalY[:, h, :], predY[:, h, :]).numpy()
-                    pickle.dump(classification_report_dict, open(results_filepath + "/classification_report_" + eval_set + "_h"+ self.orderbook_updates[h] + ".pkl", "wb"))
-                    pickle.dump(confusion_matrix_array, open(results_filepath + "/confusion_matrix_" + eval_set + "_h"+ self.orderbook_updates[h] + ".pkl", "wb"))
-                    pickle.dump(categorical_crossentropy, open(results_filepath + "/categorical_crossentropy_" + eval_set + "_h"+ self.orderbook_updates[h] + ".pkl", "wb"))
+                    pickle.dump(classification_report_dict, open(results_filepath + "/classification_report_" + eval_set + "_h"+ str(self.orderbook_updates[h]) + ".pkl", "wb"))
+                    pickle.dump(confusion_matrix_array, open(results_filepath + "/confusion_matrix_" + eval_set + "_h"+ str(self.orderbook_updates[h]) + ".pkl", "wb"))
+                    pickle.dump(categorical_crossentropy, open(results_filepath + "/categorical_crossentropy_" + eval_set + "_h"+ str(self.orderbook_updates[h]) + ".pkl", "wb"))
 
                     print("Prediction horizon:", self.orderbook_updates[h], " orderbook updates")
                     print("Categorical crossentropy:", categorical_crossentropy)
