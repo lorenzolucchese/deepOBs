@@ -36,16 +36,18 @@ if __name__ == "__main__":
     TICKERS_insample = ["QRTEA", "CHTR", "EXC", "WBA", "AAPL"]
     TICKERS_outofsample = ["LILAK", "XRAY", "PCAR", "AAL", "ATVI"]
     Ws = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    window = Ws[int(sys.argv[1])]
+    window = Ws[int(sys.argv[1])//3]
+    indicator_range = int(sys.argv[1])%3
 
     orderbook_updates = [10, 20, 30, 50, 100, 200, 300, 500, 1000]
+    n_horizons = len(orderbook_updates)
+    range_models = range(indicator_range*3, (indicator_range+1)*3)
     data = "LOBSTER"                                                
     task = "classification"
     multihorizon = False                              
     decoder = None                                            
     T = 100
     queue_depth = 10                                          
-    n_horizons = len(orderbook_updates)
     epochs = 50
     patience = 10
     training_verbose = 2
@@ -62,6 +64,10 @@ if __name__ == "__main__":
     slide_by = 5
     dates = [str(start_date + dt.timedelta(days=_)) for _ in range((end_date - start_date).days + 1)]
     weeks = list(zip(*[dates[i::7] for i in range(5)]))
+
+    univ_filepath = "results/universal"
+    os.makedirs(univ_filepath, exist_ok=True)
+    window_filepath = univ_filepath + "/W" + str(window)
 
     # make universal set
     val_dates = {}
@@ -80,15 +86,9 @@ if __name__ == "__main__":
         val_dates[TICKER] = val_train_test_dates[0]
         train_dates[TICKER] = val_train_test_dates[1]
         test_dates[TICKER] = val_train_test_dates[2]
-    
-    print(train_dates)
-    print(val_dates)
-    print(test_dates)
 
-
-    univ_filepath = "results/universal"
-    os.makedirs(univ_filepath, exist_ok=True)
-    window_filepath = univ_filepath + "/W" + str(window)
+    pickle.dump([val_dates, train_dates, test_dates], open(window_filepath + "/val_train_test_dates.pkl", "wb"))
+    pickle.dump(alphas, open(window_filepath + "/alphas.pkl", "wb"))
 
     for m, model_type in enumerate(model_list):
         model_filepath = window_filepath + "/" + model_type
@@ -103,6 +103,7 @@ if __name__ == "__main__":
         val_files_dict = {}
         train_files_dict = {}
         test_files_dict = {}
+        train_val_dict = {}
 
         for TICKER in TICKERS_insample:        
             data_dir = "data/" + TICKER + "_" + features
@@ -110,6 +111,7 @@ if __name__ == "__main__":
             val_files_dict[TICKER] = [os.path.join(data_dir, file) for date in val_dates[TICKER] for file in file_list if date in file]
             train_files_dict[TICKER] = [os.path.join(data_dir, file) for date in train_dates[TICKER] for file in file_list if date in file]
             test_files_dict[TICKER] = [os.path.join(data_dir, file) for date in test_dates[TICKER] for file in file_list if date in file]
+            train_val_dict[TICKER] = val_files_dict[TICKER] + train_files_dict[TICKER]
 
         files = {
             "val": val_files_dict,
@@ -135,29 +137,24 @@ if __name__ == "__main__":
             "test": test_files_dict
         }
 
-        if imbalances.size == None:
+        if imbalances.size == 0:
             distributions = get_class_distributions_univ(files["train"], alphas, orderbook_updates)   
             val_distributions = get_class_distributions_univ(files["val"], alphas, orderbook_updates)
             test_distributions = get_class_distributions_univ(files["test"], alphas, orderbook_updates)
-
+            train_val_distributions = get_class_distributions_univ(train_val_dict, alphas, orderbook_updates)
+            
             imbalances = distributions.to_numpy()
 
             pickle.dump(distributions, open(window_filepath + "/distributions.pkl", "wb"))
             pickle.dump(val_distributions, open(window_filepath + "/val_distributions.pkl", "wb"))
             pickle.dump(test_distributions, open(window_filepath + "/test_distributions.pkl", "wb"))
+            pickle.dump(train_val_distributions, open(window_filepath + "/train_val_distributions.pkl", "wb"))
+        else:
+            pass
         
         data_dir = "data"
-
-        print(model_filepath)
-        print("in sample train files:", files["train"])
-        print("in sample val files:", files["val"])
-        print("in sample test files:", files["test"])
-
-        print("out of sample train files:", files_outofsample["train"])
-        print("out of sample val files:", files_outofsample["val"])
-        print("out of sample test files:", files_outofsample["test"])
         
-        for h in range(n_horizons):
+        for h in range_models:
             horizon = h
             results_filepath = model_filepath + "/" + "h" + str(orderbook_updates[h])
             checkpoint_filepath = results_filepath + "/" + "weights"
@@ -186,11 +183,11 @@ if __name__ == "__main__":
 
             print("training model:", results_filepath)
 
-            # model.fit_model(epochs = epochs,
-            #                 checkpoint_filepath = checkpoint_filepath,
-            #                 verbose = training_verbose,
-            #                 batch_size = batch_size,
-            #                 patience = patience)
+            model.fit_model(epochs = epochs,
+                            checkpoint_filepath = checkpoint_filepath,
+                            verbose = training_verbose,
+                            batch_size = batch_size,
+                            patience = patience)
 
             # test in sample
 
@@ -198,15 +195,15 @@ if __name__ == "__main__":
 
             print("testing model in sample:", results_filepath_insample)
 
-            # model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
-            #                     eval_set = "test",
-            #                     results_filepath = results_filepath_insample)
-            # model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
-            #                     eval_set = "train",
-            #                     results_filepath = results_filepath_insample)
-            # model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
-            #                     eval_set = "val",
-            #                     results_filepath = results_filepath_insample)
+            model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+                                eval_set = "test",
+                                results_filepath = results_filepath_insample)
+            model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+                                eval_set = "train",
+                                results_filepath = results_filepath_insample)
+            model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+                                eval_set = "val",
+                                results_filepath = results_filepath_insample)
 
             # test out of sample
 
@@ -235,15 +232,15 @@ if __name__ == "__main__":
 
             print("testing model out of sample:", results_filepath_outofsample)
 
-            # model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
-            #                     eval_set = "test",
-            #                     results_filepath = results_filepath_outofsample)
-            # model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
-            #                     eval_set = "train",
-            #                     results_filepath = results_filepath_outofsample)
-            # model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
-            #                     eval_set = "val",
-            #                     results_filepath = results_filepath_outofsample)
+            model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+                                eval_set = "test",
+                                results_filepath = results_filepath_outofsample)
+            model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+                                eval_set = "train",
+                                results_filepath = results_filepath_outofsample)
+            model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+                                eval_set = "val",
+                                results_filepath = results_filepath_outofsample)
 
             # test results on each stock
 
@@ -285,20 +282,15 @@ if __name__ == "__main__":
 
                 print("testing model on single stock:", results_filepath_stock)
 
-                if h == 0:
-                    print(TICKER, " train files:", files_stock["train"])
-                    print(TICKER, " val files:", files_stock["val"])
-                    print(TICKER, " test files:", files_stock["test"])
-
-                # model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
-                #                     eval_set = "test",
-                #                     results_filepath = results_filepath_stock)
-                # model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
-                #                     eval_set = "train",
-                #                     results_filepath = results_filepath_stock)
-                # model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
-                #                     eval_set = "val",
-                #                     results_filepath = results_filepath_stock)
+                model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+                                    eval_set = "test",
+                                    results_filepath = results_filepath_stock)
+                model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+                                    eval_set = "train",
+                                    results_filepath = results_filepath_stock)
+                model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+                                    eval_set = "val",
+                                    results_filepath = results_filepath_stock)
 
 
 
