@@ -68,6 +68,7 @@ if __name__ == "__main__":
     univ_filepath = "results/universal"
     os.makedirs(univ_filepath, exist_ok=True)
     window_filepath = univ_filepath + "/W" + str(window)
+    os.makedirs(window_filepath, exist_ok=True)
 
     # make universal set
     val_dates = {}
