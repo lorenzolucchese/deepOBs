@@ -1,4 +1,4 @@
-from data_generators import CustomtfDataset, CustomtfDatasetUniv
+from data_generators import CustomtfDataset, CustomtfDatasetUniv, load_evalY
 from data_prepare import get_alphas
 
 import tensorflow as tf
@@ -189,6 +189,7 @@ class deepLOB:
         self.batch_size = batch_size
         self.train_roll_window = train_roll_window
         self.imbalances = imbalances
+        self.universal = universal
 
         if data in ["FI2010", "simulated"]:
             train_data = np.load(os.path.join(data_dir, "train.npz"))
@@ -550,33 +551,17 @@ class deepLOB:
             eval_data = np.load(os.path.join(self.data_dir, eval_set + ".npz"))
             evalY = eval_data["Y"][:, self.horizon, ...]
         if self.data == "LOBSTER":
-            eval_files = self.files[eval_set]
-            evalY = np.array([])
-            if self.multihorizon:
-                evalY = evalY.reshape(0, self.n_horizons)
-            for file in eval_files:
-                if self.model_inputs in ["orderbooks", "orderflows"]:
-                    data = pd.read_csv(file).to_numpy()
-                    responses = data[:, -self.n_horizons:]
-                elif self.model_inputs[:7] == "volumes":
-                    data = np.load(file)
-                    responses = data["responses"]
-                evalY = np.concatenate([evalY, responses[(self.T-1)::roll_window, self.horizon]])
-                # evalY = np.concatenate([evalY, responses[:, self.horizon]])
-            # evalY = evalY[(self.T-1)::roll_window]
-
-            if self.task == "classification":
-                if self.multihorizon:
-                    all_label = []
-                    for h in range(evalY.shape[1]):
-                        one_label = (+1)*(evalY[:, h]>=-self.alphas[h]) + (+1)*(evalY[:, h]>self.alphas[h])
-                        one_label = tf.keras.utils.to_categorical(one_label, 3)
-                        one_label = one_label.reshape(len(one_label), 1, 3)
-                        all_label.append(one_label)
-                    evalY = np.hstack(all_label)
-                else:
-                    evalY = (+1)*(evalY>=-self.alphas[self.horizon]) + (+1)*(evalY>self.alphas[self.horizon])
-                    evalY = tf.keras.utils.to_categorical(evalY, 3)
+            if not self.universal:
+                eval_files = self.files[eval_set]
+                evalY = load_evalY(eval_files, self.alphas, self.multihorizon, self.n_horizons, self.model_inputs, self.T, roll_window, self.horizon, self.task)
+            else:
+                dict_of_files = self.files[eval_set]
+                evalY = []
+                for TICKER in dict_of_files.keys():
+                    TICKER_eval_files = dict_of_files[TICKER]
+                    TICKER_alphas = self.alphas[TICKER]
+                    evalY.append(load_evalY(TICKER_eval_files, TICKER_alphas, self.multihorizon, self.n_horizons, self.model_inputs, self.T, roll_window, self.horizon, self.task))
+                evalY = np.stack(evalY, axis = 0)
             
         if self.task == "classification":
             if not self.multihorizon:
@@ -630,7 +615,6 @@ class deepLOB:
                     regression_fit_plot(evalY, predY, title = eval_set + str(self.orderbook_updates[h]), 
                                         path = results_filepath + "/fit_plot_" + eval_set + "_h" + str(self.orderbook_updates[h]) + ".png")
 
-
 def regression_fit_plot(evalY, predY, title, path):
     fig, ax = plt.subplots()
     mpl.rcParams["agg.path.chunksize"] = len(evalY)
@@ -643,110 +627,4 @@ def regression_fit_plot(evalY, predY, title, path):
     ax.set_title(title)
     ax.set_xlabel("True y")
     ax.set_ylabel("Pred y")
-    fig.savefig(path)
-
-
-if __name__ == "__main__":
-    # limit gpu memory
-    gpus = tf.config.experimental.list_physical_devices("GPU")
-    if gpus:
-        try:
-            # Use only one GPUs
-            tf.config.set_visible_devices(gpus[0], "GPU")
-            logical_gpus = tf.config.list_logical_devices("GPU")
-
-            # Or use all GPUs, memory growth needs to be the same across GPUs
-            # for gpu in gpus:
-            #     tf.config.experimental.set_memory_growth(gpu, True)
-            # logical_gpus = tf.config.experimental.list_logical_devices("GPU")
-            print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
-        except RuntimeError as e:
-            # Memory growth must be set before GPUs have been initialized
-            print(e)
-
-    # set random seeds
-    random.seed(0)
-    np.random.seed(1)
-    tf.random.set_seed(2)
-
-    tf.keras.mixed_precision.set_global_policy("mixed_float16")
-    
-    orderbook_updates = [10, 20, 30, 50, 100]
-    
-    #################################### SETTINGS ########################################
-    model_inputs = "orderbooks"                    # options: "orderbooks", "orderflows", "volumes", "volumes_L3"
-    data = "LOBSTER"                              # options: "FI2010", "LOBSTER", "simulated"
-    data_dir = "data/AAL_orderbooks"
-    csv_file_list = glob.glob(os.path.join(data_dir, "*.{}").format("csv"))
-    csv_file_list.sort()
-    val_train_list = csv_file_list[:25]
-    random.shuffle(val_train_list)
-    test_list = csv_file_list[25:30]
-    files = {
-        "val": val_train_list[:5],
-        "train": val_train_list[5:25],
-        "test": test_list
-    }
-    # alphas, distributions = get_alphas(files["train"])
-    alphas = np.array([0.0000000e+00, 0.0000000e+00, 0.0000000e+00, 0.0000000e+00, 3.2942814e-05])
-    distributions = pd.DataFrame(np.vstack([np.array([0.121552, 0.194825, 0.245483, 0.314996, 0.334330]), 
-                                            np.array([0.752556, 0.604704, 0.504695, 0.368647, 0.330456]),
-                                            np.array([0.125893, 0.200471, 0.249821, 0.316357, 0.335214])]), 
-                                 index=["down", "stationary", "up"], 
-                                 columns=["10", "20", "30", "50", "100"])
-    imbalances = distributions.to_numpy()
-    # imbalances = None
-    task = "classification"
-    multihorizon = True                         # options: True, False
-    decoder = "seq2seq"                         # options: "seq2seq", "attention"
-
-    T = 100
-    levels = 1                                  # remember to change this when changing features
-    queue_depth = 10                            # for L3 data only
-    n_horizons = 5
-    horizon = 0                                 # prediction horizon (0, 1, 2, 3, 4) -> (10, 20, 30, 50, 100) orderbook events
-    epochs = 50
-    patience = 10
-    training_verbose = 2
-    train_roll_window = 100
-    batch_size = 256                            # note we use 256 for LOBSTER, 32 for FI2010 or simulated
-    number_of_lstm = 64
-
-    checkpoint_filepath = "./model_weights/test_model"
-    load_weights = False
-    load_weights_filepath = "./model_weights/test_model"
-
-    #######################################################################################
-
-    model = deepLOB(T = T, 
-                    levels = levels, 
-                    horizon = horizon, 
-                    number_of_lstm = number_of_lstm, 
-                    data = data, 
-                    data_dir = data_dir, 
-                    files = files, 
-                    model_inputs = model_inputs, 
-                    queue_depth = queue_depth,
-                    task = task, 
-                    alphas = alphas, 
-                    multihorizon = multihorizon, 
-                    decoder = decoder, 
-                    n_horizons = n_horizons,
-                    train_roll_window = train_roll_window,
-                    imbalances = imbalances)
-
-    model.create_model()
-
-    # model.model.summary()
-
-    model.fit_model(epochs = epochs,
-                    checkpoint_filepath = checkpoint_filepath,
-                    load_weights = load_weights,
-                    load_weights_filepath = load_weights_filepath,
-                    verbose = training_verbose,
-                    batch_size = batch_size,
-                    patience = patience)
-
-    model.evaluate_model(load_weights_filepath = load_weights_filepath, eval_set = "test")
-    model.evaluate_model(load_weights_filepath = load_weights_filepath, eval_set = "train")
-    model.evaluate_model(load_weights_filepath = load_weights_filepath, eval_set = "val")     
+    fig.savefig(path)     

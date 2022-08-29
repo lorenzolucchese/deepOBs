@@ -189,3 +189,33 @@ def CustomtfDatasetUniv(dict_of_files,
     tf_dataset = tf.data.Dataset.from_tensor_slices(tf_datasets).flat_map(lambda x: x)  
 
     return tf_dataset
+
+def load_evalY(eval_files, alphas, multihorizon, n_horizons, model_inputs, T, roll_window, horizon, task):
+    evalY = np.array([])
+    if multihorizon:
+        evalY = evalY.reshape(0, n_horizons)
+    for file in eval_files:
+        if model_inputs in ["orderbooks", "orderflows"]:
+            data = pd.read_csv(file).to_numpy()
+            responses = data[:, -self.n_horizons:]
+        elif model_inputs[:7] == "volumes":
+            data = np.load(file)
+            responses = data["responses"]
+        evalY = np.concatenate([evalY, responses[(T-1)::roll_window, horizon]])
+        # evalY = np.concatenate([evalY, responses[:, self.horizon]])
+    # evalY = evalY[(self.T-1)::roll_window]
+
+    if task == "classification":
+        if multihorizon:
+            all_label = []
+            for h in range(evalY.shape[1]):
+                one_label = (+1)*(evalY[:, h]>=-alphas[h]) + (+1)*(evalY[:, h]>alphas[h])
+                one_label = tf.keras.utils.to_categorical(one_label, 3)
+                one_label = one_label.reshape(len(one_label), 1, 3)
+                all_label.append(one_label)
+            evalY = np.hstack(all_label)
+        else:
+            evalY = (+1)*(evalY>=-alphas[horizon]) + (+1)*(evalY>alphas[horizon])
+            evalY = tf.keras.utils.to_categorical(evalY, 3)
+    
+    return evalY
