@@ -197,13 +197,13 @@ def load_evalY(eval_files, alphas, multihorizon, n_horizons, model_inputs, T, ro
     for file in eval_files:
         if model_inputs in ["orderbooks", "orderflows"]:
             data = pd.read_csv(file).to_numpy()
-            responses = data[:, -self.n_horizons:]
+            responses = data[:, -n_horizons:]
         elif model_inputs[:7] == "volumes":
             data = np.load(file)
             responses = data["responses"]
         evalY = np.concatenate([evalY, responses[(T-1)::roll_window, horizon]])
-        # evalY = np.concatenate([evalY, responses[:, self.horizon]])
-    # evalY = evalY[(self.T-1)::roll_window]
+        # evalY = np.concatenate([evalY, responses[:, horizon]])
+    # evalY = evalY[(T-1)::roll_window]
 
     if task == "classification":
         if multihorizon:
