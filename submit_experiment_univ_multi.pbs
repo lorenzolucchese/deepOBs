@@ -1,6 +1,6 @@
-#PBS -l walltime=72:00:00
+#PBS -l walltime=02:00:00
 #PBS -l select=1:ncpus=128:mem=920gb:ngpus=1:gpu_type=RTX6000
-#PBS -J 0-21
+#PBS -J 0-1
 
 module load anaconda3/personal
 source activate deepLOBs_env
