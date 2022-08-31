@@ -3,6 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 import random
+import itertools
 from functools import *
 
 def classification_report_str_to_df(report:str):
@@ -299,7 +300,68 @@ def summarize_MCS_results(tickers, horizons, metric):
     full_df.to_csv("MCS_results/" + metric + "_MCS_results.csv")
     return full_df
 
-            
+# multihorizon
+def cce_dataframe_multihorizon(TICKER, model, horizon, set_='test'):
+    periods = ['W0', 'W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7', 'W8', 'W9', 'W10']
+    dataframe = pd.DataFrame(np.zeros((len(periods), 3)), columns = ['benchmark', 'single horizon', 'multi horizon'], index = periods)
+    for period in periods:
+        cce_benchmark = pickle.load(open('results/' + TICKER + '/' + period + '/benchmark/' + horizon + '/categorical_crossentropy_' + set_ + '.pkl', 'rb'))
+        dataframe.loc[period, 'benchmark'] = float(cce_benchmark)
+        cce_single_horizon = pickle.load(open('results/' + TICKER + '/' + period + '/' + model + '/' + horizon + '/categorical_crossentropy_' + set_ + '.pkl', 'rb'))
+        dataframe.loc[period, 'single horizon'] = float(cce_single_horizon)
+        cce_multi_horizon = pickle.load(open('results/' + TICKER + '/' + period + '/' + model + '/seq2seq/categorical_crossentropy_' + set_ + '_'+ horizon + '.pkl', 'rb'))
+        dataframe.loc[period, 'multi horizon'] = float(cce_multi_horizon)
+    return dataframe
+
+def cce_dataframe_multihorizon_all_models(TICKER, horizon, set_='test'):
+    models = ['deepLOB_L1', 'deepOF_L1', 'deepLOB_L2', 'deepOF_L2', 'deepVOL_L2', 'deepVOL_L3']
+    periods = ['W0', 'W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7', 'W8', 'W9', 'W10']
+    columns = ['benchmark'] + models + [model + '_seq2seq' for model in models]
+    dataframe = pd.DataFrame(np.zeros((len(periods), 13)), columns = columns, index = periods)
+    for period in periods:
+        cce_benchmark = pickle.load(open('results/' + TICKER + '/' + period + '/benchmark/' + horizon + '/categorical_crossentropy_' + set_ + '.pkl', 'rb'))
+        dataframe.loc[period, 'benchmark'] = float(cce_benchmark)
+        for model in models:
+            cce_single_horizon = pickle.load(open('results/' + TICKER + '/' + period + '/' + model + '/' + horizon + '/categorical_crossentropy_' + set_ + '.pkl', 'rb'))
+            dataframe.loc[period, model] = float(cce_single_horizon)
+            cce_multi_horizon = pickle.load(open('results/' + TICKER + '/' + period + '/' + model + '/seq2seq/categorical_crossentropy_' + set_ + '_'+ horizon + '.pkl', 'rb'))
+            dataframe.loc[period, model + '_seq2seq'] = float(cce_multi_horizon)
+    return dataframe
+
+def summarize_MCS_results_multihorizon(tickers, horizons, models):
+    col_names = [" "]*3*len(horizons)
+    col_names[::3] = horizons
+    row_names = [" "]*(3*6*len(tickers)+1)
+    row_names[1::3*6] = tickers
+    model_names = [" "]*(3*6*len(tickers)+1)
+    model_names[1::3] = models*len(tickers)
+    full_df = pd.DataFrame(np.zeros((len(row_names), len(col_names))), index = row_names, columns = col_names)
+    full_df.iloc[0, :] = [" ", "avg loss", "MCS p-value"] * len(horizons)
+    for i, (TICKER, model) in enumerate(itertools.product(tickers, models)):
+        for j, horizon in enumerate(horizons):
+            df = cce_dataframe_multihorizon(TICKER, model, horizon)
+            MCS_results = MCS(df, l=3, B=100)[['avg loss', 'MCS p-value']]
+            MCS_results = MCS_results.reset_index()
+            full_df.iloc[(1 + 3*i):(1 + 3*(i+1)), 3*j:3*(j+1)] = MCS_results.values
+    full_df.insert(0, ' ', model_names, allow_duplicates=True)
+    full_df.to_csv("MCS_results/multihorizon_MCS_results.csv")
+    return full_df
+
+def summarize_MCS_results_multihorizon_all_models(tickers, horizons):
+    col_names = [" "]*3*len(horizons)
+    col_names[::3] = horizons
+    row_names = [" "]*(13*len(tickers)+1)
+    row_names[1::13] = tickers
+    full_df = pd.DataFrame(np.zeros((len(row_names), len(col_names))), index = row_names, columns = col_names)
+    full_df.iloc[0, :] = [" ", "avg loss", "MCS p-value"] * len(horizons)
+    for i, TICKER in enumerate(tickers):
+        for j, horizon in enumerate(horizons):
+            df = cce_dataframe_multihorizon_all_models(TICKER, horizon)
+            MCS_results = MCS(df, l=3, B=100)[['avg loss', 'MCS p-value']]
+            MCS_results = MCS_results.reset_index()
+            full_df.iloc[(1 + 13*i):(1 + 13*(i+1)), 3*j:3*(j+1)] = MCS_results.values
+    full_df.to_csv("MCS_results/multihorizon_MCS_results_all_models.csv")
+    return full_df
 
 if __name__ == '__main__':
     # all_classification_reports_to_df(from_type='dict')
@@ -311,5 +373,8 @@ if __name__ == '__main__':
     # summarize_MCS_results(tickers, horizons, metric = "weighted_f1")
     # summarize_MCS_results(tickers, horizons, metric = "macro_f1")
     # summarize_MCS_results(tickers, horizons, metric = "cce")
-
-
+    tickers = ['LILAK', 'QRTEA', 'XRAY', 'CHTR', 'PCAR', 'EXC', 'AAL', 'WBA', 'ATVI', 'AAPL']
+    horizons = ['h10', 'h20', 'h30', 'h50']
+    models = ['deepLOB_L1', 'deepOF_L1', 'deepLOB_L2', 'deepOF_L2', 'deepVOL_L2', 'deepVOL_L3']
+    # summarize_MCS_results_multihorizon(tickers, horizons, models)
+    summarize_MCS_results_multihorizon_all_models(tickers, horizons)

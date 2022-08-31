@@ -561,7 +561,7 @@ class deepLOB:
                     TICKER_eval_files = dict_of_files[TICKER]
                     TICKER_alphas = self.alphas[TICKER]
                     evalY.append(load_evalY(TICKER_eval_files, TICKER_alphas, self.multihorizon, self.n_horizons, self.model_inputs, self.T, roll_window, self.horizon, self.task))
-                evalY = np.stack(evalY, axis = 0)
+                evalY = np.concatenate(evalY, axis = 0)
             
         if self.task == "classification":
             if not self.multihorizon:
