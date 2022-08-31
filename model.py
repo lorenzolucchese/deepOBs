@@ -546,6 +546,7 @@ class deepLOB:
             raise ValueError("eval_set must be test, val or train.")
         
         predY = np.squeeze(self.model.predict(generator, verbose=2))
+        self.predY = predY
 
         if self.data in ["FI2010", "simulated"]:
             eval_data = np.load(os.path.join(self.data_dir, eval_set + ".npz"))
@@ -562,7 +563,6 @@ class deepLOB:
                     TICKER_alphas = self.alphas[TICKER]
                     evalY.append(load_evalY(TICKER_eval_files, TICKER_alphas, self.multihorizon, self.n_horizons, self.model_inputs, self.T, roll_window, self.horizon, self.task))
                 evalY = np.concatenate(evalY, axis = 0)
-            
         if self.task == "classification":
             if not self.multihorizon:
                 classification_report_dict = classification_report(np.argmax(evalY, axis=1), np.argmax(predY, axis=1), digits=4, output_dict=True)

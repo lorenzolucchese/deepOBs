@@ -31,7 +31,7 @@ if __name__ == '__main__':
     # tf.random.set_seed(2)
 
     for i in range(11):
-        load = pickle.load(open("results/CHTR/W" + str(i) + "/deepVOL_L2/h10/categorical_crossentropy_test.pkl", "rb"))
+        load = pickle.load(open("results/CHTR/W" + str(i) + "/deepVOL_L2/h10/classification_report_test.pkl", "rb"))
         print(load)
 
     # data_dir = "data/AAL_orderbooks"
