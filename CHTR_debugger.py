@@ -131,6 +131,11 @@ if __name__ == "__main__":
                 pickle.dump(predY, open(results_filepath + "/predY_test.pkl", "wb"))
                 print("there are ", np.count_nonzero(np.isnan(predY)), " NaN values in test predY")
                 print("there are ", np.count_nonzero(predY == 0), " 0 values in test predY")
+                evalY = model.evalY.numpy()
+                pickle.dump(evalY, open(results_filepath + "/evalY_test.pkl", "wb"))
+                print("there are ", np.count_nonzero(np.isnan(evalY)), " NaN values in test evalY")
+                print("there are ", np.count_nonzero(evalY == 0), " 0 values in test evalY")
+                
                 model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
                                     eval_set = "train",
                                     results_filepath = results_filepath)
@@ -138,6 +143,11 @@ if __name__ == "__main__":
                 pickle.dump(predY, open(results_filepath + "/predY_train.pkl", "wb"))
                 print("there are ", np.count_nonzero(np.isnan(predY)), " NaN values in train predY")
                 print("there are ", np.count_nonzero(predY == 0), " 0 values in train predY")
+                evalY = model.evalY.numpy()
+                pickle.dump(evalY, open(results_filepath + "/evalY_train.pkl", "wb"))
+                print("there are ", np.count_nonzero(np.isnan(evalY)), " NaN values in train evalY")
+                print("there are ", np.count_nonzero(evalY == 0), " 0 values in train evalY")
+
                 model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
                                     eval_set = "val",
                                     results_filepath = results_filepath)
@@ -145,5 +155,9 @@ if __name__ == "__main__":
                 pickle.dump(predY, open(results_filepath + "/predY_val.pkl", "wb"))
                 print("there are ", np.count_nonzero(np.isnan(predY)), " NaN values in val predY")
                 print("there are ", np.count_nonzero(predY == 0), " 0 values in val predY")
+                evalY = model.evalY.numpy()
+                pickle.dump(evalY, open(results_filepath + "/evalY_val.pkl", "wb"))
+                print("there are ", np.count_nonzero(np.isnan(evalY)), " NaN values in val evalY")
+                print("there are ", np.count_nonzero(evalY == 0), " 0 values in val evalY")
                                     
                 tf.keras.backend.clear_session()
