@@ -121,6 +121,33 @@ if __name__ == "__main__":
                                 imbalances = imbalances)
 
                 model.create_model()
+
+                tot_samples = 0
+                nan_samples = 0
+                for x, y in model.train_generator:
+                    tot_samples += 1
+                    if any(np.isnan(x)):
+                        print(x)
+                        nan_samples += 1
+                print('In train set there are', nan_samples, 'NaN samples out of', tot_samples, 'total_samples')
+                
+                tot_samples = 0
+                nan_samples = 0
+                for x, y in model.val_generator:
+                    tot_samples += 1
+                    if any(np.isnan(x)):
+                        print(x)
+                        nan_samples += 1
+                print('In val set there are', nan_samples, 'NaN samples out of', tot_samples, 'total_samples')
+                
+                tot_samples = 0
+                nan_samples = 0
+                for x, y in model.test_generator:
+                    tot_samples += 1
+                    if any(np.isnan(x)):
+                        print(x)
+                        nan_samples += 1
+                print('In test set there are', nan_samples, 'NaN samples out of', tot_samples, 'total_samples')
                 
                 print("testing model:", results_filepath)
 
@@ -128,11 +155,9 @@ if __name__ == "__main__":
                                     eval_set = "test",
                                     results_filepath = results_filepath)
                 predY = model.predY
-                pickle.dump(predY, open(results_filepath + "/predY_test.pkl", "wb"))
                 print("there are ", np.count_nonzero(np.isnan(predY)), " NaN values in test predY")
                 print("there are ", np.count_nonzero(predY == 0), " 0 values in test predY")
                 evalY = model.evalY
-                pickle.dump(evalY, open(results_filepath + "/evalY_test.pkl", "wb"))
                 print("there are ", np.count_nonzero(np.isnan(evalY)), " NaN values in test evalY")
                 print("there are ", np.count_nonzero(evalY == 0), " 0 values in test evalY")
                 
@@ -140,11 +165,9 @@ if __name__ == "__main__":
                                     eval_set = "train",
                                     results_filepath = results_filepath)
                 predY = model.predY
-                pickle.dump(predY, open(results_filepath + "/predY_train.pkl", "wb"))
                 print("there are ", np.count_nonzero(np.isnan(predY)), " NaN values in train predY")
                 print("there are ", np.count_nonzero(predY == 0), " 0 values in train predY")
                 evalY = model.evalY
-                pickle.dump(evalY, open(results_filepath + "/evalY_train.pkl", "wb"))
                 print("there are ", np.count_nonzero(np.isnan(evalY)), " NaN values in train evalY")
                 print("there are ", np.count_nonzero(evalY == 0), " 0 values in train evalY")
 
@@ -152,12 +175,14 @@ if __name__ == "__main__":
                                     eval_set = "val",
                                     results_filepath = results_filepath)
                 predY = model.predY
-                pickle.dump(predY, open(results_filepath + "/predY_val.pkl", "wb"))
                 print("there are ", np.count_nonzero(np.isnan(predY)), " NaN values in val predY")
                 print("there are ", np.count_nonzero(predY == 0), " 0 values in val predY")
                 evalY = model.evalY
-                pickle.dump(evalY, open(results_filepath + "/evalY_val.pkl", "wb"))
                 print("there are ", np.count_nonzero(np.isnan(evalY)), " NaN values in val evalY")
                 print("there are ", np.count_nonzero(evalY == 0), " 0 values in val evalY")
                                     
                 tf.keras.backend.clear_session()
+
+                break
+            break
+        break
