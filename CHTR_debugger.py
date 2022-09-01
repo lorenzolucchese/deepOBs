@@ -53,7 +53,7 @@ if __name__ == "__main__":
     model_list = ["deepVOL_L2", "deepVOL_L3"]
     features_list = ["volumes", "volumes"]
     model_inputs_list = ["volumes", "volumes_L3"]
-    levels_list = [1, 1, 10, 10, 10, 10]
+    levels_list = [10, 10]
 
     start_date = dt.date(2019, 1, 14)
     end_date = dt.date(2020, 1, 31)
@@ -127,11 +127,11 @@ if __name__ == "__main__":
                 model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
                                     eval_set = "test",
                                     results_filepath = results_filepath)
-                predY = model.predY.numpy()
+                predY = model.predY
                 pickle.dump(predY, open(results_filepath + "/predY_test.pkl", "wb"))
                 print("there are ", np.count_nonzero(np.isnan(predY)), " NaN values in test predY")
                 print("there are ", np.count_nonzero(predY == 0), " 0 values in test predY")
-                evalY = model.evalY.numpy()
+                evalY = model.evalY
                 pickle.dump(evalY, open(results_filepath + "/evalY_test.pkl", "wb"))
                 print("there are ", np.count_nonzero(np.isnan(evalY)), " NaN values in test evalY")
                 print("there are ", np.count_nonzero(evalY == 0), " 0 values in test evalY")
@@ -139,11 +139,11 @@ if __name__ == "__main__":
                 model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
                                     eval_set = "train",
                                     results_filepath = results_filepath)
-                predY = model.predY.numpy()
+                predY = model.predY
                 pickle.dump(predY, open(results_filepath + "/predY_train.pkl", "wb"))
                 print("there are ", np.count_nonzero(np.isnan(predY)), " NaN values in train predY")
                 print("there are ", np.count_nonzero(predY == 0), " 0 values in train predY")
-                evalY = model.evalY.numpy()
+                evalY = model.evalY
                 pickle.dump(evalY, open(results_filepath + "/evalY_train.pkl", "wb"))
                 print("there are ", np.count_nonzero(np.isnan(evalY)), " NaN values in train evalY")
                 print("there are ", np.count_nonzero(evalY == 0), " 0 values in train evalY")
@@ -151,11 +151,11 @@ if __name__ == "__main__":
                 model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
                                     eval_set = "val",
                                     results_filepath = results_filepath)
-                predY = model.predY.numpy()
+                predY = model.predY
                 pickle.dump(predY, open(results_filepath + "/predY_val.pkl", "wb"))
                 print("there are ", np.count_nonzero(np.isnan(predY)), " NaN values in val predY")
                 print("there are ", np.count_nonzero(predY == 0), " 0 values in val predY")
-                evalY = model.evalY.numpy()
+                evalY = model.evalY
                 pickle.dump(evalY, open(results_filepath + "/evalY_val.pkl", "wb"))
                 print("there are ", np.count_nonzero(np.isnan(evalY)), " NaN values in val evalY")
                 print("there are ", np.count_nonzero(evalY == 0), " 0 values in val evalY")

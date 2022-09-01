@@ -193,6 +193,7 @@ if __name__ == "__main__":
             # test in sample
 
             results_filepath_insample = results_filepath + "/" + "TICKERS_in_sample"
+            os.makedirs(results_filepath_insample, exist_ok=True)
 
             print("testing model in sample:", results_filepath_insample)
 
@@ -209,6 +210,7 @@ if __name__ == "__main__":
             # test out of sample
 
             results_filepath_outofsample = results_filepath + "/" + "TICKERS_out_of_sample"
+            os.makedirs(results_filepath_outofsample, exist_ok=True)
 
             model = deepLOB(T = T, 
                             levels = levels, 
@@ -259,6 +261,7 @@ if __name__ == "__main__":
                 }
 
                 results_filepath_stock = results_filepath + "/" + TICKER
+                os.makedirs(results_filepath_stock, exist_ok=True)
 
                 model = deepLOB(T = T, 
                                 levels = levels, 
