@@ -115,7 +115,7 @@ if __name__ == "__main__":
                     features = features[:, (D//2 - NF//2):(D//2 + NF//2)]
                     features = np.expand_dims(features, axis=-1)
                     features[features > 65535] = 65535
-                    features = tf.convert_to_tensor(features, dtype=tf.uint16)
+                    features = tf.convert_to_tensor(features, dtype=tf.int16)
 
                     if np.isnan(features).any():
                         print(file)
@@ -125,12 +125,11 @@ if __name__ == "__main__":
                         print("These are the rows where NaNs are present:")
                         print(features[np.isnan(features).any(axis=1)])
                     
-                    responses = dataset['responses'][(window-1):, horizon]
+                    responses = dataset['responses'][(T-1):, horizon]
 
-                    if not len(features) == len(responses):
-                        print(file)
-                        print("len features:", len(features))
-                        print("len responses:", len(responses))
+                    print(file)
+                    print("len features:", features.shape)
+                    print("len responses:", responses.shape)
                 
                 print("test files...")
 
@@ -144,7 +143,7 @@ if __name__ == "__main__":
                     features = features[:, (D//2 - NF//2):(D//2 + NF//2)]
                     features = np.expand_dims(features, axis=-1)
                     features[features > 65535] = 65535
-                    features = tf.convert_to_tensor(features, dtype=tf.uint16)
+                    features = tf.convert_to_tensor(features, dtype=tf.int16)
 
                     if np.isnan(features).any():
                         print(file)
@@ -154,12 +153,11 @@ if __name__ == "__main__":
                         print("These are the rows where NaNs are present:")
                         print(features[np.isnan(features).any(axis=1)])
                     
-                    responses = dataset['responses'][(window-1):, horizon]
+                    responses = dataset['responses'][(T-1):, horizon]
 
-                    if not len(features) == len(responses):
-                        print(file)
-                        print("len features:", len(features))
-                        print("len responses:", len(responses))
+                    print(file)
+                    print("len features:", features.shape)
+                    print("len responses:", responses.shape)
 
                 print("val files...")
 
@@ -173,7 +171,7 @@ if __name__ == "__main__":
                     features = features[:, (D//2 - NF//2):(D//2 + NF//2)]
                     features = np.expand_dims(features, axis=-1)
                     features[features > 65535] = 65535
-                    features = tf.convert_to_tensor(features, dtype=tf.uint16)
+                    features = tf.convert_to_tensor(features, dtype=tf.int16)
 
                     if np.isnan(features).any():
                         print(file)
@@ -183,12 +181,11 @@ if __name__ == "__main__":
                         print("These are the rows where NaNs are present:")
                         print(features[np.isnan(features).any(axis=1)])
                     
-                    responses = dataset['responses'][(window-1):, horizon]
+                    responses = dataset['responses'][(T-1):, horizon]
 
-                    if not len(features) == len(responses):
-                        print(file)
-                        print("len features:", len(features))
-                        print("len responses:", len(responses))
+                    print(file)
+                    print("len features:", features.shape)
+                    print("len responses:", responses.shape)
 
                 # model = deepLOB(T = T, 
                 #         levels = levels, 
