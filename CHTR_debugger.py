@@ -104,7 +104,8 @@ if __name__ == "__main__":
                 os.makedirs(results_filepath, exist_ok=True)
 
                 print("train files...")
-
+                
+                train_datasets = [] 
                 for file in files["train"]:
                     dataset = np.load(file)
 
@@ -115,7 +116,7 @@ if __name__ == "__main__":
                     features = features[:, (D//2 - NF//2):(D//2 + NF//2)]
                     features = np.expand_dims(features, axis=-1)
                     features[features > 65535] = 65535
-                    features = tf.convert_to_tensor(features, dtype=tf.int16)
+                    features = tf.convert_to_tensor(features, dtype=tf.uint16)
 
                     if np.isnan(features).any():
                         print(file)
@@ -130,9 +131,17 @@ if __name__ == "__main__":
                     print(file)
                     print("len features:", features.shape)
                     print("len responses:", responses.shape)
+
+                    y = (+1)*(responses>=-alphas[horizon]) + (+1)*(responses>alphas[horizon])
+                    y = tf.keras.utils.to_categorical(y, 3)
+
+                    train_datasets.append(tf.keras.preprocessing.timeseries_dataset_from_array(features, y, T, batch_size=1, sequence_stride=1))
                 
+                train_dataset = tf.data.Dataset.from_tensor_slices(train_datasets).flat_map(lambda x: x)
+
                 print("test files...")
 
+                test_datasets = []
                 for file in files["test"]:
                     dataset = np.load(file)
 
@@ -143,7 +152,7 @@ if __name__ == "__main__":
                     features = features[:, (D//2 - NF//2):(D//2 + NF//2)]
                     features = np.expand_dims(features, axis=-1)
                     features[features > 65535] = 65535
-                    features = tf.convert_to_tensor(features, dtype=tf.int16)
+                    features = tf.convert_to_tensor(features, dtype=tf.uint16)
 
                     if np.isnan(features).any():
                         print(file)
@@ -159,8 +168,16 @@ if __name__ == "__main__":
                     print("len features:", features.shape)
                     print("len responses:", responses.shape)
 
+                    y = (+1)*(responses>=-alphas[horizon]) + (+1)*(responses>alphas[horizon])
+                    y = tf.keras.utils.to_categorical(y, 3)
+
+                    test_datasets.append(tf.keras.preprocessing.timeseries_dataset_from_array(features, y, T, batch_size=1, sequence_stride=1))
+                
+                test_dataset = tf.data.Dataset.from_tensor_slices(test_datasets).flat_map(lambda x: x)
+
                 print("val files...")
 
+                val_datasets = []
                 for file in files["val"]:
                     dataset = np.load(file)
 
@@ -171,7 +188,7 @@ if __name__ == "__main__":
                     features = features[:, (D//2 - NF//2):(D//2 + NF//2)]
                     features = np.expand_dims(features, axis=-1)
                     features[features > 65535] = 65535
-                    features = tf.convert_to_tensor(features, dtype=tf.int16)
+                    features = tf.convert_to_tensor(features, dtype=tf.uint16)
 
                     if np.isnan(features).any():
                         print(file)
@@ -186,6 +203,40 @@ if __name__ == "__main__":
                     print(file)
                     print("len features:", features.shape)
                     print("len responses:", responses.shape)
+
+                    y = (+1)*(responses>=-alphas[horizon]) + (+1)*(responses>alphas[horizon])
+                    y = tf.keras.utils.to_categorical(y, 3)
+
+                    val_datasets.append(tf.keras.preprocessing.timeseries_dataset_from_array(features, y, T, batch_size=1, sequence_stride=1))
+                
+                val_dataset = tf.data.Dataset.from_tensor_slices(val_datasets).flat_map(lambda x: x)
+
+                tot_samples = 0
+                nan_samples = 0
+                for x, y in train_dataset:
+                    tot_samples += 1
+                    if np.isnan(x).all():
+                        nan_samples += 1
+                        print(nan_samples)
+                print('In train set there are', nan_samples, 'NaN samples out of', tot_samples, 'total_samples')
+                
+                tot_samples = 0
+                nan_samples = 0
+                for x, y in test_dataset:
+                    tot_samples += 1
+                    if np.isnan(x).all():
+                        nan_samples += 1
+                        print(nan_samples)
+                print('In test set there are', nan_samples, 'NaN samples out of', tot_samples, 'total_samples')
+                
+                tot_samples = 0
+                nan_samples = 0
+                for x, y in val_dataset:
+                    tot_samples += 1
+                    if np.isnan(x).all():
+                        nan_samples += 1
+                        print(nan_samples)
+                print('In val set there are', nan_samples, 'NaN samples out of', tot_samples, 'total_samples')
 
                 # model = deepLOB(T = T, 
                 #         levels = levels, 
