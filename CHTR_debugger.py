@@ -126,6 +126,11 @@ if __name__ == "__main__":
                         print(features[np.isnan(features).any(axis=1)])
                     
                     responses = dataset['responses'][(window-1):, horizon]
+
+                    if not len(features) == len(responses):
+                        print(file)
+                        print("len features:", len(features))
+                        print("len responses:", len(responses))
                 
                 print("test files...")
 
@@ -151,6 +156,11 @@ if __name__ == "__main__":
                     
                     responses = dataset['responses'][(window-1):, horizon]
 
+                    if not len(features) == len(responses):
+                        print(file)
+                        print("len features:", len(features))
+                        print("len responses:", len(responses))
+
                 print("val files...")
 
                 for file in files["val"]:
@@ -174,6 +184,11 @@ if __name__ == "__main__":
                         print(features[np.isnan(features).any(axis=1)])
                     
                     responses = dataset['responses'][(window-1):, horizon]
+
+                    if not len(features) == len(responses):
+                        print(file)
+                        print("len features:", len(features))
+                        print("len responses:", len(responses))
 
                 # model = deepLOB(T = T, 
                 #         levels = levels, 
