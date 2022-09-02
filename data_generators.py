@@ -80,8 +80,8 @@ def CustomtfDataset(files,
             D = features.shape[1]
             features = features[:, (D//2 - NF//2):(D//2 + NF//2)]
             features = np.expand_dims(features, axis=-1)
-            features[features > 65504] = 65504
-            features = tf.convert_to_tensor(features, dtype=tf.int16)
+            features[features > 65535] = 65535
+            features = tf.convert_to_tensor(features, dtype=tf.uint16)
             
             responses = dataset['responses'][(window-1):, horizon]
 

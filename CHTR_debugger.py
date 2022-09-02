@@ -54,6 +54,7 @@ if __name__ == "__main__":
     features_list = ["volumes", "volumes"]
     model_inputs_list = ["volumes", "volumes_L3"]
     levels_list = [10, 10]
+    NF = 20
 
     start_date = dt.date(2019, 1, 14)
     end_date = dt.date(2020, 1, 31)
@@ -102,87 +103,90 @@ if __name__ == "__main__":
                 checkpoint_filepath = results_filepath + "/" + "weights"
                 os.makedirs(results_filepath, exist_ok=True)
 
-                model = deepLOB(T = T, 
-                                levels = levels, 
-                                horizon = horizon, 
-                                number_of_lstm = number_of_lstm, 
-                                data = data, 
-                                data_dir = data_dir, 
-                                files = files, 
-                                model_inputs = model_inputs, 
-                                queue_depth = queue_depth,
-                                task = task, 
-                                alphas = alphas, 
-                                orderbook_updates = orderbook_updates,
-                                multihorizon = multihorizon, 
-                                decoder = decoder, 
-                                n_horizons = n_horizons,
-                                train_roll_window = train_roll_window,
-                                imbalances = imbalances)
+                for file in files:
+                    dataset = np.load(file)
 
-                model.create_model()
+                    features = dataset['features']
+                    if model_inputs == "volumes":
+                        features = np.sum(features, axis = 2)
+                    D = features.shape[1]
+                    features = features[:, (D//2 - NF//2):(D//2 + NF//2)]
+                    features = np.expand_dims(features, axis=-1)
+                    features[features > 65535] = 65535
+                    features = tf.convert_to_tensor(features, dtype=tf.uint16)
 
-                tot_samples = 0
-                nan_samples = 0
-                for x, y in model.train_generator:
-                    tot_samples += 1
-                    if any(np.isnan(x)):
-                        print(x)
-                        nan_samples += 1
-                print('In train set there are', nan_samples, 'NaN samples out of', tot_samples, 'total_samples')
-                
-                tot_samples = 0
-                nan_samples = 0
-                for x, y in model.val_generator:
-                    tot_samples += 1
-                    if any(np.isnan(x)):
-                        print(x)
-                        nan_samples += 1
-                print('In val set there are', nan_samples, 'NaN samples out of', tot_samples, 'total_samples')
-                
-                tot_samples = 0
-                nan_samples = 0
-                for x, y in model.test_generator:
-                    tot_samples += 1
-                    if any(np.isnan(x)):
-                        print(x)
-                        nan_samples += 1
-                print('In test set there are', nan_samples, 'NaN samples out of', tot_samples, 'total_samples')
-                
-                print("testing model:", results_filepath)
+                    if np.isnan(features).any():
+                        print(file)
+                        print("number of rows:", features.shape[0])
+                        print("NaNs are present at the following row indices:")
+                        print(np.isnan(features).any(axis=1).nonzero())
+                        print("These are the rows where NaNs are present:")
+                        print(features[np.isnan(features).any(axis=1)])
+                    
+                    responses = dataset['responses'][(window-1):, horizon]
 
-                model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
-                                    eval_set = "test",
-                                    results_filepath = results_filepath)
-                predY = model.predY
-                print("there are ", np.count_nonzero(np.isnan(predY)), " NaN values in test predY")
-                print("there are ", np.count_nonzero(predY == 0), " 0 values in test predY")
-                evalY = model.evalY
-                print("there are ", np.count_nonzero(np.isnan(evalY)), " NaN values in test evalY")
-                print("there are ", np.count_nonzero(evalY == 0), " 0 values in test evalY")
-                
-                model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
-                                    eval_set = "train",
-                                    results_filepath = results_filepath)
-                predY = model.predY
-                print("there are ", np.count_nonzero(np.isnan(predY)), " NaN values in train predY")
-                print("there are ", np.count_nonzero(predY == 0), " 0 values in train predY")
-                evalY = model.evalY
-                print("there are ", np.count_nonzero(np.isnan(evalY)), " NaN values in train evalY")
-                print("there are ", np.count_nonzero(evalY == 0), " 0 values in train evalY")
+                # model = deepLOB(T = T, 
+                #         levels = levels, 
+                #         horizon = horizon, 
+                #         number_of_lstm = number_of_lstm, 
+                #         data = data, 
+                #         data_dir = data_dir, 
+                #         files = files, 
+                #         model_inputs = model_inputs, 
+                #         queue_depth = queue_depth,
+                #         task = task, 
+                #         alphas = alphas, 
+                #         orderbook_updates = orderbook_updates,
+                #         multihorizon = multihorizon, 
+                #         decoder = decoder, 
+                #         n_horizons = n_horizons,
+                #         train_roll_window = train_roll_window,
+                #         imbalances = imbalances)
 
-                model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
-                                    eval_set = "val",
-                                    results_filepath = results_filepath)
-                predY = model.predY
-                print("there are ", np.count_nonzero(np.isnan(predY)), " NaN values in val predY")
-                print("there are ", np.count_nonzero(predY == 0), " 0 values in val predY")
-                evalY = model.evalY
-                print("there are ", np.count_nonzero(np.isnan(evalY)), " NaN values in val evalY")
-                print("there are ", np.count_nonzero(evalY == 0), " 0 values in val evalY")
+                # model.create_model()
+                
+                # tot_samples = 0
+                # nan_samples = 0
+                # for x, y in model.test_generator:
+                #     tot_samples += 1
+                #     if np.isnan(x).all():
+                #         nan_samples += 1
+                #         print(nan_samples)
+                # print('In test set there are', nan_samples, 'NaN samples out of', tot_samples, 'total_samples')
+                
+                # print("testing model:", results_filepath)
+
+                # model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+                #                     eval_set = "test",
+                #                     results_filepath = results_filepath)
+                # predY = model.predY
+                # print("there are ", np.count_nonzero(np.isnan(predY)), " NaN values in test predY")
+                # print("there are ", np.count_nonzero(predY == 0), " 0 values in test predY")
+                # evalY = model.evalY
+                # print("there are ", np.count_nonzero(np.isnan(evalY)), " NaN values in test evalY")
+                # print("there are ", np.count_nonzero(evalY == 0), " 0 values in test evalY")
+                
+                # model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+                #                     eval_set = "train",
+                #                     results_filepath = results_filepath)
+                # predY = model.predY
+                # print("there are ", np.count_nonzero(np.isnan(predY)), " NaN values in train predY")
+                # print("there are ", np.count_nonzero(predY == 0), " 0 values in train predY")
+                # evalY = model.evalY
+                # print("there are ", np.count_nonzero(np.isnan(evalY)), " NaN values in train evalY")
+                # print("there are ", np.count_nonzero(evalY == 0), " 0 values in train evalY")
+
+                # model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
+                #                     eval_set = "val",
+                #                     results_filepath = results_filepath)
+                # predY = model.predY
+                # print("there are ", np.count_nonzero(np.isnan(predY)), " NaN values in val predY")
+                # print("there are ", np.count_nonzero(predY == 0), " 0 values in val predY")
+                # evalY = model.evalY
+                # print("there are ", np.count_nonzero(np.isnan(evalY)), " NaN values in val evalY")
+                # print("there are ", np.count_nonzero(evalY == 0), " 0 values in val evalY")
                                     
                 tf.keras.backend.clear_session()
-
                 break
             break
         break
