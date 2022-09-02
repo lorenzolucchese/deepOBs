@@ -103,7 +103,57 @@ if __name__ == "__main__":
                 checkpoint_filepath = results_filepath + "/" + "weights"
                 os.makedirs(results_filepath, exist_ok=True)
 
-                for file in files:
+                print("train files...")
+
+                for file in files["train"]:
+                    dataset = np.load(file)
+
+                    features = dataset['features']
+                    if model_inputs == "volumes":
+                        features = np.sum(features, axis = 2)
+                    D = features.shape[1]
+                    features = features[:, (D//2 - NF//2):(D//2 + NF//2)]
+                    features = np.expand_dims(features, axis=-1)
+                    features[features > 65535] = 65535
+                    features = tf.convert_to_tensor(features, dtype=tf.uint16)
+
+                    if np.isnan(features).any():
+                        print(file)
+                        print("number of rows:", features.shape[0])
+                        print("NaNs are present at the following row indices:")
+                        print(np.isnan(features).any(axis=1).nonzero())
+                        print("These are the rows where NaNs are present:")
+                        print(features[np.isnan(features).any(axis=1)])
+                    
+                    responses = dataset['responses'][(window-1):, horizon]
+                
+                print("test files...")
+
+                for file in files["test"]:
+                    dataset = np.load(file)
+
+                    features = dataset['features']
+                    if model_inputs == "volumes":
+                        features = np.sum(features, axis = 2)
+                    D = features.shape[1]
+                    features = features[:, (D//2 - NF//2):(D//2 + NF//2)]
+                    features = np.expand_dims(features, axis=-1)
+                    features[features > 65535] = 65535
+                    features = tf.convert_to_tensor(features, dtype=tf.uint16)
+
+                    if np.isnan(features).any():
+                        print(file)
+                        print("number of rows:", features.shape[0])
+                        print("NaNs are present at the following row indices:")
+                        print(np.isnan(features).any(axis=1).nonzero())
+                        print("These are the rows where NaNs are present:")
+                        print(features[np.isnan(features).any(axis=1)])
+                    
+                    responses = dataset['responses'][(window-1):, horizon]
+
+                print("val files...")
+
+                for file in files["val"]:
                     dataset = np.load(file)
 
                     features = dataset['features']
