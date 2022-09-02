@@ -197,6 +197,11 @@ if __name__ == "__main__":
 
             print("testing model in sample:", results_filepath_insample)
 
+            print("results obtained via built-in function model.evaluate:")
+            print("test set:", model.model.evaluate(model.test_generator))
+            print("train set:", model.model.evaluate(model.train_generator))
+            print("val set:", model.model.evaluate(model.val_generator))
+
             model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
                                 eval_set = "test",
                                 results_filepath = results_filepath_insample)
@@ -273,7 +278,7 @@ if __name__ == "__main__":
                                 model_inputs = model_inputs, 
                                 queue_depth = queue_depth,
                                 task = task, 
-                                alphas = alphas, 
+                                alphas = alphas[TICKER], 
                                 orderbook_updates = orderbook_updates,
                                 multihorizon = multihorizon, 
                                 decoder = decoder, 

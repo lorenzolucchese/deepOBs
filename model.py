@@ -558,7 +558,7 @@ class deepLOB:
             else:
                 dict_of_files = self.files[eval_set]
                 evalY = []
-                for TICKER in dict_of_files.keys():
+                for TICKER in sorted(dict_of_files.keys()):
                     TICKER_eval_files = dict_of_files[TICKER]
                     TICKER_alphas = self.alphas[TICKER]
                     evalY.append(load_evalY(TICKER_eval_files, TICKER_alphas, self.multihorizon, self.n_horizons, self.model_inputs, self.T, roll_window, self.horizon, self.task))
