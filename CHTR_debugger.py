@@ -10,7 +10,7 @@ import random
 import tensorflow as tf
 
 def scale_fn(x, y):
-    if tf.keras.backend.max(x) == 0:
+    if tf.keras.backend.max(x).numpy() == 0:
         x = tf.zeros_like(x)
     else:
         x = x / tf.keras.backend.max(x)
