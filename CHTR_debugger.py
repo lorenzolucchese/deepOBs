@@ -10,7 +10,11 @@ import random
 import tensorflow as tf
 
 def scale_fn(x, y):
-        return x / tf.keras.backend.max(x), y
+    if tf.keras.backend.max(x) == 0:
+        x = tf.zeros_like(x)
+    else:
+        x = x / tf.keras.backend.max(x)
+    return x, y
 
 if __name__ == "__main__":
     # limit gpu memory
@@ -227,7 +231,6 @@ if __name__ == "__main__":
                     tot_samples += 1
                     if np.isnan(x).all():
                         nan_samples += 1
-                        print(nan_samples)
                 print('In train set there are', nan_samples, 'NaN samples out of', tot_samples, 'total_samples')
                 
                 tot_samples = 0
@@ -236,7 +239,6 @@ if __name__ == "__main__":
                     tot_samples += 1
                     if np.isnan(x).all():
                         nan_samples += 1
-                        print(nan_samples)
                 print('In test set there are', nan_samples, 'NaN samples out of', tot_samples, 'total_samples')
                 
                 tot_samples = 0
@@ -245,7 +247,6 @@ if __name__ == "__main__":
                     tot_samples += 1
                     if np.isnan(x).all():
                         nan_samples += 1
-                        print(nan_samples)
                 print('In val set there are', nan_samples, 'NaN samples out of', tot_samples, 'total_samples')
 
                 # model = deepLOB(T = T, 

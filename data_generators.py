@@ -29,7 +29,11 @@ def CustomtfDataset(files,
     """
     # methods to be used
     def scale_fn(x, y):
-        return x / tf.keras.backend.max(x), y
+        if tf.keras.backend.max(x) == 0:
+            x = tf.zeros_like(x)
+        else:
+            x = x / tf.keras.backend.max(x)
+        return x, y
 
     def add_decoder_input(x, y):
         if teacher_forcing:
