@@ -9,6 +9,9 @@ import os
 import random
 import tensorflow as tf
 
+def scale_fn(x, y):
+        return x / tf.keras.backend.max(x), y
+
 if __name__ == "__main__":
     # limit gpu memory
     visible_gpus = tf.config.experimental.get_visible_devices("GPU")
@@ -210,6 +213,13 @@ if __name__ == "__main__":
                     val_datasets.append(tf.keras.preprocessing.timeseries_dataset_from_array(features, y, T, batch_size=1, sequence_stride=1))
                 
                 val_dataset = tf.data.Dataset.from_tensor_slices(val_datasets).flat_map(lambda x: x)
+
+                train_dataset = train_dataset.map(scale_fn)
+                test_dataset = test_dataset.map(scale_fn)
+                val_dataset = val_dataset.map(scale_fn)
+                
+                # if no NaNs produced see if uint -> int goes back to producing NaNs
+                # if NaNs are produces try changing roll_window to T and see if no NaNs, then investigate further 
 
                 tot_samples = 0
                 nan_samples = 0
