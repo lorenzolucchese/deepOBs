@@ -10,8 +10,8 @@ import random
 import tensorflow as tf
 
 def scale_fn(x, y):
-    if tf.keras.backend.max(x).numpy() == 0:
-        x = tf.zeros_like(x)
+    if tf.keras.backend.max(x) == 0:
+        x = tf.zeros_like(x, dtype=tf.float32)
     else:
         x = x / tf.keras.backend.max(x)
     return x, y
@@ -122,8 +122,7 @@ if __name__ == "__main__":
                     D = features.shape[1]
                     features = features[:, (D//2 - NF//2):(D//2 + NF//2)]
                     features = np.expand_dims(features, axis=-1)
-                    features[features > 65535] = 65535
-                    features = tf.convert_to_tensor(features, dtype=tf.uint16)
+                    features = tf.convert_to_tensor(features, dtype=tf.float32)
 
                     if np.isnan(features).any():
                         print(file)
@@ -158,8 +157,7 @@ if __name__ == "__main__":
                     D = features.shape[1]
                     features = features[:, (D//2 - NF//2):(D//2 + NF//2)]
                     features = np.expand_dims(features, axis=-1)
-                    features[features > 65535] = 65535
-                    features = tf.convert_to_tensor(features, dtype=tf.uint16)
+                    features = tf.convert_to_tensor(features, dtype=tf.float32)
 
                     if np.isnan(features).any():
                         print(file)
@@ -194,8 +192,7 @@ if __name__ == "__main__":
                     D = features.shape[1]
                     features = features[:, (D//2 - NF//2):(D//2 + NF//2)]
                     features = np.expand_dims(features, axis=-1)
-                    features[features > 65535] = 65535
-                    features = tf.convert_to_tensor(features, dtype=tf.uint16)
+                    features = tf.convert_to_tensor(features, dtype=tf.float32)
 
                     if np.isnan(features).any():
                         print(file)
