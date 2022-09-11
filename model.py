@@ -518,7 +518,7 @@ class deepLOB:
                                                     mode="auto",
                                                     save_best_only=True)
         
-        early_stopping = EarlyStopping(monitor="val_loss", patience=patience, mode="auto")
+        early_stopping = EarlyStopping(monitor="val_loss", patience=patience, mode="auto", restore_best_weights=True)
 
         if load_weights == True:
             self.model.load_weights(load_weights_filepath)
@@ -576,6 +576,9 @@ class deepLOB:
 
                 print("Prediction horizon:", self.orderbook_updates[self.horizon], " orderbook updates")
                 print("Categorical crossentropy:", categorical_crossentropy)
+                ############################# temporary debugging ###################################
+                weighted_categorical_crossentropy_loss = weighted_categorical_crossentropy(np.argmax(evalY, axis=1), np.argmax(predY, axis=1), np.vstack([1 / self.imbalances[:, self.horizon]]*3).T)
+                print("Weighted categorical crossentropy", weighted_categorical_crossentropy_loss)
                 print(classification_report_dict)
                 print(confusion_matrix_array)
             else:
