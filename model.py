@@ -576,9 +576,14 @@ class deepLOB:
 
                 print("Prediction horizon:", self.orderbook_updates[self.horizon], " orderbook updates")
                 print("Categorical crossentropy:", categorical_crossentropy)
+
                 ############################# temporary debugging ###################################
                 weighted_categorical_crossentropy_loss = weighted_categorical_crossentropy(np.argmax(evalY, axis=1), np.argmax(predY, axis=1), np.vstack([1 / self.imbalances[:, self.horizon]]*3).T)
                 print("Weighted categorical crossentropy", weighted_categorical_crossentropy_loss)
+                m = CategoricalAccuracy()
+                accuracy = m.update_state(evalY, predY)
+                print("Accuracy:", accuracy)
+
                 print(classification_report_dict)
                 print(confusion_matrix_array)
             else:
