@@ -583,6 +583,8 @@ class deepLOB:
                 m = CategoricalAccuracy()
                 accuracy = m.update_state(evalY, predY)
                 print("Accuracy:", accuracy)
+                print("evalY:", evalY[:5, :])
+                print("predY:", predY[:5, :])
 
                 print(classification_report_dict)
                 print(confusion_matrix_array)
