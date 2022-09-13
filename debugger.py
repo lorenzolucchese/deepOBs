@@ -30,30 +30,30 @@ if __name__ == '__main__':
     # np.random.seed(1)
     # tf.random.set_seed(2)
 
-    TICKERS = ['LILAK']
+    TICKERS = ['AAL']
 
     for i in range(1):
-        print("------------------------------train------------------------------")
-        load = pickle.load(open("results/universal/W" + str(i) + "/distributions.pkl", "rb"))
-        print(load)
-        print("-------------------------------val-------------------------------")
-        load = pickle.load(open("results/universal/W" + str(i) + "/val_distributions.pkl", "rb"))
-        print(load)
-        print("------------------------------test-------------------------------")
-        load = pickle.load(open("results/universal/W" + str(i) + "/test_distributions.pkl", "rb"))
-        print(load)
-        print("-----------------------------------------------------------------")
-        print("-----------------------------------------------------------------")
-        # load = pickle.load(open("results/universal/W" + str(i) + "/val_train_test_dates.pkl", "rb"))
-        # val = load[0]
-        # train = load[1]
-        # test = load[2]
-        # for TICKER in TICKERS:
-        #     print(TICKER)
-        #     print("val", val[TICKER])
-        #     print("train", train[TICKER])
-        #     print("test", test[TICKER])
+        # print("------------------------------train------------------------------")
+        # load = pickle.load(open("results/universal/W" + str(i) + "/distributions.pkl", "rb"))
+        # print(load)
+        # print("-------------------------------val-------------------------------")
+        # load = pickle.load(open("results/universal/W" + str(i) + "/val_distributions.pkl", "rb"))
+        # print(load)
+        # print("------------------------------test-------------------------------")
+        # load = pickle.load(open("results/universal/W" + str(i) + "/test_distributions.pkl", "rb"))
+        # print(load)
         # print("-----------------------------------------------------------------")
+        # print("-----------------------------------------------------------------")
+        load = pickle.load(open("results/universal/W" + str(i) + "/val_train_test_dates.pkl", "rb"))
+        val = load[0]
+        train = load[1]
+        test = load[2]
+        for TICKER in TICKERS:
+            print(TICKER)
+            print("val", val[TICKER])
+            print("train", train[TICKER])
+            print("test", test[TICKER])
+        print("-----------------------------------------------------------------")
 
 
     # data_dir = "data/AAL_orderbooks"

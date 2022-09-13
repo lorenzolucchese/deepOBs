@@ -143,6 +143,7 @@ class deepLOB:
                  multihorizon = False, 
                  decoder = "seq2seq", 
                  n_horizons = 5,
+                 tot_horizons = 9,
                  batch_size = 256,
                  train_roll_window = 1,
                  imbalances = None,
@@ -159,7 +160,7 @@ class deepLOB:
         :param task: regression or classification
         :param multihorizon: whether the forecasts need to be multihorizon, if True this overrides horizon
         :param decoder: the decoder to use for multihorizon forecasts, seq2seq or attention
-        :param n_horizons: the number of forecast horizons in multihorizon
+        :param n_horizons: the number of forecast horizons in multihorizon / the length of alphas
         """
         self.T = T
         self.levels = levels
@@ -182,6 +183,7 @@ class deepLOB:
         self.multihorizon = multihorizon
         self.decoder = decoder
         self.n_horizons = n_horizons
+        self.tot_horizons = tot_horizons
         self.orderbook_updates = orderbook_updates
         self.data_dir = data_dir
         self.files = files
@@ -224,13 +226,13 @@ class deepLOB:
             elif model_inputs in ["volumes", "volumes_L3"]:
                 normalise = True
             if not universal:
-                self.train_generator = CustomtfDataset(files = self.files["train"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, alphas = self.alphas, multihorizon = self.multihorizon,window = self.T, normalise=normalise, batch_size=batch_size,  roll_window=train_roll_window)
-                self.val_generator = CustomtfDataset(files = self.files["val"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, alphas = self.alphas, multihorizon = self.multihorizon, window = self.T, normalise=normalise,  batch_size=batch_size, roll_window=train_roll_window)
-                self.test_generator = CustomtfDataset(files = self.files["test"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, alphas = self.alphas, multihorizon = self.multihorizon, window = self.T, normalise=normalise,  batch_size=batch_size, roll_window=1)
+                self.train_generator = CustomtfDataset(files = self.files["train"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise, batch_size = batch_size,  roll_window = train_roll_window, shuffle = True)
+                self.val_generator = CustomtfDataset(files = self.files["val"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = train_roll_window, shuffle = False)
+                self.test_generator = CustomtfDataset(files = self.files["test"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = 1, shuffle = False)
             else:
-                self.train_generator = CustomtfDatasetUniv(dict_of_files = self.files["train"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, dict_of_alphas = self.alphas, multihorizon = self.multihorizon,window = self.T, normalise=normalise, batch_size=batch_size,  roll_window=train_roll_window)
-                self.val_generator = CustomtfDatasetUniv(dict_of_files = self.files["val"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, window = self.T, normalise=normalise,  batch_size=batch_size, roll_window=train_roll_window)
-                self.test_generator = CustomtfDatasetUniv(dict_of_files = self.files["test"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, window = self.T, normalise=normalise,  batch_size=batch_size, roll_window=1)
+                self.train_generator = CustomtfDatasetUniv(dict_of_files = self.files["train"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise, batch_size = batch_size,  roll_window = train_roll_window, shuffle = True)
+                self.val_generator = CustomtfDatasetUniv(dict_of_files = self.files["val"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = train_roll_window, shuffle = False)
+                self.test_generator = CustomtfDatasetUniv(dict_of_files = self.files["test"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = 1, shuffle = False)
 
         else:
             raise ValueError("data must be either FI2010, simulated or LOBSTER.")
@@ -535,35 +537,20 @@ class deepLOB:
 
         if eval_set == "test":
             generator = self.test_generator
-            roll_window = 1
         elif eval_set == "val":
             generator = self.val_generator
-            roll_window = self.train_roll_window
         elif eval_set == "train":
             generator = self.train_generator
-            roll_window = self.train_roll_window
         else:
             raise ValueError("eval_set must be test, val or train.")
         
         predY = np.squeeze(self.model.predict(generator, verbose=2))
-        self.predY = predY
 
         if self.data in ["FI2010", "simulated"]:
             eval_data = np.load(os.path.join(self.data_dir, eval_set + ".npz"))
             evalY = eval_data["Y"][:, self.horizon, ...]
         if self.data == "LOBSTER":
-            if not self.universal:
-                eval_files = self.files[eval_set]
-                evalY = load_evalY(eval_files, self.alphas, self.multihorizon, self.n_horizons, self.model_inputs, self.T, roll_window, self.horizon, self.task)
-            else:
-                dict_of_files = self.files[eval_set]
-                evalY = []
-                for TICKER in sorted(dict_of_files.keys()):
-                    TICKER_eval_files = dict_of_files[TICKER]
-                    TICKER_alphas = self.alphas[TICKER]
-                    evalY.append(load_evalY(TICKER_eval_files, TICKER_alphas, self.multihorizon, self.n_horizons, self.model_inputs, self.T, roll_window, self.horizon, self.task))
-                evalY = np.concatenate(evalY, axis = 0)
-        self.evalY = evalY
+            evalY = np.concatenate([y for _, y in generator], axis = 0)
         
         if self.task == "classification":
             if not self.multihorizon:
@@ -576,17 +563,6 @@ class deepLOB:
 
                 print("Prediction horizon:", self.orderbook_updates[self.horizon], " orderbook updates")
                 print("Categorical crossentropy:", categorical_crossentropy)
-
-                ############################# temporary debugging ###################################
-                weighted_categorical_crossentropy_loss = weighted_categorical_crossentropy(np.argmax(evalY, axis=1), np.argmax(predY, axis=1), np.vstack([1 / self.imbalances[:, self.horizon]]*3).T)
-                print("Weighted categorical crossentropy", weighted_categorical_crossentropy_loss)
-                m = CategoricalAccuracy()
-                m.update_state(evalY, predY)
-                accuracy = m.result().numpy()   
-                print("Accuracy:", accuracy)
-                print("evalY:", evalY[:5, :])
-                print("predY:", predY[:5, :])
-
                 print(classification_report_dict)
                 print(confusion_matrix_array)
             else:

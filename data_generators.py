@@ -6,15 +6,17 @@ def CustomtfDataset(files,
                     NF, 
                     horizon, 
                     n_horizons,
+                    tot_horizons,
                     model_inputs = "orderbooks",
                     task = "classification", 
                     alphas = np.array([]), 
                     multihorizon = False, 
                     normalise = False,
                     teacher_forcing = False, 
-                    window = 100, 
+                    T = 100, 
                     batch_size = 256, 
-                    roll_window = 1):
+                    roll_window = 1,
+                    shuffle = False):
     """
     :param dir: directory of files
     :param files: list of files in directory to use
@@ -72,7 +74,7 @@ def CustomtfDataset(files,
 
             features = dataset[:, :NF]
             features = np.expand_dims(features, axis=-1)
-            responses = dataset[(window-1):, NF:]
+            responses = dataset[(T-1):, -tot_horizons:]
             responses = responses[:, horizon]
 
         elif model_inputs[:7] == "volumes":
@@ -86,7 +88,7 @@ def CustomtfDataset(files,
             features = np.expand_dims(features, axis=-1)
             features = tf.convert_to_tensor(features, dtype=tf.float32)
             
-            responses = dataset['responses'][(window-1):, horizon]
+            responses = dataset['responses'][(T-1):, horizon]
 
         if task == "classification":
             if multihorizon:
@@ -101,54 +103,9 @@ def CustomtfDataset(files,
                 y = (+1)*(responses>=-alphas[horizon]) + (+1)*(responses>alphas[horizon])
                 y = tf.keras.utils.to_categorical(y, 3)
 
-        tf_datasets.append(tf.keras.preprocessing.timeseries_dataset_from_array(features, y, window, batch_size=batch_size, sequence_stride=roll_window))
+        tf_datasets.append(tf.keras.preprocessing.timeseries_dataset_from_array(features, y, T, batch_size=None, sequence_stride=roll_window, shuffle=False))
     
-    tf_dataset = tf.data.Dataset.from_tensor_slices(tf_datasets).flat_map(lambda x: x)  
-
-    # # create combined dataset
-    # features_list = []
-    # y_list = []
-    # for file in files:
-    #     if model_inputs in ["orderbooks", "orderflows"]:
-    #         dataset = pd.read_csv(file).to_numpy()
-
-    #         features = dataset[:, :NF]
-    #         features = tf.convert_to_tensor(np.expand_dims(features, axis=-1))
-    #         responses = dataset[:, -n_horizons:]
-    #         responses = responses[:, horizon]
-
-    #     elif model_inputs[:7] == "volumes":
-    #         dataset = np.load(file)
-
-    #         features = dataset['features']
-    #         if model_inputs == "volumes":
-    #             features = np.sum(features, axis = 2)
-    #         features = np.expand_dims(features, axis=-1)
-    #         features[features > 65504] = 65504
-    #         features = tf.convert_to_tensor(features, dtype=tf.int16)
-            
-    #         responses = dataset['responses'][:, horizon]
-
-    #     if task == "classification":
-    #         if multihorizon:
-    #             all_label = []
-    #             for h in range(responses.shape[1]):
-    #                 one_label = (+1)*(responses[:, h]>=-alphas[h]) + (+1)*(responses[:, h]>alphas[h])
-    #                 one_label = tf.keras.utils.to_categorical(one_label, 3)
-    #                 one_label = one_label.reshape(len(one_label), 1, 3)
-    #                 all_label.append(one_label)
-    #             y = np.hstack(all_label)
-    #         else:
-    #             y = (+1)*(responses>=-alphas[horizon]) + (+1)*(responses>alphas[horizon])
-    #             y = tf.keras.utils.to_categorical(y, 3)
-
-    #     y = tf.convert_to_tensor(y)
-    #     features_list.append(features)
-    #     y_list.append(y)
-    
-    # features = tf.concat(features_list, axis=0)
-    # y = tf.concat(y_list, axis=0)[(window-1):, ...]
-    # tf_dataset = tf.keras.preprocessing.timeseries_dataset_from_array(features, y, window, batch_size=batch_size, sequence_stride=roll_window)
+    tf_dataset = tf.data.Dataset.from_tensor_slices(tf_datasets).flat_map(lambda x: x)
     
     if normalise:
         tf_dataset = tf_dataset.map(scale_fn)
@@ -156,21 +113,30 @@ def CustomtfDataset(files,
     if multihorizon:
         tf_dataset = tf_dataset.map(add_decoder_input)
 
+    if shuffle:
+        tf_dataset = tf_dataset.shuffle(1000, reshuffle_each_iteration=False)
+    else:
+        tf_dataset = tf_dataset.shuffle(1, reshuffle_each_iteration=False)
+
+    tf_dataset = tf_dataset.batch(batch_size)
+
     return tf_dataset
 
 def CustomtfDatasetUniv(dict_of_files, 
                         NF, 
                         horizon, 
                         n_horizons,
+                        tot_horizons,
                         dict_of_alphas, 
                         model_inputs = "orderbooks",
                         task = "classification",
                         multihorizon = False, 
                         normalise = False,
                         teacher_forcing = False, 
-                        window = 100, 
+                        T = 100, 
                         batch_size = 256, 
-                        roll_window = 1):
+                        roll_window = 1, 
+                        shuffle = False):
     tf_datasets = []
     for TICKER in sorted(dict_of_files.keys()):
         files = dict_of_files[TICKER]
@@ -179,34 +145,36 @@ def CustomtfDatasetUniv(dict_of_files,
                                            NF, 
                                            horizon, 
                                            n_horizons,
+                                           tot_horizons,
                                            model_inputs = model_inputs,
                                            task = task, 
                                            alphas = alphas, 
                                            multihorizon = multihorizon, 
                                            normalise = normalise,
                                            teacher_forcing = teacher_forcing, 
-                                           window = window, 
+                                           T = T, 
                                            batch_size = batch_size, 
-                                           roll_window = roll_window))
+                                           roll_window = roll_window,
+                                           shuffle = shuffle))
 
     tf_dataset = tf.data.Dataset.from_tensor_slices(tf_datasets).flat_map(lambda x: x)  
 
     return tf_dataset
 
-def load_evalY(eval_files, alphas, multihorizon, n_horizons, model_inputs, T, roll_window, horizon, task):
+def load_evalY(eval_files, alphas, multihorizon, n_horizons, tot_horizons, model_inputs, T, roll_window, horizon, task):
     evalY = np.array([])
     if multihorizon:
         evalY = evalY.reshape(0, n_horizons)
     for file in eval_files:
         if model_inputs in ["orderbooks", "orderflows"]:
             data = pd.read_csv(file).to_numpy()
-            responses = data[:, -n_horizons:]
+            responses = data[(T-1)::roll_window, -tot_horizons:]
+            responses = responses[:, horizon]
         elif model_inputs[:7] == "volumes":
             data = np.load(file)
             responses = data["responses"]
-        evalY = np.concatenate([evalY, responses[(T-1)::roll_window, horizon]])
-        # evalY = np.concatenate([evalY, responses[:, horizon]])
-    # evalY = evalY[(T-1)::roll_window]
+            responses = responses[(T-1)::roll_window, horizon]
+        evalY = np.concatenate([evalY, responses])
 
     if task == "classification":
         if multihorizon:

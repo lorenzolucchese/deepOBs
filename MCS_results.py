@@ -317,7 +317,7 @@ def cce_dataframe_multihorizon_all_models(TICKER, horizon, set_='test'):
     models = ['deepLOB_L1', 'deepOF_L1', 'deepLOB_L2', 'deepOF_L2', 'deepVOL_L2', 'deepVOL_L3']
     periods = ['W0', 'W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7', 'W8', 'W9', 'W10']
     columns = ['benchmark'] + models + [model + '_seq2seq' for model in models]
-    dataframe = pd.DataFrame(np.zeros((len(periods), 13)), columns = columns, index = periods)
+    dataframe = pd.DataFrame(np.zeros((len(periods), len(columns))), columns = columns, index = periods)
     for period in periods:
         cce_benchmark = pickle.load(open('results/' + TICKER + '/' + period + '/benchmark/' + horizon + '/categorical_crossentropy_' + set_ + '.pkl', 'rb'))
         dataframe.loc[period, 'benchmark'] = float(cce_benchmark)
