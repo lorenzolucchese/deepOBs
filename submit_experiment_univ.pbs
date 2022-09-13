@@ -1,5 +1,6 @@
 #PBS -l walltime=72:00:00
 #PBS -l select=1:ncpus=128:mem=920gb:ngpus=1:gpu_type=RTX6000
+#PBS -J 24-32
 
 module load anaconda3/personal
 source activate deepLOBs_env
@@ -10,4 +11,4 @@ source activate deepLOBs_env
 # need to run $PBS_ARRAY_INDEX through 0-32 for complete experiment
 
 cd $PBS_O_WORKDIR
-python submit_experiment_univ.py 5
+python submit_experiment_univ.py $PBS_ARRAY_INDEX
