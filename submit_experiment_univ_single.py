@@ -138,10 +138,10 @@ if __name__ == "__main__":
         }
 
         if imbalances.size == 0:
-            distributions = pickle.load(open(window_filepath + "/distributions.pkl", "wb"))
-            val_distributions = pickle.load(open(window_filepath + "/val_distributions.pkl", "wb"))
-            test_distributions = pickle.load(open(window_filepath + "/test_distributions.pkl", "wb"))
-            train_val_distributions = pickle.load(open(window_filepath + "/train_val_distributions.pkl", "wb"))
+            distributions = pickle.load(open(window_filepath + "/distributions.pkl", "rb"))
+            val_distributions = pickle.load(open(window_filepath + "/val_distributions.pkl", "rb"))
+            test_distributions = pickle.load(open(window_filepath + "/test_distributions.pkl", "rb"))
+            train_val_distributions = pickle.load(open(window_filepath + "/train_val_distributions.pkl", "rb"))
 
             imbalances = distributions.to_numpy()
         else:
