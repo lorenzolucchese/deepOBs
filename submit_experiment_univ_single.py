@@ -138,12 +138,17 @@ if __name__ == "__main__":
         }
 
         if imbalances.size == 0:
-            distributions = pickle.load(open(window_filepath + "/distributions.pkl", "rb"))
-            val_distributions = pickle.load(open(window_filepath + "/val_distributions.pkl", "rb"))
-            test_distributions = pickle.load(open(window_filepath + "/test_distributions.pkl", "rb"))
-            train_val_distributions = pickle.load(open(window_filepath + "/train_val_distributions.pkl", "rb"))
-
+            distributions = get_class_distributions_univ(files["train"], alphas, orderbook_updates)   
+            val_distributions = get_class_distributions_univ(files["val"], alphas, orderbook_updates)
+            test_distributions = get_class_distributions_univ(files["test"], alphas, orderbook_updates)
+            train_val_distributions = get_class_distributions_univ(train_val_dict, alphas, orderbook_updates)
+            
             imbalances = distributions.to_numpy()
+
+            pickle.dump(distributions, open(window_filepath + "/distributions.pkl", "wb"))
+            pickle.dump(val_distributions, open(window_filepath + "/val_distributions.pkl", "wb"))
+            pickle.dump(test_distributions, open(window_filepath + "/test_distributions.pkl", "wb"))
+            pickle.dump(train_val_distributions, open(window_filepath + "/train_val_distributions.pkl", "wb"))
         else:
             pass
         
