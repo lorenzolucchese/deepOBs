@@ -53,10 +53,10 @@ if __name__ == "__main__":
     train_roll_window = 10
     batch_size = 256
     number_of_lstm = 64
-    model_list = ["deepVOL_L3"]
-    features_list = ["volumes"]
-    model_inputs_list = ["volumes_L3"]
-    levels_list = [10]
+    model_list = ["deepLOB_L1", "deepVOL_L3"]
+    features_list = ["orderbooks", "volumes"]
+    model_inputs_list = ["orderbooks", "volumes_L3"]
+    levels_list = [1, 10]
 
     start_date = dt.date(2019, 1, 14)
     end_date = dt.date(2020, 1, 31)
