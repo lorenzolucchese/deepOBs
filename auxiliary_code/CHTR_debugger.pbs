@@ -1,0 +1,8 @@
+#PBS -l walltime=00:08:00
+#PBS -l select=1:ncpus=64:mem=96gb
+
+module load anaconda3/personal
+source activate deepLOBs_env
+
+cd $PBS_O_WORKDIR
+python CHTR_debugger.py
