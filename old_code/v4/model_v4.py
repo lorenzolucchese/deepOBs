@@ -1,4 +1,4 @@
-from data_generators import CustomtfDataset, CustomtfDatasetUniv
+from data_generators_v4 import CustomtfDataset, CustomtfDatasetUniv
 
 import tensorflow as tf
 import numpy as np

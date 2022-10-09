@@ -1,5 +1,5 @@
 from pyparsing import PrecededBy
-from data_generators import CustomDataGenerator
+from data_generators_old import CustomDataGenerator
 
 import tensorflow as tf
 import pandas as pd
