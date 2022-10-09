@@ -1,5 +1,5 @@
-from model import deepLOB
-from data_prepare import get_alphas, get_class_distributions
+from model import deepOB
+from data_methods import get_alphas, get_class_distributions
 import datetime as dt
 import sys
 import numpy as np
@@ -23,27 +23,21 @@ if __name__ == "__main__":
             # Memory growth must be set before GPUs have been initialized
             print(e)
 
-    # set random seeds
-    random.seed(0)
-    np.random.seed(1)
-    tf.random.set_seed(2)
-
-    tf.keras.mixed_precision.set_global_policy("mixed_float16")
-
-    # set global parameters
+    # select TICKER-period from $PBS_ARRAY_INDEX
     TICKERS = ["LILAK", "QRTEA", "XRAY", "CHTR", "PCAR", "EXC", "AAL", "WBA", "ATVI", "AAPL"]
     Ws = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     TICKER = TICKERS[int(sys.argv[1]) % 10]
     W = Ws[int(sys.argv[1]) // 10]
 
-    orderbook_updates = [10, 20, 30, 50, 100, 200, 300, 500, 1000]
-    data = "LOBSTER"                                                
+    # set global parameters
+    orderbook_updates = [10, 20, 30, 50, 100, 200, 300, 500, 1000]             
     task = "classification"
     multihorizon = False                              
     decoder = "seq2seq"                                            
     T = 100
     queue_depth = 10                                          
     n_horizons = len(orderbook_updates)
+    tot_horizons = 9
     epochs = 50
     patience = 10
     training_verbose = 2
@@ -55,6 +49,7 @@ if __name__ == "__main__":
     model_inputs_list = ["orderbooks", "orderflows", "orderbooks", "orderflows", "volumes", "volumes_L3"]
     levels_list = [1, 1, 10, 10, 10, 10]
 
+    # divide 55 weeks into 11 periods, 5 week each
     start_date = dt.date(2019, 1, 14)
     end_date = dt.date(2020, 1, 31)
     slide_by = 5
@@ -64,16 +59,22 @@ if __name__ == "__main__":
     TICKER_filepath = "results/" + TICKER
     os.makedirs(TICKER_filepath, exist_ok=True)
 
+    # select specific window
     for d in range(0, len(weeks), slide_by):
         window = d // slide_by
-        if W == "all":
-            pass
-        elif window == W:
+        if window == W:
             pass
         else:
             continue
         train_val_dates = [date for week in weeks[d:d+4] for date in week]
         test_dates = [date for date in weeks[d+4]]
+
+        # set random seeds
+        random.seed(0)
+        np.random.seed(1)
+        tf.random.set_seed(2)
+        
+        # random train-val split
         random.shuffle(train_val_dates)
         val_dates = train_val_dates[:5]
         train_dates = train_val_dates[5:]
@@ -84,9 +85,11 @@ if __name__ == "__main__":
 
         alphas = np.array([])
 
+        # iterate through model types
         for m, model_type in enumerate(model_list):
             model_filepath = window_filepath + "/" + model_type
             os.makedirs(model_filepath, exist_ok=True)
+            
             # set local parameters
             features = features_list[m]
             model_inputs = model_inputs_list[m]
@@ -115,34 +118,42 @@ if __name__ == "__main__":
                 pass
             imbalances = distributions.to_numpy()
             
-            for h in range(n_horizons):
+            # iterate through horizons
+            for h in range(tot_horizons):
                 horizon = h
                 results_filepath = model_filepath + "/" + "h" + str(orderbook_updates[h])
                 checkpoint_filepath = results_filepath + "/" + "weights"
                 os.makedirs(results_filepath, exist_ok=True)
 
-                model = deepLOB(T = T, 
-                                levels = levels, 
-                                horizon = horizon, 
-                                number_of_lstm = number_of_lstm, 
-                                data = data, 
-                                data_dir = data_dir, 
-                                files = files, 
-                                model_inputs = model_inputs, 
-                                queue_depth = queue_depth,
-                                task = task, 
-                                alphas = alphas, 
-                                orderbook_updates = orderbook_updates,
-                                multihorizon = multihorizon, 
-                                decoder = decoder, 
-                                n_horizons = n_horizons,
-                                train_roll_window = train_roll_window,
-                                imbalances = imbalances)
+                # create model
+                model = deepOB(T = T, 
+                               levels = levels, 
+                               horizon = horizon, 
+                               number_of_lstm = number_of_lstm,
+                               data_dir = data_dir, 
+                               files = files, 
+                               model_inputs = model_inputs, 
+                               queue_depth = queue_depth,
+                               task = task, 
+                               alphas = alphas, 
+                               orderbook_updates = orderbook_updates,
+                               multihorizon = multihorizon, 
+                               decoder = decoder, 
+                               n_horizons = n_horizons,
+                               tot_horizons = tot_horizons,
+                               train_roll_window = train_roll_window,
+                               imbalances = imbalances)
 
                 model.create_model()
 
                 print("training model:", results_filepath)
 
+                # set random seeds
+                random.seed(0)
+                np.random.seed(1)
+                tf.random.set_seed(2)
+
+                # train model
                 model.fit_model(epochs = epochs,
                                 checkpoint_filepath = checkpoint_filepath,
                                 verbose = training_verbose,
@@ -151,6 +162,7 @@ if __name__ == "__main__":
                 
                 print("testing model:", results_filepath)
 
+                # evaluate model
                 model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
                                      eval_set = "test",
                                      results_filepath = results_filepath)

@@ -1,5 +1,4 @@
-from model import deepLOB
-from data_prepare import get_alphas, get_class_distributions
+from model import deepOB
 import datetime as dt
 import sys
 import numpy as np
@@ -28,21 +27,20 @@ if __name__ == "__main__":
     np.random.seed(1)
     tf.random.set_seed(2)
 
-    tf.keras.mixed_precision.set_global_policy("mixed_float16")
-
-    # set global parameters
+    # select period from $PBS_ARRAY_INDEX
     TICKERS = ["LILAK", "QRTEA", "XRAY", "CHTR", "PCAR", "EXC", "AAL", "WBA", "ATVI", "AAPL"]
     Ws = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     TICKER = TICKERS[int(sys.argv[1])]
-
-    orderbook_updates = [10, 20, 30, 50]
-    data = "LOBSTER"                                                
+    
+    # set global parameters
+    orderbook_updates = [10, 20, 30, 50]                
     task = "classification"
     multihorizon = True                              
     decoder = "seq2seq"                                            
     T = 100
     queue_depth = 10                                          
     n_horizons = len(orderbook_updates)
+    tot_horizons = 9
     epochs = 50
     patience = 10
     training_verbose = 2
@@ -54,6 +52,7 @@ if __name__ == "__main__":
     model_inputs_list = ["orderbooks", "orderflows", "orderbooks", "orderflows", "volumes", "volumes_L3"]
     levels_list = [1, 1, 10, 10, 10, 10]
 
+    # divide 55 weeks into 11 periods, 5 week each
     start_date = dt.date(2019, 1, 14)
     end_date = dt.date(2020, 1, 31)
     slide_by = 5
@@ -62,22 +61,25 @@ if __name__ == "__main__":
 
     TICKER_filepath = "results/" + TICKER
     os.makedirs(TICKER_filepath, exist_ok=True)
-
+    
+    # iterate through windows
     for d in range(0, len(weeks), slide_by):
         window = d // slide_by
 
         window_filepath = TICKER_filepath + "/W" + str(window)
         os.makedirs(window_filepath, exist_ok=True)
+
+        # load train, val and test dates, alphas and distributions
         val_train_test_dates = pickle.load(open(window_filepath + "/val_train_test_dates.pkl", "rb"))
         alphas = pickle.load(open(window_filepath + "/alphas.pkl", "rb"))[:len(orderbook_updates)]
         distributions = pickle.load(open(window_filepath + "/distributions.pkl", "rb"))
         imbalances = distributions.to_numpy()[:, :len(orderbook_updates)]
-        print(alphas)
-        print(imbalances)
+        
         val_dates = val_train_test_dates[0]
         train_dates = val_train_test_dates[1]
         test_dates = val_train_test_dates[2]
 
+        # iterate through model types
         for m, model_type in enumerate(model_list):
             model_filepath = window_filepath + "/" + model_type
             os.makedirs(model_filepath, exist_ok=True)
@@ -100,28 +102,35 @@ if __name__ == "__main__":
             checkpoint_filepath = results_filepath + "/" + "weights"
             os.makedirs(results_filepath, exist_ok=True)
 
-            model = deepLOB(T = T, 
-                            levels = levels, 
-                            horizon = horizon, 
-                            number_of_lstm = number_of_lstm, 
-                            data = data, 
-                            data_dir = data_dir, 
-                            files = files, 
-                            model_inputs = model_inputs, 
-                            queue_depth = queue_depth,
-                            task = task, 
-                            alphas = alphas, 
-                            orderbook_updates = orderbook_updates,
-                            multihorizon = multihorizon, 
-                            decoder = decoder, 
-                            n_horizons = n_horizons,
-                            train_roll_window = train_roll_window,
-                            imbalances = imbalances)
+            # create model
+            model = deepOB(T = T, 
+                           levels = levels, 
+                           horizon = horizon, 
+                           number_of_lstm = number_of_lstm,
+                           data_dir = data_dir, 
+                           files = files, 
+                           model_inputs = model_inputs, 
+                           queue_depth = queue_depth,
+                           task = task, 
+                           alphas = alphas, 
+                           orderbook_updates = orderbook_updates,
+                           multihorizon = multihorizon, 
+                           decoder = decoder, 
+                           n_horizons = n_horizons,
+                           tot_horizons = tot_horizons,
+                           train_roll_window = train_roll_window,
+                           imbalances = imbalances)
 
             model.create_model()
 
             print("training model:", results_filepath)
 
+            # set random seeds
+            random.seed(0)
+            np.random.seed(1)
+            tf.random.set_seed(2)
+            
+            # train model
             model.fit_model(epochs = epochs,
                             checkpoint_filepath = checkpoint_filepath,
                             verbose = training_verbose,
@@ -130,6 +139,7 @@ if __name__ == "__main__":
             
             print("testing model:", results_filepath)
 
+            # evaluate model
             model.evaluate_model(load_weights_filepath = checkpoint_filepath, 
                                     eval_set = "test",
                                     results_filepath = results_filepath)

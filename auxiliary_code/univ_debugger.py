@@ -1,6 +1,6 @@
 from importlib.metadata import distribution
-from model import deepLOB
-from data_prepare import get_alphas, get_class_distributions, get_class_distributions_univ
+from model import deepOB
+from data_methods import get_alphas, get_class_distributions, get_class_distributions_univ
 import datetime as dt
 import sys
 import numpy as np
@@ -157,7 +157,7 @@ if __name__ == "__main__":
     checkpoint_filepath = results_filepath + "/" + "weights"
     os.makedirs(results_filepath, exist_ok=True)
 
-    model = deepLOB(T = T, 
+    model = deepOB(T = T, 
                     levels = levels, 
                     horizon = horizon, 
                     number_of_lstm = number_of_lstm, 
@@ -213,7 +213,7 @@ if __name__ == "__main__":
     results_filepath_outofsample = results_filepath + "/" + "TICKERS_out_of_sample"
     os.makedirs(results_filepath_outofsample, exist_ok=True)
 
-    model = deepLOB(T = T, 
+    model = deepOB(T = T, 
                     levels = levels, 
                     horizon = horizon, 
                     number_of_lstm = number_of_lstm, 
@@ -264,7 +264,7 @@ if __name__ == "__main__":
         results_filepath_stock = results_filepath + "/" + TICKER
         os.makedirs(results_filepath_stock, exist_ok=True)
 
-        model = deepLOB(T = T, 
+        model = deepOB(T = T, 
                         levels = levels, 
                         horizon = horizon, 
                         number_of_lstm = number_of_lstm, 

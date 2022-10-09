@@ -1,5 +1,5 @@
-from model import deepLOB
-from data_prepare import get_alphas, get_class_distributions
+from model import deepOB
+from data_methods import get_alphas, get_class_distributions
 import datetime as dt
 import sys
 import numpy as np
@@ -113,7 +113,7 @@ if __name__ == "__main__":
                 checkpoint_filepath = results_filepath + "/" + "weights"
                 os.makedirs(results_filepath, exist_ok=True)
 
-                model = deepLOB(T = T, 
+                model = deepOB(T = T, 
                                 levels = levels, 
                                 horizon = horizon, 
                                 number_of_lstm = number_of_lstm, 

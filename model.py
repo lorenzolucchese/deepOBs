@@ -1,28 +1,27 @@
-from data_generators import CustomtfDataset, CustomtfDatasetUniv, load_evalY
-from data_prepare import get_alphas
+from data_generators import CustomtfDataset, CustomtfDatasetUniv
 
 import tensorflow as tf
-import pandas as pd
 import numpy as np
 import pickle
-import random
 import itertools
-import os
 
 from keras import backend as K
 from keras.models import Model
-from keras.layers import Dense, Dropout, LeakyReLU, Activation, Input, LSTM, CuDNNLSTM, Reshape, Conv2D, Conv3D, MaxPooling2D, concatenate, Lambda, dot, BatchNormalization, Layer
+from keras.layers import Dense, Dropout, LeakyReLU, Activation, Input, CuDNNLSTM, Reshape, Conv2D, Conv3D, MaxPooling2D, concatenate, Lambda, dot, BatchNormalization, Layer
 from keras.callbacks import EarlyStopping, ModelCheckpoint
-from keras.metrics import CategoricalAccuracy, Precision, Recall, MeanSquaredError, MeanMetricWrapper
+from keras.metrics import CategoricalAccuracy, MeanSquaredError, MeanMetricWrapper
 
-from sklearn.metrics import classification_report, accuracy_score, confusion_matrix, mean_absolute_error, mean_squared_error, r2_score
+from sklearn.metrics import classification_report, confusion_matrix, mean_absolute_error, mean_squared_error, r2_score
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-import glob
 from functools import partial
 
 
 class CustomReshape(Layer):
+    """
+    Custom keras.layers.Layer for "folding" input when volumes are used.
+    Folds a tensor along the -2 axis, i.e. (:, :, 2W, :) -> (:, :, W, 2, :).
+    """
     def __init__(self, output_dim, **kwargs):
         self.output_dim = output_dim
         super(CustomReshape, self).__init__(**kwargs)
@@ -39,10 +38,6 @@ class CustomReshape(Layer):
         input_BID = tf.reverse(input_BID, axis = [2])
         input_ASK = tf.reshape(input_data[:, :, NF//2:, :], [batch_size, T, NF//2, 1, channels])
         output = concatenate([input_BID, input_ASK], axis = 3)
-        # if not tf.executing_eagerly():
-        #     # Set the static shape for the result since it might lost during array_ops
-        #     # reshape, eg, some `None` dim in the result could be inferred.
-        #     output.set_shape(self.compute_output_shape(input_data.shape))
         return output
 
     def compute_output_shape(self, input_shape): 
@@ -54,21 +49,33 @@ class CustomReshape(Layer):
 
 
 def weighted_categorical_crossentropy(y_true, y_pred, weights):
-    # weights is a CxC matrix (where C is the number of classes) that defines the class weights
-    # i.e. weights[i, j] defines the weight for an example of class i which was classified as class j
-    nb_cl = len(weights)
+    """
+    Compute weighted categorical crossentropy between y_true and y_pred.
+    :param y_true: (:, C) array with true responses, one_hot labels
+    :param y_pred: (:, C) array with predicted responses, output probabilities 
+    :param weights: (C, C) array (where C is the number of classes) with the class weights,
+                    i.e. weights[i, j] is the weight applied to an example of class i which was classified as class j
+    """
+    C = len(weights)
     final_mask = K.zeros_like(y_pred[:, 0])
     y_pred_max = K.max(y_pred, axis=1)
     y_pred_max = K.reshape(y_pred_max, (K.shape(y_pred)[0], 1))
     y_pred_max_mat = K.cast(K.equal(y_pred, y_pred_max), K.floatx())
-    for c_p, c_t in itertools.product(range(nb_cl), range(nb_cl)):
+    for c_p, c_t in itertools.product(range(C), range(C)):
         final_mask += (weights[c_t, c_p] * y_pred_max_mat[:, c_p] * y_true[:, c_t])
     return K.categorical_crossentropy(y_true, y_pred) * final_mask
 
 
 def multihorizon_weighted_categorical_crossentropy(y_true, y_pred, imbalances):
-    # imbalances is a CxH matrix (where C is the number of classes) that defines the class imbalances
-    # i.e. imbalances[:, h] defines the class distributions for horizon h
+    """
+    Compute multi-horizon weighted categorical crossentropy between y_true and y_pred. 
+    At each horizon, the cce loss is weighted by the inverse of the class probabilities.
+    The cce losses are then averaged out across horizons to obtain a multihorizon weighted cce loss.
+    :param y_true: (:, H, C) array with true responses, one_hot labels
+    :param y_pred: (:, H, C) array with predicted responses, output probabilities 
+    :param imbalances: (C, H) array (where C is the number of classes, H is the number of horizons) with the class probabilites,
+                       i.e. imbalances[:, h] are the class probabilities at horizon h
+    """
     C, H = imbalances.shape
     losses = []
     for h in range(H):
@@ -78,14 +85,12 @@ def multihorizon_weighted_categorical_crossentropy(y_true, y_pred, imbalances):
     
 
 def sparse_categorical_matches(y_true, y_pred):
-    """Creates float Tensor, 1.0 for label-prediction match, 0.0 for mismatch.
-    You can provide logits of classes as `y_pred`, since argmax of
-    logits and probabilities are same.
-    Args:
-        y_true: Integer ground truth values.
-        y_pred: The prediction values.
-    Returns:
-        Match tensor: 1.0 for label-prediction match, 0.0 for mismatch.
+    """
+    Creates float Tensor, 1.0 for label-prediction match, 0.0 for mismatch.
+    Can provide logits of classes as y_pred, since argmax of logits and probabilities are same.
+    :param y_true: ground truth values, array/tensor
+    :param y_pred: prediction values, array/tensor
+    :returns: matches: tensor with 1.0 for label-prediction match, 0.0 for mismatch
     """
     reshape_matches = False
     y_pred = tf.convert_to_tensor(y_pred)
@@ -100,8 +105,7 @@ def sparse_categorical_matches(y_true, y_pred):
         reshape_matches = True
     y_pred = tf.math.argmax(y_pred, axis=-1)
 
-    # If the predicted output and actual output types don't match, force cast them
-    # to match.
+    # If the predicted output and actual output types don't match, force cast them to match.
     if K.dtype(y_pred) != K.dtype(y_true):
         y_pred = tf.cast(y_pred, K.dtype(y_true))
     matches = tf.cast(tf.equal(y_true, y_pred), K.floatx())
@@ -111,56 +115,71 @@ def sparse_categorical_matches(y_true, y_pred):
 
 
 class MultihorizonCategoricalAccuracy(MeanMetricWrapper):
-  def __init__(self, h, name="multihorizon_categorical_accuracy", dtype=None):
-    super(MultihorizonCategoricalAccuracy, self).__init__(
-        lambda y_true, y_pred: sparse_categorical_matches(tf.math.argmax(y_true[:, h, :], axis=-1), y_pred[:, h, :]),
-        name,
-        dtype=dtype)
+    """
+    Custom keras.metrics which computed keras.metrics.CategoricalAccuracy at horizon h when y_true and y_pred are multihorizon.
+    """
+    def __init__(self, h, name="multihorizon_categorical_accuracy", dtype=None):
+        super(MultihorizonCategoricalAccuracy, self).__init__(lambda y_true, y_pred: sparse_categorical_matches(tf.math.argmax(y_true[:, h, :], axis=-1), y_pred[:, h, :]), name, dtype=dtype)
 
 
 class MultihorizonMeanSquaredError(MeanMetricWrapper):
-  def __init__(self, h, name="multihorizon_mse", dtype=None):
-    super(MultihorizonMeanSquaredError, self).__init__(
-        lambda y_true, y_pred: mean_squared_error(y_true[:, h], y_pred[:, h]),
-        name,
-        dtype=dtype)
+    """
+    Custom keras.metrics which computed keras.metrics.MeanSquaredError at horizon h when y_true and y_pred are multihorizon.
+    """
+    def __init__(self, h, name="multihorizon_mse", dtype=None):
+        super(MultihorizonMeanSquaredError, self).__init__(lambda y_true, y_pred: mean_squared_error(y_true[:, h], y_pred[:, h]), name, dtype=dtype)
 
 
-class deepLOB:
+class deepOB:
+    """
+    Object which allows to build, train and evaluate a family of deep learning models for order book driven
+    mid-price prediction. The class is quite flexible allowing to train deepLOB(L1/L2), deepOF(L1/L2) and deepVOL(L2/L3) 
+    as single-/multi-horizon, stock-specific/universal (multi-stock) and classification/regression models.
+    For multi-horizon models both seq2seq and attention decoders are implemented.
+    This code is an adaptation of https://github.com/zcakhaa/DeepLOB-Deep-Convolutional-Neural-Networks-for-Limit-Order-Books.git
+    """
     def __init__(self, 
                  horizon,
                  number_of_lstm,
-                 data, 
                  data_dir, 
-                 files = None, 
-                 model_inputs = "orderbooks", 
-                 T = 100,
-                 levels = 10, 
-                 queue_depth = None,
-                 task = "classification", 
-                 orderbook_updates = [10, 20, 30, 50, 100],
-                 alphas = np.array([]), 
-                 multihorizon = False, 
-                 decoder = "seq2seq", 
-                 n_horizons = 5,
-                 tot_horizons = 9,
+                 files, 
+                 model_inputs, 
+                 T,
+                 levels, 
+                 queue_depth,
+                 task, 
+                 orderbook_updates,
+                 alphas, 
+                 multihorizon, 
+                 decoder, 
+                 n_horizons,
+                 tot_horizons,
+                 train_roll_window,
+                 imbalances,                 
                  batch_size = 256,
-                 train_roll_window = 1,
-                 imbalances = None,
                  universal = False):
-        """Initialization.
-        :param T: time window 
-        :param levels: number of levels (note these have different meaning for orderbooks/orderflows and volumes)
-        :param horizon: when not multihorizon, the horizon to consider
-        :param number_of_lstm: number of nodes in lstm
-        :param data: whether the data fits in the RAM and is thus divided in train, val, test datasets (and, if multihorizon, corresponding decoder_input) - "FI2010", "simulated"
-                     or if custom data generator is required - "LOBSTER".
+        """Paramter initialization and creation of train, val and test tf.datasets.
+        :param horizon: the horizon to consider, int (between 0 and tot_horizon)
+        :param number_of_lstm: number of hidden nodes in lstm, int
         :param data_dir: parent directory for data
-        :param model_inputs: what type of inputs
-        :param task: regression or classification
-        :param multihorizon: whether the forecasts need to be multihorizon, if True this overrides horizon
-        :param decoder: the decoder to use for multihorizon forecasts, seq2seq or attention
-        :param n_horizons: the number of forecast horizons in multihorizon / the length of alphas
+        :param files: a dict of lists containing "train", "val" and "test" lists of files (if universal these are dicts of TICKER-specific lists of files)
+        :param model_inputs: which input is being used "orderbooks", "orderflows", "volumes" or "volumes_L3"
+        :param T: length of lookback window for features
+        :param levels: number of levels in model (note these have different meaning for orderbooks/orderflows and volumes)
+        :param queue_depth: the depth of the queue when "volumes_L3" input is used
+        :param task: ML task, "regression" or "classification"
+        :param orderbook_updates: (tot_horizons,) array with the number of orderbook updates corresponding to each horizon
+        :param alphas: (tot_horizons) array of alphas to use when task = "classification", (down, no change, up) = ((-infty, -alpha), [-alpha, +alpha] (+alpha, +infty))
+                       if universal = True, dict of (tot_horizons) array for each TICKER
+        :param multihorizon: whether the predictions are multihorizon, if True horizon = slice(0, n_horizons)
+        :param decoder: the decoder to use for multihorizon forecasts, "seq2seq" or "attention"
+        :param n_horizons: the number of forecast horizons in multihorizon, int
+        :param tot_horizons: the number of forecast horizons in the processed data, int
+        :param train_roll_window: the roll window to use when selecting training/validation the data, int
+        :param imbalances: the imbalances used to weight the training categorical crossentropy loss, (class, tot_horizons) array
+               if multihorizon = True, (class, n_horizons) array
+        :param batch_size: the batch size to use when training the model, int
+        :param universal: whether the model is trained/evaluated on multiple stocks simultaneously, bool
         """
         self.T = T
         self.levels = levels
@@ -187,58 +206,29 @@ class deepLOB:
         self.orderbook_updates = orderbook_updates
         self.data_dir = data_dir
         self.files = files
-        self.data = data
         self.batch_size = batch_size
         self.train_roll_window = train_roll_window
         self.imbalances = imbalances
         self.universal = universal
-
-        if data in ["FI2010", "simulated"]:
-            train_data = np.load(os.path.join(data_dir, "train.npz"))
-            trainX, trainY = train_data["X"], train_data["Y"]
-            val_data = np.load(os.path.join(data_dir, "val.npz"))
-            valX, valY = val_data["X"], val_data["Y"]
-            test_data = np.load(os.path.join(data_dir, "test.npz"))
-            testX, testY = test_data["X"], test_data["Y"]
-
-            if not(multihorizon):
-                trainY = trainY[:, self.horizon , :]
-                valY = valY[:, self.horizon , :]
-                testY = testY[:, self.horizon ,:]
-
-            if multihorizon:
-                train_decoder_input = np.load(os.path.join(data_dir, "train_decoder_input.npy"))
-                val_decoder_input = np.load(os.path.join(data_dir, "val_decoder_input.npy"))
-                test_decoder_input = np.load(os.path.join(data_dir, "test_decoder_input.npy"))
-
-                trainX = [trainX, train_decoder_input]
-                valX = [valX, val_decoder_input]
-                testX = [testX, test_decoder_input]
-
-            generator = tf.keras.preprocessing.image.ImageDataGenerator()
-            self.train_generator = generator.flow(trainX, trainY, batch_size=batch_size, shuffle=True)
-            self.val_generator = generator.flow(valX, valY, batch_size=batch_size, shuffle=True)
-            self.test_generator = generator.flow(testX, testY, batch_size=batch_size, shuffle=False)
     
-        elif data == "LOBSTER":
-            if model_inputs in ["orderbooks", "orderflows"]:
-                normalise = False
-            elif model_inputs in ["volumes", "volumes_L3"]:
-                normalise = True
-            if not universal:
-                self.train_generator = CustomtfDataset(files = self.files["train"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise, batch_size = batch_size,  roll_window = train_roll_window, shuffle = True)
-                self.val_generator = CustomtfDataset(files = self.files["val"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = train_roll_window, shuffle = False)
-                self.test_generator = CustomtfDataset(files = self.files["test"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = 1, shuffle = False)
-            else:
-                self.train_generator = CustomtfDatasetUniv(dict_of_files = self.files["train"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise, batch_size = batch_size,  roll_window = train_roll_window, shuffle = True)
-                self.val_generator = CustomtfDatasetUniv(dict_of_files = self.files["val"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = train_roll_window, shuffle = False)
-                self.test_generator = CustomtfDatasetUniv(dict_of_files = self.files["test"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = 1, shuffle = False)
-
+        if model_inputs in ["orderbooks", "orderflows"]:
+            normalise = False
+        elif model_inputs in ["volumes", "volumes_L3"]:
+            normalise = True
+        if not universal:
+            self.train_dataset = CustomtfDataset(files = self.files["train"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise, batch_size = batch_size,  roll_window = train_roll_window, shuffle = True)
+            self.val_dataset = CustomtfDataset(files = self.files["val"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = train_roll_window, shuffle = False)
+            self.test_dataset = CustomtfDataset(files = self.files["test"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = 1, shuffle = False)
         else:
-            raise ValueError("data must be either FI2010, simulated or LOBSTER.")
+            self.train_dataset = CustomtfDatasetUniv(dict_of_files = self.files["train"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise, batch_size = batch_size,  roll_window = train_roll_window, shuffle = True)
+            self.val_dataset = CustomtfDatasetUniv(dict_of_files = self.files["val"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = train_roll_window, shuffle = False)
+            self.test_dataset = CustomtfDatasetUniv(dict_of_files = self.files["test"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = 1, shuffle = False)
 
 
     def create_model(self):
+        """
+        Create the deep learning model as a keras.models.Model object according to initialization parameters.
+        """
         # network parameters
         if self.task == "classification":
             output_activation = "softmax"
@@ -284,48 +274,48 @@ class deepLOB:
         elif self.model_inputs == "volumes_L3":
             input_lmd = Input(shape=(self.T, self.NF, self.queue_depth, 1), name="input")
 
-        # build the convolutional block
+        ############################################ CNN module ############################################
         if self.model_inputs == "orderbooks":
             # [batch_size, T, 4L, 1] -> [batch_size, T, 2L, 32]
-            conv_first1 = Conv2D(32, (1, 2), strides=(1, 2))(input_lmd)
-            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+            conv_output = Conv2D(32, (1, 2), strides=(1, 2))(input_lmd)
+            conv_output = LeakyReLU(alpha=0.01)(conv_output)
             # [batch_size, T, 2L, 32] -> [batch_size, T, 2L, 32]
-            conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
-            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+            conv_output = Conv2D(32, (4, 1), padding="same")(conv_output)
+            conv_output = LeakyReLU(alpha=0.01)(conv_output)
             # [batch_size, T, 2L, 32] -> [batch_size, T, 2L, 32]
-            conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
-            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+            conv_output = Conv2D(32, (4, 1), padding="same")(conv_output)
+            conv_output = LeakyReLU(alpha=0.01)(conv_output)
 
-            conv_first1 = BatchNormalization(momentum=0.6)(conv_first1)
+            conv_output = BatchNormalization(momentum=0.6)(conv_output)
 
             # [batch_size, T, 2L, 32] -> [batch_size, T, L, 32]
-            conv_first1 = Conv2D(32, (1, 2), strides=(1, 2))(conv_first1)
-            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+            conv_output = Conv2D(32, (1, 2), strides=(1, 2))(conv_output)
+            conv_output = LeakyReLU(alpha=0.01)(conv_output)
             # [batch_size, T, L, 32] -> [batch_size, T, L, 32]
-            conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
-            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+            conv_output = Conv2D(32, (4, 1), padding="same")(conv_output)
+            conv_output = LeakyReLU(alpha=0.01)(conv_output)
             # [batch_size, T, L, 32] -> [batch_size, T, L, 32]
-            conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
-            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+            conv_output = Conv2D(32, (4, 1), padding="same")(conv_output)
+            conv_output = LeakyReLU(alpha=0.01)(conv_output)
 
-            conv_first1 = BatchNormalization(momentum=0.6)(conv_first1)
+            conv_output = BatchNormalization(momentum=0.6)(conv_output)
 
         elif self.model_inputs == "volumes":
             # [batch_size, T, 2W, 1] -> [batch_size, T, W, 2, 1]
             input_reshaped = CustomReshape(0)(input_lmd)
             # [batch_size, T, W, 2, 1] -> [batch_size, T, W-1, 1, 32]
-            conv_first1 = Conv3D(32, (1, 2, 2), strides=(1, 1, 1))(input_reshaped)
+            conv_output = Conv3D(32, (1, 2, 2), strides=(1, 1, 1))(input_reshaped)
             # [batch_size, T, W-1, 1, 32] -> [batch_size, T, W-1, 32]
-            conv_first1 = Reshape((int(conv_first1.shape[1]), int(conv_first1.shape[2]), int(conv_first1.shape[4])))(conv_first1)
-            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+            conv_output = Reshape((int(conv_output.shape[1]), int(conv_output.shape[2]), int(conv_output.shape[4])))(conv_output)
+            conv_output = LeakyReLU(alpha=0.01)(conv_output)
             # [batch_size, T, W-1, 32] -> [batch_size, T, W-1, 32]
-            conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
-            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+            conv_output = Conv2D(32, (4, 1), padding="same")(conv_output)
+            conv_output = LeakyReLU(alpha=0.01)(conv_output)
             # [batch_size, T, W-1, 32] -> [batch_size, T, W-1, 32]
-            conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
-            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+            conv_output = Conv2D(32, (4, 1), padding="same")(conv_output)
+            conv_output = LeakyReLU(alpha=0.01)(conv_output)
 
-            conv_first1 = BatchNormalization(momentum=0.6)(conv_first1)
+            conv_output = BatchNormalization(momentum=0.6)(conv_output)
 
         elif self.model_inputs == "volumes_L3":
             # [batch_size, T, 2W, Q, 1] -> [batch_size, T, 2W, 1, 1]
@@ -335,78 +325,79 @@ class deepLOB:
             # [batch_size, T, 2W, 1] -> [batch_size, T, W, 2, 1]
             input_reshaped = CustomReshape(0)(conv_queue)
             # [batch_size, T, W, 2, 1] -> [batch_size, T, W-1, 1, 32]
-            conv_first1 = Conv3D(32, (1, 2, 2), strides=(1, 1, 1))(input_reshaped)
+            conv_output = Conv3D(32, (1, 2, 2), strides=(1, 1, 1))(input_reshaped)
             # [batch_size, T, W-1, 1, 32] -> [batch_size, T, W-1, 32]
-            conv_first1 = Reshape((int(conv_first1.shape[1]), int(conv_first1.shape[2]), int(conv_first1.shape[4])))(conv_first1)
-            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+            conv_output = Reshape((int(conv_output.shape[1]), int(conv_output.shape[2]), int(conv_output.shape[4])))(conv_output)
+            conv_output = LeakyReLU(alpha=0.01)(conv_output)
             # [batch_size, T, W-1, 32] -> [batch_size, T, W-1, 32]
-            conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
-            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+            conv_output = Conv2D(32, (4, 1), padding="same")(conv_output)
+            conv_output = LeakyReLU(alpha=0.01)(conv_output)
             # [batch_size, T, W-1, 32] -> [batch_size, T, W-1, 32]
-            conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
-            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+            conv_output = Conv2D(32, (4, 1), padding="same")(conv_output)
+            conv_output = LeakyReLU(alpha=0.01)(conv_output)
 
-            conv_first1 = BatchNormalization(momentum=0.6)(conv_first1)
+            conv_output = BatchNormalization(momentum=0.6)(conv_output)
 
         elif self.model_inputs == "orderflows":
             # [batch_size, T, 2L, 1] -> [batch_size, T, 2L, 1]
-            conv_first1 = input_lmd
+            conv_output = input_lmd
 
             # [batch_size, T, 2L, 1] -> [batch_size, T, L, 32]
-            conv_first1 = Conv2D(32, (1, 2), strides=(1, 2))(conv_first1)
-            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+            conv_output = Conv2D(32, (1, 2), strides=(1, 2))(conv_output)
+            conv_output = LeakyReLU(alpha=0.01)(conv_output)
             # [batch_size, T, L, 32] -> [batch_size, T, L, 32]
-            conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
-            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+            conv_output = Conv2D(32, (4, 1), padding="same")(conv_output)
+            conv_output = LeakyReLU(alpha=0.01)(conv_output)
             # [batch_size, T, L, 32] -> [batch_size, T, L, 32]
-            conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
-            conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+            conv_output = Conv2D(32, (4, 1), padding="same")(conv_output)
+            conv_output = LeakyReLU(alpha=0.01)(conv_output)
 
-            conv_first1 = BatchNormalization(momentum=0.6)(conv_first1)
+            conv_output = BatchNormalization(momentum=0.6)(conv_output)
 
         else:
             raise ValueError("task must be either orderbooks, orderflows or volumes.")
 
         # [batch_size, T, L/(W-1), 32] -> [batch_size, T, 1, 32]
-        conv_first1 = Conv2D(32, (1, conv_first1.shape[2]))(conv_first1)
-        conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+        conv_output = Conv2D(32, (1, conv_output.shape[2]))(conv_output)
+        conv_output = LeakyReLU(alpha=0.01)(conv_output)
         # [batch_size, T, 1, 32] -> [batch_size, T, 1, 32]
-        conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
-        conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+        conv_output = Conv2D(32, (4, 1), padding="same")(conv_output)
+        conv_output = LeakyReLU(alpha=0.01)(conv_output)
         # [batch_size, T, 1, 32] -> [batch_size, T, 1, 32]
-        conv_first1 = Conv2D(32, (4, 1), padding="same")(conv_first1)
-        conv_first1 = LeakyReLU(alpha=0.01)(conv_first1)
+        conv_output = Conv2D(32, (4, 1), padding="same")(conv_output)
+        conv_output = LeakyReLU(alpha=0.01)(conv_output)
 
-        conv_first1 = BatchNormalization(momentum=0.6)(conv_first1)
+        conv_output = BatchNormalization(momentum=0.6)(conv_output)
 
-        # build the inception module
-        convsecond_1 = Conv2D(64, (1, 1), padding="same")(conv_first1)
-        convsecond_1 = LeakyReLU(alpha=0.01)(convsecond_1)
-        convsecond_1 = Conv2D(64, (3, 1), padding="same")(convsecond_1)
-        convsecond_1 = LeakyReLU(alpha=0.01)(convsecond_1)
+        
+        ############################################ Inception module ############################################
+        inception_output_1 = Conv2D(64, (1, 1), padding="same")(conv_output)
+        inception_output_1 = LeakyReLU(alpha=0.01)(inception_output_1)
+        inception_output_1 = Conv2D(64, (3, 1), padding="same")(inception_output_1)
+        inception_output_1 = LeakyReLU(alpha=0.01)(inception_output_1)
 
-        convsecond_1 = BatchNormalization(momentum=0.6)(convsecond_1)
+        inception_output_1 = BatchNormalization(momentum=0.6)(inception_output_1)
 
-        convsecond_2 = Conv2D(64, (1, 1), padding="same")(conv_first1)
-        convsecond_2 = LeakyReLU(alpha=0.01)(convsecond_2)
-        convsecond_2 = Conv2D(64, (5, 1), padding="same")(convsecond_2)
-        convsecond_2 = LeakyReLU(alpha=0.01)(convsecond_2)
+        inception_output_2 = Conv2D(64, (1, 1), padding="same")(conv_output)
+        inception_output_2 = LeakyReLU(alpha=0.01)(inception_output_2)
+        inception_output_2 = Conv2D(64, (5, 1), padding="same")(inception_output_2)
+        inception_output_2 = LeakyReLU(alpha=0.01)(inception_output_2)
 
-        convsecond_2 = BatchNormalization(momentum=0.6)(convsecond_2)
+        inception_output_2 = BatchNormalization(momentum=0.6)(inception_output_2)
 
-        convsecond_3 = MaxPooling2D((3, 1), strides=(1, 1), padding="same")(conv_first1)
-        convsecond_3 = Conv2D(64, (1, 1), padding="same")(convsecond_3)
-        convsecond_3 = LeakyReLU(alpha=0.01)(convsecond_3)
+        inception_output_3 = MaxPooling2D((3, 1), strides=(1, 1), padding="same")(conv_output)
+        inception_output_3 = Conv2D(64, (1, 1), padding="same")(inception_output_3)
+        inception_output_3 = LeakyReLU(alpha=0.01)(inception_output_3)
 
-        convsecond_3 = BatchNormalization(momentum=0.6)(convsecond_3)
+        inception_output_3 = BatchNormalization(momentum=0.6)(inception_output_3)
 
-        convsecond_output = concatenate([convsecond_1, convsecond_2, convsecond_3], axis=3)
-        conv_reshape = Reshape((int(convsecond_output.shape[1]), int(convsecond_output.shape[3])))(convsecond_output)
-        conv_reshape = Dropout(0.2, noise_shape=(None, 1, int(conv_reshape.shape[2])))(conv_reshape, training=True)
+        inception_output = concatenate([inception_output_1, inception_output_2, inception_output_3], axis=3)
+        inception_output = Reshape((int(inception_output.shape[1]), int(inception_output.shape[3])))(inception_output)
+        inception_output = Dropout(0.2, noise_shape=(None, 1, int(inception_output.shape[2])))(inception_output, training=True)
 
         if not(self.multihorizon):
-            # build the last LSTM layer
-            conv_lstm = CuDNNLSTM(self.number_of_lstm)(conv_reshape)
+            ############################################ LSTM module ############################################
+            conv_lstm = CuDNNLSTM(self.number_of_lstm)(inception_output)
             out = Dense(output_dim, activation=output_activation)(conv_lstm)
             # send to float32 for stability
             out = Activation("linear", dtype="float32")(out)
@@ -414,8 +405,8 @@ class deepLOB:
         
         else:
             if self.decoder == "seq2seq":
-                # seq2seq
-                encoder_inputs = conv_reshape
+                ############################################ LSTM module ############################################
+                encoder_inputs = inception_output
                 encoder = CuDNNLSTM(self.number_of_lstm, return_state=True)
                 encoder_outputs, state_h, state_c = encoder(encoder_inputs)
                 states = [state_h, state_c]
@@ -433,6 +424,7 @@ class deepLOB:
                 # inputs: y_0 = decoder_inputs (exogenous), c = encoder_outputs (hidden state only)
                 # hidden state: h'_0 = h_T (encoder output states: hidden state, state_h, and cell state, state_c)
 
+                ############################################ seq2seq decoder ############################################
                 for _ in range(self.n_horizons):
                     # h'_t = f(h'_{t-1}, y_{t-1}, c)
                     outputs, state_h, state_c = decoder_lstm(inputs, initial_state=states)
@@ -451,8 +443,8 @@ class deepLOB:
                 decoder_outputs = Lambda(lambda x: K.concatenate(x, axis=1))(all_outputs)
             
             elif self.decoder == "attention":
-                # attention
-                encoder_inputs = conv_reshape
+                ############################################ LSTM module ############################################
+                encoder_inputs = inception_output
                 encoder = CuDNNLSTM(self.number_of_lstm, return_state=True, return_sequences=True)
                 encoder_outputs, state_h, state_c = encoder(encoder_inputs)
                 states = [state_h, state_c]
@@ -473,6 +465,7 @@ class deepLOB:
                 all_outputs = []
                 all_attention = []
 
+                ############################################ attention decoder ############################################
                 for _ in range(self.n_horizons):
                     # h'_t = f(h'_{t-1}, y_{t-1}, c_{t-1})
                     outputs, state_h, state_c = decoder_lstm(inputs, initial_state=states)
@@ -500,12 +493,9 @@ class deepLOB:
                 # Concatenate all predictions
                 decoder_outputs = Lambda(lambda x: K.concatenate(x, axis=1), name="outputs")(all_outputs)
                 # decoder_attention = Lambda(lambda x: K.concatenate(x, axis=1), name="attentions")(all_attention)
-            
-            elif self.decoder == None:
-                pass
 
             else:
-                raise ValueError("decoder must be either seq2seq or attention.")
+                raise ValueError('decoder must be either "seq2seq" or "attention".')
 
             # send to float32 for stability
             decoder_outputs = Activation("linear", dtype="float32")(decoder_outputs)
@@ -513,7 +503,22 @@ class deepLOB:
         
         self.model.compile(loss=loss, metrics=metrics, optimizer=adam)
 
-    def fit_model(self, epochs, checkpoint_filepath, load_weights=False, load_weights_filepath = None, verbose=1, batch_size = 256, patience=5):
+    def fit_model(self, 
+                  epochs, 
+                  checkpoint_filepath, 
+                  load_weights=False, 
+                  load_weights_filepath=None, 
+                  verbose=1, 
+                  patience=10):
+        """
+        Fit self.model on self.train_dataset and self.val_dataset using Adam optimizer.
+        :param epochs: number of epochs to train for, int
+        :param checkpoint_filepath: where to save checkpoint weights, str
+        :param load_weights: whether to load weights or randomly initialize them, bool
+        :param load_weights_filepath: if load_weights = True, where to load weights from, str
+        :param verbose: the verbosity of training output, int
+        :param patience: early stopping patience, i.e. the number of epochs with no val_loss decrease after which to stop the training procedure, int
+        """
         model_checkpoint_callback = ModelCheckpoint(filepath=checkpoint_filepath,
         					                        save_weights_only=True,
 						                            monitor="val_loss",
@@ -525,32 +530,38 @@ class deepLOB:
         if load_weights == True:
             self.model.load_weights(load_weights_filepath)
 
-        self.model.fit(self.train_generator, validation_data=self.val_generator,
+        self.model.fit(self.train_dataset, validation_data=self.val_dataset,
                        epochs=epochs, verbose=verbose, workers=8,
                        max_queue_size=10, use_multiprocessing=True,
                        callbacks=[model_checkpoint_callback, early_stopping])
 
     def evaluate_model(self, load_weights_filepath, results_filepath, eval_set = "test"):
+        """
+        Evaluate self.model with the weights at load_weights_filepath on eval_set.
+        Save results in results_filepath. Format of results varies depending on ML task:
+        - if classification save sklearn's classification report, confusion matrix and categorical crossentropy
+          (if multihorizon do this for each horizon)
+        - if regression save mean squared error, mean average error and r2, as well as produce a plot of y_true vs y_pred
+          (if multihorizon do this for each horizon)
+        :param load_weights_filepath: weights to load, str
+        :param results_filepath: where to save results, str
+        :param eval_set: dataset on which to evaluate performance, "train", "val" or "test", str
+        """
         self.model.load_weights(load_weights_filepath).expect_partial()
 
         print("Evaluating performance on ", eval_set, "set...")
 
         if eval_set == "test":
-            generator = self.test_generator
+            dataset = self.test_dataset
         elif eval_set == "val":
-            generator = self.val_generator
+            dataset = self.val_dataset
         elif eval_set == "train":
-            generator = self.train_generator
+            dataset = self.train_dataset
         else:
             raise ValueError("eval_set must be test, val or train.")
         
-        predY = np.squeeze(self.model.predict(generator, verbose=2))
-
-        if self.data in ["FI2010", "simulated"]:
-            eval_data = np.load(os.path.join(self.data_dir, eval_set + ".npz"))
-            evalY = eval_data["Y"][:, self.horizon, ...]
-        if self.data == "LOBSTER":
-            evalY = np.concatenate([y for _, y in generator], axis = 0)
+        predY = np.squeeze(self.model.predict(dataset, verbose=2))
+        evalY = np.concatenate([y for _, y in dataset], axis = 0)
         
         if self.task == "classification":
             if not self.multihorizon:
@@ -605,6 +616,13 @@ class deepLOB:
                                         path = results_filepath + "/fit_plot_" + eval_set + "_h" + str(self.orderbook_updates[h]) + ".png")
 
 def regression_fit_plot(evalY, predY, title, path):
+    """
+    Produce regression fit plot of evalY vs predY.
+    :param evalY: true value of response, (:,) array
+    :param predY: predicted value of response, (:,) array
+    :param title: title of plot, str
+    :param path: where to save the plot, str
+    """
     fig, ax = plt.subplots()
     mpl.rcParams["agg.path.chunksize"] = len(evalY)
     ax.scatter(evalY, predY, s=10, c="k", alpha=0.5)

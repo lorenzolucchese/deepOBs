@@ -6,7 +6,7 @@ import os
 import tensorflow as tf
 from keras.layers import Reshape, concatenate
 from data_generators import CustomtfDataset
-from data_prepare import get_alphas
+from data_methods import get_alphas
 
 if __name__ == '__main__':
     # # limit gpu memory

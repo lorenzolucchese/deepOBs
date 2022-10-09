@@ -1,4 +1,4 @@
-from model import deepLOB
+from model import deepOB
 
 import tensorflow as tf
 import pandas as pd
@@ -82,7 +82,7 @@ if __name__ == '__main__':
 
             #######################################################################################
 
-            model = deepLOB(T = T, 
+            model = deepOB(T = T, 
                     levels = levels, 
                     horizon = horizon, 
                     number_of_lstm = number_of_lstm, 

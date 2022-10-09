@@ -2,32 +2,25 @@ import tensorflow as tf
 import pandas as pd
 import numpy as np
 
-def CustomtfDataset(files, 
-                    NF, 
-                    horizon, 
-                    n_horizons,
-                    tot_horizons,
-                    model_inputs = "orderbooks",
-                    task = "classification", 
-                    alphas = np.array([]), 
-                    multihorizon = False, 
-                    normalise = False,
-                    teacher_forcing = False, 
-                    T = 100, 
-                    batch_size = 256, 
-                    roll_window = 1,
-                    shuffle = False):
+def CustomtfDataset(files, NF, horizon, n_horizons, tot_horizons, model_inputs, task, alphas, multihorizon, normalise, batch_size, T, roll_window, shuffle, teacher_forcing = False):
     """
-    :param dir: directory of files
-    :param files: list of files in directory to use
-    :param NF: number of features
-    :param horizon: prediction horizon, 0, 1, 2, 3, 4 
-    :param task: regression or classification
-    :param alphas: array of alphas for class boundaries if task = classification.
-    :param multihorizon: whether the predictions are multihorizon, if True overrides horizon
-                         In this case trainX is [trainX, decoder]
-    :param samples_per_file: how many samples are in each file
-    :param teacher_forcing: when using multihorizon, whether to use teacher forcing on the decoder
+    Create custom tf.dataset object to be used by model.
+    :param files: files with data, list of str
+    :param NF: number of features, int
+    :param horizon: prediction horizon, between 0 and tot_horizons, int
+    :param n_horizons: number of horizons in multihorizon, int
+    :param tot_horizons: total number of horizons present in each file, int
+    :param model_inputs: which input is being used "orderbooks", "orderflows", "volumes" or "volumes_L3", str
+    :param task: ML task, "regression" or "classification", str
+    :param alphas: alphas for classification (down, no change, up) = ((-infty, -alpha), [-alpha, +alpha] (+alpha, +infty)), (tot_horizons,) array
+    :param multihorizon: whether the predictions are multihorizon, if True horizon = slice(0, n_horizons), bool
+    :param normalise: whether to normalise the data, bool
+    :param T: length of lookback window for features, int
+    :param batch_size: batch size for dataset, int
+    :param roll_window: length of window to roll forward when extracting features/responses, int
+    :param shuffle: whether to shuffle dataset, bool
+    :param teacher_forcing: when using multihorizon, whether to use teacher forcing on the decoder, bool
+    :return: tf_dataset: a tf.dataset object 
     """
     # methods to be used
     def scale_fn(x, y):
@@ -83,8 +76,8 @@ def CustomtfDataset(files,
             features = dataset['features']
             if model_inputs == "volumes":
                 features = np.sum(features, axis = 2)
-            D = features.shape[1]
-            features = features[:, (D//2 - NF//2):(D//2 + NF//2)]
+            mid = features.shape[1]
+            features = features[:, (mid//2 - NF//2):(mid//2 + NF//2)]
             features = np.expand_dims(features, axis=-1)
             features = tf.convert_to_tensor(features, dtype=tf.float32)
             
@@ -122,21 +115,26 @@ def CustomtfDataset(files,
 
     return tf_dataset
 
-def CustomtfDatasetUniv(dict_of_files, 
-                        NF, 
-                        horizon, 
-                        n_horizons,
-                        tot_horizons,
-                        dict_of_alphas, 
-                        model_inputs = "orderbooks",
-                        task = "classification",
-                        multihorizon = False, 
-                        normalise = False,
-                        teacher_forcing = False, 
-                        T = 100, 
-                        batch_size = 256, 
-                        roll_window = 1, 
-                        shuffle = False):
+def CustomtfDatasetUniv(dict_of_files, NF, horizon, n_horizons, tot_horizons, model_inputs, task, dict_of_alphas, multihorizon, normalise, batch_size, T, roll_window, shuffle, teacher_forcing = False):
+    """
+    Create custom tf.dataset object to be used by model, when using multiple TICKERs with different files and alphas.
+    :param dict_of_files: the files with data for each TICKER, dict of lists of strs
+    :param NF: number of features, int
+    :param horizon: prediction horizon, int
+    :param n_horizons: number of horizons in multihorizon, int
+    :param tot_horizons: total number of horizons present in each file, int
+    :param model_inputs: which input is being used "orderbooks", "orderflows", "volumes" pr "volumes_L3", str
+    :param task: ML task, "regression" or "classification", str
+    :param alphas: alphas for classification (down, no change, up) = ((-infty, -alpha), [-alpha, +alpha] (+alpha, +infty)), (tot_horizons,) array
+    :param multihorizon: whether the predictions are multihorizon, if True horizon = slice(0, n_horizons), bool
+    :param normalise: whether to normalise the data, bool
+    :param T: length of lookback window for features, int
+    :param batch_size: batch size for dataset, int
+    :param roll_window: length of window to roll forward when extracting features/responses, int
+    :param shuffle: whether to shuffle dataset, bool
+    :param teacher_forcing: when using multihorizon, whether to use teacher forcing on the decoder, bool
+    :return: tf_dataset: a tf.dataset object 
+    """
     tf_datasets = []
     for TICKER in sorted(dict_of_files.keys()):
         files = dict_of_files[TICKER]
@@ -160,33 +158,3 @@ def CustomtfDatasetUniv(dict_of_files,
     tf_dataset = tf.data.Dataset.from_tensor_slices(tf_datasets).flat_map(lambda x: x)  
 
     return tf_dataset
-
-def load_evalY(eval_files, alphas, multihorizon, n_horizons, tot_horizons, model_inputs, T, roll_window, horizon, task):
-    evalY = np.array([])
-    if multihorizon:
-        evalY = evalY.reshape(0, n_horizons)
-    for file in eval_files:
-        if model_inputs in ["orderbooks", "orderflows"]:
-            data = pd.read_csv(file).to_numpy()
-            responses = data[(T-1)::roll_window, -tot_horizons:]
-            responses = responses[:, horizon]
-        elif model_inputs[:7] == "volumes":
-            data = np.load(file)
-            responses = data["responses"]
-            responses = responses[(T-1)::roll_window, horizon]
-        evalY = np.concatenate([evalY, responses])
-
-    if task == "classification":
-        if multihorizon:
-            all_label = []
-            for h in range(evalY.shape[1]):
-                one_label = (+1)*(evalY[:, h]>=-alphas[h]) + (+1)*(evalY[:, h]>alphas[h])
-                one_label = tf.keras.utils.to_categorical(one_label, 3)
-                one_label = one_label.reshape(len(one_label), 1, 3)
-                all_label.append(one_label)
-            evalY = np.hstack(all_label)
-        else:
-            evalY = (+1)*(evalY>=-alphas[horizon]) + (+1)*(evalY>alphas[horizon])
-            evalY = tf.keras.utils.to_categorical(evalY, 3)
-    
-    return evalY

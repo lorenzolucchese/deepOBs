@@ -4,9 +4,12 @@ import pandas as pd
 import re
 import datetime
 import numpy as np
+from data_prepare_v4 import prepare_x_y, prepare_decoder_input
 from multiprocessing import Pool
+import h5py
 
-def process_data(TICKER, input_path, output_path, log_path, time_index="seconds", horizons=np.array([10, 20, 30, 50, 100]), features = "orderbooks", smoothing="uniform", k=10):
+def process_data(TICKER, input_path, output_path, log_path, time_index="seconds", output_extension="csv",
+                  horizons=np.array([10, 20, 30, 50, 100]), features = "orderbooks", smoothing="uniform", k=10):
     """
     Function for pre-processing LOBSTER data. The data must be stored in the input_path
     directory as daily message book and order book files. The data is treated in the following way:
@@ -36,17 +39,19 @@ def process_data(TICKER, input_path, output_path, log_path, time_index="seconds"
                            is given by Size*Price
         # Tick size: the fraction of time that the bid-ask spread is equal to one tick for each stock
                      (Curato et al., 2015).
-    :param TICKER: the TICKER to be considered, str
+    :param TICKER: the TICKER to be considered
     :param input_path: the path where the order book and message book files are stored, order book files have shape (:, 4*levels):
-                       "ASKp1", "ASKs1", "BIDp1",  "BIDs1", ..., "ASKplevels", "ASKslevels", "BIDplevels",  "BIDslevels"
-                       str
-    :param output_path: the path where we wish to save the processed datasets, str
-    :param time_index: the time-index to use ("seconds" or "datetime"), str
-    :param horizons: forecasting horizons for labels, (h,) array
-    :param features: whether to return "orderbooks" or "orderflows", str
-    :param smoothing: whether to use "uniform" or "horizon" smoothing, bool
-    :param k: smoothing window for returns when smoothing = "uniform", int
-    :return: saves the processed features as .csv files in output_path, each file consists of:
+                       "ASKp1", "ASKs1", "BIDp1",  "BIDs1", ..., "ASKplevels", "ASKslevels", "BIDplevels",  "BIDslevels",
+    :param output_path: the path where we wish to save the processed datasets
+    :param time_index: the time-index to use ("seconds" or "datetime")
+    :param output_extension: the extension of the saved files ("hdf5" or "csv")
+    :param horizons: forecasting horizons for labels, length h
+    :param features: whether to return order book, order flow or volume features
+           if volume: return the volumes of the first 2*levels ticks on each side of the mid, even if these are empty. 
+                      Apply horizontal normalization in data preparation step.
+    :param smoothing: whether to use "uniform" or "horizon" smoothing
+    :param k: smoothing window for returns when smoothing = "uniform"
+    :return: saves the processed features in output_path, each file consists of:
              if orderbook, shape (:, 4*levels + h)
              "ASKp1", "ASKs1", "BIDp1",  "BIDs1", ..., "ASKplevels", "ASKslevels", "BIDplevels",  "BIDslevels", "horizons[0]", ..., "horizons[-1]"
              if orderflow, shape (:, 2*levels + h)
@@ -249,41 +254,72 @@ def process_data(TICKER, input_path, output_path, log_path, time_index="seconds"
 
             df_orderbook = df_orderbook[mid_seconds_columns + feature_names]
 
-        else:
-            raise ValueError('features must be "orderbooks" or "orderflows".')
-    
-        # dynamic z-score normalization
-        orderbook_mean_df = pd.DataFrame(df_orderbook[feature_names].mean().values.reshape(-1, len(feature_names)), columns=feature_names)
-        orderbook_mean2_df = pd.DataFrame((df_orderbook[feature_names] ** 2).mean().values.reshape(-1, len(feature_names)), columns=feature_names)
-        orderbook_nsamples_df = pd.DataFrame(np.array([[len(df_orderbook)]] * len(feature_names)).T, columns=feature_names)
+        elif features == "volumes":
+            # Assumes tick_size = 0.01 $, as per LOBSTER data
 
-        if len(mean_df) < 5:
-            logs.append(orderbook_name + ' skipped. Initializing rolling z-score normalization.')
-            # don't save the first five days as we don't have enough days to normalize
-            mean_df = pd.concat([mean_df, orderbook_mean_df], ignore_index=True)
-            mean2_df = pd.concat([mean2_df, orderbook_mean2_df], ignore_index=True)
-            nsamples_df = pd.concat([nsamples_df, orderbook_nsamples_df], ignore_index=True)
-            continue
-        else:
-            # z-score normalization
-            z_mean_df = pd.DataFrame((nsamples_df * mean_df).sum(axis=0) / nsamples_df.sum(axis=0)).T
-            z_stdev_df = pd.DataFrame(np.sqrt((nsamples_df * mean2_df).sum(axis=0) / nsamples_df.sum(axis=0) - z_mean_df ** 2))
+            ticks = np.hstack((np.outer(np.round((df_orderbook["mid price"] - 25) / 100) * 100, np.ones(2*levels)) + 100 * np.outer(np.ones(len(df_orderbook)), np.arange(-2*levels+1, 1)),
+                               np.outer(np.round((df_orderbook["mid price"] + 25) / 100) * 100, np.ones(2*levels)) + 100 * np.outer(np.ones(len(df_orderbook)), np.arange(2*levels))))
+            ticks = ticks.astype(int)
+
+            volumes = np.zeros((len(df_orderbook), 4*levels))
+
+            orderbook_states = df_orderbook[feature_names]
+            orderbook_states_prices = orderbook_states.values[:, ::2]
+            orderbook_states_volumes = orderbook_states.values[:, 1::2]
+
+            for i in range(4*levels):
+                # match tick prices with prices in levels of orderbook
+                flags = (orderbook_states_prices == np.repeat(ticks[:, i].reshape((len(orderbook_states_prices), 1)), orderbook_states_prices.shape[1], axis=1))
+                volumes[flags.sum(axis=1) > 0, i] = orderbook_states_volumes[flags]
             
-            # broadcast to df_orderbook size
-            z_mean_df = z_mean_df.loc[z_mean_df.index.repeat(len(df_orderbook))]
-            z_stdev_df = z_stdev_df.loc[z_stdev_df.index.repeat(len(df_orderbook))]
-            z_mean_df.index = df_orderbook.index
-            z_stdev_df.index = df_orderbook.index
-            df_orderbook[feature_names] = (df_orderbook[feature_names] - z_mean_df) / z_stdev_df
+            df_orderbook = df_orderbook.drop(feature_names, axis=1).iloc[:, :]
+            feature_names_raw = ["BIDs", "ASKs"]
+            feature_names = []
+            for feature_name in feature_names_raw:
+                if feature_name == "BIDs":
+                    for i in range(2*levels, 0, -1):
+                        feature_names += [feature_name + str(i)]
+                else:
+                    for i in range(1, 2*levels + 1):
+                        feature_names += [feature_name + str(i)]
+            df_orderbook[feature_names] = volumes
 
-            # roll forward by dropping first rows and adding most recent mean and mean2
-            mean_df = mean_df.iloc[1:, :]
-            mean2_df = mean2_df.iloc[1:, :]
-            nsamples_df = nsamples_df.iloc[1:, :]
+        else:
+            raise ValueError('features must be one of "orderbooks", "orderflows", or "volumes".')
 
-            mean_df = pd.concat([mean_df, orderbook_mean_df], ignore_index=True)
-            mean2_df = pd.concat([mean2_df, orderbook_mean2_df], ignore_index=True)
-            nsamples_df = pd.concat([nsamples_df, orderbook_nsamples_df], ignore_index=True)
+        if features in ["orderbooks", "orderflows"]:
+            # dynamic z-score normalization
+            orderbook_mean_df = pd.DataFrame(df_orderbook[feature_names].mean().values.reshape(-1, len(feature_names)), columns=feature_names)
+            orderbook_mean2_df = pd.DataFrame((df_orderbook[feature_names] ** 2).mean().values.reshape(-1, len(feature_names)), columns=feature_names)
+            orderbook_nsamples_df = pd.DataFrame(np.array([[len(df_orderbook)]] * len(feature_names)).T, columns=feature_names)
+
+            if len(mean_df) < 5:
+                logs.append(orderbook_name + ' skipped. Initializing rolling z-score normalization.')
+                # don't save the first five days as we don't have enough days to normalize
+                mean_df = pd.concat([mean_df, orderbook_mean_df], ignore_index=True)
+                mean2_df = pd.concat([mean2_df, orderbook_mean2_df], ignore_index=True)
+                nsamples_df = pd.concat([nsamples_df, orderbook_nsamples_df], ignore_index=True)
+                continue
+            else:
+                # z-score normalization
+                z_mean_df = pd.DataFrame((nsamples_df * mean_df).sum(axis=0) / nsamples_df.sum(axis=0)).T
+                z_stdev_df = pd.DataFrame(np.sqrt((nsamples_df * mean2_df).sum(axis=0) / nsamples_df.sum(axis=0) - z_mean_df ** 2))
+                
+                # broadcast to df_orderbook size
+                z_mean_df = z_mean_df.loc[z_mean_df.index.repeat(len(df_orderbook))]
+                z_stdev_df = z_stdev_df.loc[z_stdev_df.index.repeat(len(df_orderbook))]
+                z_mean_df.index = df_orderbook.index
+                z_stdev_df.index = df_orderbook.index
+                df_orderbook[feature_names] = (df_orderbook[feature_names] - z_mean_df) / z_stdev_df
+
+                # roll forward by dropping first rows and adding most recent mean and mean2
+                mean_df = mean_df.iloc[1:, :]
+                mean2_df = mean2_df.iloc[1:, :]
+                nsamples_df = nsamples_df.iloc[1:, :]
+
+                mean_df = pd.concat([mean_df, orderbook_mean_df], ignore_index=True)
+                mean2_df = pd.concat([mean2_df, orderbook_mean2_df], ignore_index=True)
+                nsamples_df = pd.concat([nsamples_df, orderbook_nsamples_df], ignore_index=True)
 
         if smoothing == "horizon":
             # create labels for returns with smoothing labelling method
@@ -308,7 +344,13 @@ def process_data(TICKER, input_path, output_path, log_path, time_index="seconds"
 
         # save
         output_name = os.path.join(output_path, TICKER + "_" + features + "_" + str(date.date()))
-        df_orderbook.to_csv(output_name + ".csv", header=True, index=False)
+        if output_extension == "hdf5":
+            with h5py.File(output_name + ".hdf5", "w") as f:
+                f.create_dataset("default", data=df_orderbook)
+        elif output_extension == "csv":
+            df_orderbook.to_csv(output_name + ".csv", header=True, index=False)
+        else:
+            raise ValueError("output_extension must be hdf5 or csv")
 
         logs.append(orderbook_name + ' completed.')
 
@@ -325,7 +367,7 @@ def process_data(TICKER, input_path, output_path, log_path, time_index="seconds"
 
 def multiprocess_L3(TICKER, input_path, output_path, log_path, horizons=np.array([10, 20, 30, 50, 100]), NF=40, queue_depth=10, smoothing="uniform", k=10):
     """
-    External call for pre-processing LOBSTER data into L3 volumes parallely. The data must be stored in the input_path
+    Wrapper for pre-processing LOBSTER data into L3 volumes parallely. The data must be stored in the input_path
     directory as daily message book and order book files. The data is treated in the following way:
     - order book states with crossed quotes are removed.
     - each state in the orderbook is time-stamped, with states occurring at the same time collapsed
@@ -339,18 +381,17 @@ def multiprocess_L3(TICKER, input_path, output_path, log_path, horizons=np.array
     - message book files with problems
     - trading days with unusual open - close times
     - trading days with crossed quotes
-    :param TICKER: the TICKER to be considered, str
+    :param TICKER: the TICKER to be considered
     :param input_path: the path where the order book and message book files are stored, order book files have shape (:, 4*levels):
                        "ASKp1", "ASKs1", "BIDp1",  "BIDs1", ..., "ASKplevels", "ASKslevels", "BIDplevels",  "BIDslevels",
-                       str
-    :param output_path: the path where we wish to save the processed datasets (as .npz files), str
-    :param log_path: the path where processing logs are saved, str
-    :param NF: number of volume features, NF = 2W where W is number of ticks on each side of mid, int
-    :param horizons: forecasting horizons for labels, (h,) array
-    :param queue_depth: the depth beyond which to aggregate the queue, int
-    :param smoothing: whether to use "uniform" or "horizon" smoothing, bool
-    :param k: smoothing window for returns when smoothing = "uniform", int
-    :return: saves the processed features in output_path, as .npz files with numpy attributes "features" (:, NF, queue_depth) and "responses" (:, h).
+    :param output_path: the path where we wish to save the processed datasets (as .npz files)
+    :param log_path: the path where processing logs are saved
+    :param NF: number of volume features, NF = 2W where W is number of ticks on each side of mid
+    :param horizons: forecasting horizons for labels, length h
+    :param queue_depth: the depth beyond which to aggregate the queue.
+    :param smoothing: whether to use "uniform" or "horizon" smoothing
+    :param k: smoothing window for returns when smoothing = "uniform"
+    :return: saves the processed features in output_path, as .npz files with numpy arrays "features" (:, NF, queue_depth) and "responses" (:, h).
     """
     csv_file_list = glob.glob(os.path.join(input_path, "*.{}".format("csv")))
 
@@ -413,15 +454,14 @@ def process_L3_orderbook(orderbook_name, TICKER, output_path, NF, queue_depth, h
       if smoothing = "uniform": l = (m+ - m)/m, where m+ denotes the mean of the k+1 mid-prices centered at m(. + h), m(.) is current mid price.
     :param orderbook_name: order book to process, of shape (T, 4*levels):
                           "ASKp1", "ASKs1", "BIDp1",  "BIDs1", ..., "ASKplevels", "ASKslevels", "BIDplevels",  "BIDslevels",
-                          str
-    :param TICKER: the TICKER to be considered, str
-    :param output_path: the path where we wish to save the processed datasets (as .npz files), str
-    :param NF: number of volume features, NF = 2W where W is number of ticks on each side of mid, int
-    :param queue_depth: the depth beyond which to aggregate the queue, int
-    :param horizons: forecasting horizons for labels, (h,) array
-    :param smoothing: whether to use "uniform" or "horizon" smoothing, bool
-    :param k: smoothing window for returns when smoothing = "uniform", int
-    :return: save the processed features in output_path, as .npz files with numpy attributes "features" (:, NF, queue_depth) and "responses" (:, h).
+    :param TICKER: the TICKER to be considered
+    :param output_path: the path where we wish to save the processed datasets (as .npz files)
+    :param NF: number of volume features, NF = 2W where W is number of ticks on each side of mid
+    :param queue_depth: the depth beyond which to aggregate the queue.
+    :param horizons: forecasting horizons for labels, length h
+    :param smoothing: whether to use "uniform" or "horizon" smoothing
+    :param k: smoothing window for returns when smoothing = "uniform"
+    :return: save the processed features in output_path, as .npz files with numpy arrays "features" (:, NF, queue_depth) and "responses" (:, h).
     """
     print(orderbook_name)
     log = ''
@@ -682,3 +722,209 @@ def process_L3_orderbook(orderbook_name, TICKER, output_path, NF, queue_depth, h
     np.savez(output_name + ".npz", features=orderbook_L3, responses=returns)
 
     return log + orderbook_name + ' completed.'
+
+
+def process_simulated_data(input_path, output_path, levels = 10, T = 100, horizons=np.array([10, 20, 30, 50, 100]), features = "orderbooks"):
+    """
+    Function for pre-processing simulated data. The data must be stored in the input_path directory as daily order book files. 
+    The data is processed in the following way:
+    - training set based z-score normalization is applied to the data, i.e. the mean and standard deviation of the training set features
+      is used to normalize training, testing and validation data. 
+      If volume features are selected data is normalized in the preparation phase ("horizontal" normalization).
+    - the smoothed returns at the requested horizons (in order book changes) are returned
+      l = (m+ - m)/m, where m+ denotes the mean of the next k mid-prices, m is current mid price.
+    :param input_path: the path where the order book and message book files are stores in monthly
+                       directories
+    :param output_path: the path where we wish to save the processed datasets
+    :param levels: number of order book levels in input data
+    :param T: number of time-steps for pre-processing data
+    :param horizons: forecasting horizons for labels
+    :param features: whether to return order book, order flow or volume features
+           if volume: return the volumes of the first 10 ticks on each side of the mid, even if these are empty. 
+                      Apply horizontal normalization in data preparation step.
+    :return: saves the processed features in output_path as test, train and val npz files containing tensors ready to feed into the model
+             if orderbook:
+             "ASKp1", "ASKs1", "BIDp1",  "BIDs1", ..., "ASKpN", "ASKsN", "BIDpN",  "BIDsN", "horizons[0]", ..., "horizons[-1]"
+             if orderflow:
+             "aOF1", "bOF1", "aOF2",  "bOF2", ..., "aOFN", "bOFN", "horizons[0]", ..., "horizons[-1]"
+             where N is the number of levels.
+             if volumes:
+             "BIDvol20", ...,  "BIDvol1", "ASKvol1", ..., "ASKvol20", "horizons[0]", ..., "horizons[-1]".
+            
+    """
+    # currently implemented for 4 days -> three days training, half day val and half day test
+    train = slice(0, 3)
+
+    if features in ["orderbooks", "volumes"]:
+        NF = 4*levels
+    elif features == "orderflows":
+        NF = 2*levels
+    else:
+        raise ValueError("features must be one of orderbooks, orderflows or volumes")
+
+    csv_orderbooks = glob.glob(os.path.join(input_path, "*.{}".format("csv")))
+    csv_orderbooks.sort()
+
+    df_data = []
+
+    for orderbook_name in csv_orderbooks:
+        df_orderbook = pd.read_csv(orderbook_name, index_col=0)
+        df_orderbook = df_orderbook.fillna(0)
+        df_orderbook = df_orderbook.drop(["date"], axis=1)
+
+        df_orderbook["mid price"] = (df_orderbook["Ask Price 1"] + df_orderbook["Bid Price 1"])/2
+
+        # create labels for returns with smoothing labelling method
+        for h in horizons:
+            rolling_mid = df_orderbook["mid price"].rolling(h).mean().dropna()[1:]
+            rolling_mid = rolling_mid.to_numpy().reshape(len(rolling_mid),)
+            smooth_pct_change = rolling_mid/df_orderbook["mid price"][0:-h] - 1
+            df_orderbook[str(h)] = np.concatenate((smooth_pct_change,
+                                                   np.repeat(np.NaN, int(h))))
+
+        # drop elements with na predictions at the end which cannot be used for training
+        df_orderbook = df_orderbook.iloc[:-max(horizons), :]
+
+        if features == "orderbooks":
+            # drop mid price column
+            df_orderbook = df_orderbook.drop(["mid price"], axis=1)
+
+            df_data += [df_orderbook]
+
+        elif features == "orderflows":
+            # compute bid and ask multilevel orderflow
+            ASK_prices = df_orderbook.loc[:, df_orderbook.columns.str.contains("Ask Price")]
+            BID_prices = df_orderbook.loc[:, df_orderbook.columns.str.contains("Bid Price")]
+            ASK_sizes = df_orderbook.loc[:, df_orderbook.columns.str.contains("Ask Size")]
+            BID_sizes = df_orderbook.loc[:, df_orderbook.columns.str.contains("Bid Size")]
+
+            ASK_price_changes = ASK_prices.diff().dropna(axis=0, how="all").to_numpy()
+            BID_price_changes = BID_prices.diff().dropna(axis=0, how="all").to_numpy()
+            ASK_size_changes = ASK_sizes.diff().dropna(axis=0, how="all").to_numpy()
+            BID_size_changes = BID_sizes.diff().dropna(axis=0, how="all").to_numpy()
+
+            ASK_sizes = ASK_sizes.to_numpy()
+            BID_sizes = BID_sizes.to_numpy()
+
+            ASK_OF = (ASK_price_changes > 0.0) * (-ASK_sizes[:-1, :]) + (ASK_price_changes == 0.0) * ASK_size_changes + (ASK_price_changes < 0) * ASK_sizes[1:, :]
+            BID_OF = (BID_price_changes < 0.0) * (-BID_sizes[:-1, :]) + (BID_price_changes == 0.0) * BID_size_changes + (BID_price_changes > 0) * BID_sizes[1:, :]
+
+            # create orderflow dataframe
+            df_orderflow = pd.DataFrame()
+            for i in range(levels):
+                df_orderflow["ASK_OF" + str(i+1)] = ASK_OF[:, i]
+                df_orderflow["BID_OF" + str(i+1)] = BID_OF[:, i]
+
+            # add returns
+            return_names = [str(h) for h in horizons]
+            df_orderflow[return_names] = df_orderbook.iloc[1:, -len(horizons):].reindex(df_orderflow.index)
+            
+            df_data += [df_orderflow]
+
+        elif features == "volumes":
+            # Assumes tick_size is 0.025 $, as per simulated data
+
+            ticks = np.hstack((np.outer(np.round(df_orderbook["mid price"] * 40 - 0.25, decimals=0) / 40, np.ones(2*levels)) + 0.025 * np.outer(np.ones(len(df_orderbook)), np.arange(-2*levels+1, 1)),
+                               np.outer(np.round(df_orderbook["mid price"] * 40 + 0.25) / 40, np.ones(2*levels)) + 0.025 * np.outer(np.ones(len(df_orderbook)), np.arange(2*levels))))
+            
+            volumes = np.zeros((len(df_orderbook), 4*levels))
+
+            # drop mid price column
+            df_orderbook = df_orderbook.drop(["mid price"], axis=1)
+            orderbook_states = df_orderbook.iloc[:, :-len(horizons)].to_numpy()
+
+            orderbook_states_prices = orderbook_states[:, ::2]
+            orderbook_states_volumes = orderbook_states[:, 1::2]
+
+            for i in range(4*levels):
+                # match tick prices with prices in levels of orderbook
+                flags = (orderbook_states_prices == np.repeat(ticks[:, i].reshape((len(orderbook_states_prices), 1)), orderbook_states_prices.shape[1], axis=1))
+                volumes[flags.sum(axis=1) > 0, i] = orderbook_states_volumes[flags]
+            
+            # create volumes dataframe
+            feature_names = ["BIDvol" + str(i) for i in range(2*levels, 0, -1)] + ["ASKvol" + str(i) for i in range(1, 2*levels + 1)]
+            df_volumes = pd.DataFrame(volumes, columns=feature_names)
+
+            # add returns
+            return_names = [str(h) for h in horizons]
+            df_volumes[return_names] = df_orderbook.iloc[:, -len(horizons):]
+            
+            df_data += [df_volumes]
+
+        else:
+            raise ValueError("features must be one of orderbooks, orderflows or volumes")
+    
+    # normalize features by mean and sd of training set
+    train_df = pd.concat(df_data[train])
+    train_means = train_df.iloc[:, :-len(horizons)].mean()
+    train_stds = train_df.iloc[:, :-len(horizons)].std()
+
+    # find alphas to split into classes
+    returns = train_df.iloc[:, -len(horizons):].to_numpy()
+    alphas = (np.abs(np.quantile(returns, 0.33, axis = 0)) + np.quantile(returns, 0.66, axis = 0))/2
+
+    Xs = []
+    Ys = []
+
+    for df in df_data:
+        if features in ["orderbooks", "orderflows"]:
+            # normalize features
+            df.iloc[:, :-len(horizons)] = (df.iloc[:, :-len(horizons)] - train_means)/train_stds
+        
+            # produce inputs ready for model
+            X, Y = prepare_x_y(df.to_numpy(), T, NF, alphas, normalize=False)
+
+        elif features == "volumes":
+            # normalize features and produce inputs ready for model
+            X, Y = prepare_x_y(df.to_numpy(), T, NF, alphas, normalize=True)
+
+        else:
+            raise ValueError("features must be one of orderbooks, orderflows or volumes")
+
+        Xs += [X]
+        Ys += [Y]
+
+    trainX = np.concatenate(Xs[train], axis=0)
+    trainY = np.concatenate(Ys[train], axis=0)
+    valX = Xs[-1][:len(Xs[-1])//2, :, :, :]
+    valY = Ys[-1][:len(Ys[-1])//2, :, :]
+    testX = Xs[-1][len(Xs[-1])//2:, :, :, :]
+    testY = Ys[-1][len(Ys[-1])//2:, :, :]
+
+    np.savez(os.path.join(output_path, "train"), X=trainX, Y=trainY)        
+    np.savez(os.path.join(output_path, "val"), X=valX, Y=valY)
+    np.savez(os.path.join(output_path, "test"), X=testX, Y=testY)
+
+    # this sets the initial hidden state of the decoder to be y_0 = [1, 0, 0].
+    train_decoder_input = prepare_decoder_input(trainX, teacher_forcing=False)
+    val_decoder_input = prepare_decoder_input(valX, teacher_forcing=False)
+    test_decoder_input = prepare_decoder_input(testX, teacher_forcing=False)
+
+    np.save(os.path.join(output_path, "train_decoder_input"), train_decoder_input)        
+    np.save(os.path.join(output_path, "val_decoder_input"), val_decoder_input)
+    np.save(os.path.join(output_path, "test_decoder_input"), test_decoder_input)
+
+
+def reconstruct_orderbook_from_hdf5(file):
+    """
+    Reconstruct a pandas dataframe from saved hdf5 file.
+    :param file: the hdf5 orderbook file to be converted to pandas dataframe
+    :return: orderbook, a pandas dataframe corresponding to the orderbook
+    """
+
+    # read file as numpy array
+    with h5py.File(file, "r") as f:
+        orderbook = f["default"][()]
+
+    # set orderbook column names
+    col_names = ["seconds", "mid price"]
+    levels = int((orderbook.shape[1] - 2) / 4)
+    col_names_raw = ["ASKp", "ASKs", "BIDp", "BIDs"]
+    for i in range(1, levels + 1):
+        for j in range(4):
+            col_names += [col_names_raw[j] + str(i)]
+
+    # write orderbook to pandas dataframe
+    orderbook = pd.DataFrame(data=orderbook, columns=col_names)
+    return orderbook
+

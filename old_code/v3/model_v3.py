@@ -1,6 +1,6 @@
 from pyparsing import PrecededBy
 from data_generators import CustomDataGenerator2
-from data_prepare import get_alphas
+from data_prepare_v3 import get_alphas
 
 import tensorflow as tf
 import pandas as pd

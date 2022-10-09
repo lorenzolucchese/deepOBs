@@ -1,6 +1,6 @@
 from importlib.metadata import distribution
-from model import deepLOB
-from data_prepare import get_alphas, get_class_distributions
+from model import deepOB
+from data_methods import get_alphas, get_class_distributions
 import datetime as dt
 import sys
 import numpy as np
