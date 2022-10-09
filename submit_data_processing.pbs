@@ -1,4 +1,4 @@
-#PBS -l walltime=02:00:00
+#PBS -l walltime=08:00:00
 #PBS -l select=1:ncpus=256:mem=2048gb
 
 cd $PBS_O_WORKDIR
@@ -6,4 +6,4 @@ cd $PBS_O_WORKDIR
 module load anaconda3/personal
 source activate deepLOBs_env
 
-python submit_data_process_debugger.py
+python submit_data_process.py 9
