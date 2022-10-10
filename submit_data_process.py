@@ -13,13 +13,13 @@ if __name__ == "__main__":
     log_path = "data/logs/" + TICKER + "_processing_logs"
     horizons = np.array([10, 20, 30, 50, 100, 200, 300, 500, 1000])
 
-    os.mkdir(log_path)
+    os.makedirs(log_path, exist_ok=True)
 
     # ============================================================================
     # LOBSTER DATA - ORDERBOOKS
 
     output_path = "data/" + TICKER + "_orderbooks"
-    os.mkdir(output_path)
+    os.makedirs(output_path, exist_ok=True)
 
     startTime = time.time()
     process_data(TICKER=TICKER, 
@@ -36,7 +36,7 @@ if __name__ == "__main__":
     # LOBSTER DATA - ORDERFLOWS
 
     output_path = "data/" + TICKER + "_orderflows"
-    os.mkdir(output_path)
+    os.makedirs(output_path, exist_ok=True)
 
     startTime = time.time()
     process_data(TICKER=TICKER, 
@@ -53,7 +53,7 @@ if __name__ == "__main__":
     # LOBSTER DATA - VOLUMES L3 (multiprocess)
 
     output_path = "data/" + TICKER + "_volumes"
-    os.mkdir(output_path)
+    os.makedirs(output_path, exist_ok=True)
 
     startTime = time.time()
     multiprocess_L3(TICKER=TICKER,
