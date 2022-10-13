@@ -1,4 +1,4 @@
-#PBS -l walltime=08:00:00
+#PBS -l walltime=10:00:00
 #PBS -l select=1:ncpus=256:mem=2048gb
 
 cd $PBS_O_WORKDIR

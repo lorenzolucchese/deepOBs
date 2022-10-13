@@ -1,6 +1,6 @@
 #PBS -l walltime=72:00:00
 #PBS -l select=1:ncpus=32:mem=96gb:ngpus=1:gpu_type=RTX6000
-#PBS -J 83-109
+#PBS -J 0-31
 
 module load anaconda3/personal
 source activate deepLOBs_env
@@ -8,6 +8,7 @@ source activate deepLOBs_env
 # Ws = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 # TICKERS = ["LILAK", "QRTEA", "XRAY", "CHTR", "PCAR", "EXC", "AAL", "WBA", "ATVI", "AAPL"]
 # $PBS_ARRAY_INDEX = i*10 + j -> Ws[i], TICKERS[j]
+# need to run $PBS_ARRAY_INDEX through 0-109 for complete experiment
 
 cd $PBS_O_WORKDIR
 python submit_experiment.py $PBS_ARRAY_INDEX
