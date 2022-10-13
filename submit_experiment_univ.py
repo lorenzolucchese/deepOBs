@@ -176,6 +176,7 @@ if __name__ == "__main__":
                            tot_horizons = tot_horizons,
                            train_roll_window = train_roll_window,
                            imbalances = imbalances,
+                           batch_size = batch_size,
                            universal = True)
 
             model.create_model()
@@ -191,7 +192,6 @@ if __name__ == "__main__":
             model.fit_model(epochs = epochs,
                             checkpoint_filepath = checkpoint_filepath,
                             verbose = training_verbose,
-                            batch_size = batch_size,
                             patience = patience)
 
             results_filepath_insample = results_filepath + "/" + "TICKERS_in_sample"
@@ -231,6 +231,7 @@ if __name__ == "__main__":
                            tot_horizons = tot_horizons,
                            train_roll_window = train_roll_window,
                            imbalances = imbalances,
+                           batch_size = batch_size,
                            universal = True)
             
             model.create_model()
@@ -281,6 +282,7 @@ if __name__ == "__main__":
                                tot_horizons = tot_horizons,
                                train_roll_window = train_roll_window,
                                imbalances = imbalances,
+                               batch_size = batch_size,
                                universal = False)
                 
                 model.create_model()

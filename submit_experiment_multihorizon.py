@@ -119,7 +119,8 @@ if __name__ == "__main__":
                            n_horizons = n_horizons,
                            tot_horizons = tot_horizons,
                            train_roll_window = train_roll_window,
-                           imbalances = imbalances)
+                           imbalances = imbalances,
+                           batch_size = batch_size)
 
             model.create_model()
 
@@ -134,7 +135,6 @@ if __name__ == "__main__":
             model.fit_model(epochs = epochs,
                             checkpoint_filepath = checkpoint_filepath,
                             verbose = training_verbose,
-                            batch_size = batch_size,
                             patience = patience)
             
             print("testing model:", results_filepath)
