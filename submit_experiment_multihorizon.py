@@ -71,13 +71,12 @@ if __name__ == "__main__":
 
         # load train, val and test dates, alphas and distributions
         val_train_test_dates = pickle.load(open(window_filepath + "/val_train_test_dates.pkl", "rb"))
+        [val_dates, train_dates, test_dates] = val_train_test_dates
+
         alphas = pickle.load(open(window_filepath + "/alphas.pkl", "rb"))[:len(orderbook_updates)]
+        
         distributions = pickle.load(open(window_filepath + "/distributions.pkl", "rb"))
         imbalances = distributions.to_numpy()[:, :len(orderbook_updates)]
-        
-        val_dates = val_train_test_dates[0]
-        train_dates = val_train_test_dates[1]
-        test_dates = val_train_test_dates[2]
 
         # iterate through model types
         for m, model_type in enumerate(model_list):
