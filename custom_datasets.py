@@ -33,21 +33,19 @@ def CustomtfDataset(files, NF, horizon, n_horizons, tot_horizons, model_inputs, 
     def add_decoder_input(x, y):
         if teacher_forcing:
             if task == "classification":
-                first_decoder_input = tf.keras.utils.to_categorical(tf.zeros(x.shape[0]), y.shape[-1])
-                first_decoder_input = tf.reshape(first_decoder_input, [first_decoder_input.shape[0], 1, y.shape[-1]])
-                decoder_input_data = tf.hstack((x[:, :-1, :], first_decoder_input))
+                raise ValueError('teacher forcing not yet implemented.')
             elif task == "regression":
-                raise ValueError('teacher forcing with regression not yet implemented.')
+                raise ValueError('teacher forcing not yet implemented.')
             else:
                 raise ValueError('task must be either classification or regression.')
 
         if not teacher_forcing:
             if task == "classification":
                 # this sets the initial hidden state of the decoder to be y_0 = [0, 0, 0] for classification
-                decoder_input_data = tf.zeros_like(y[:, 0:1, :])
+                decoder_input_data = tf.zeros_like(y[0:1, :])
             elif task == "regression":
                 # this sets the initial hidden state of the decoder to be y_0 = 0 for regression
-                decoder_input_data = tf.zeros_like(y[:, 0:1])
+                decoder_input_data = tf.zeros_like(y[0:1])
             else:
                 raise ValueError('task must be either classification or regression.')
 
