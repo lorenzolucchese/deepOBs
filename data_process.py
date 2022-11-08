@@ -480,13 +480,12 @@ def process_L3_orderbook(orderbook_name, TICKER, output_path, NF, queue_depth, h
     # add the seconds since midnight column to the order book from the message book
     df_orderbook.insert(0, "seconds", df_message["seconds"])
 
-    df_orderbook_full = df_orderbook
-    df_message_full = df_message
-
     # one conceptual event (e.g. limit order modification which is implemented as a cancellation followed
     # by an immediate new arrival, single market order executing against multiple resting limit orders) may
     # appear as multiple rows in the message file, all with the same timestamp.
-    # We hence group the order book data by unique timestamps and take the last entry.
+    df_orderbook_full = df_orderbook
+    df_message_full = df_message
+    # We group the order book data by unique timestamps and take the last entry.
     df_orderbook = df_orderbook.groupby(["seconds"]).tail(1)
     df_message = df_message.groupby(["seconds"]).tail(1)
 
