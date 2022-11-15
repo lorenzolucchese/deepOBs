@@ -10,4 +10,4 @@ source activate deepLOBs_env
 # need to run $PBS_ARRAY_INDEX through 0-32 for complete experiment
 
 cd $PBS_O_WORKDIR
-python submit_experiment_univ.py 5
+python submit_experiment_univ_fix.py 15
