@@ -5,7 +5,7 @@ import numpy as np
 from collections import Counter
 import matplotlib.pyplot as plt
 
-def action_edf(csv_file_list):
+def action_edf(csv_file_list, order_replacement=True):
     """
     Function for mapping a set of LOBSTER data to the corresponding unconditional 
     distribution of actions. NOTE this might assume volumes are stationary.
@@ -133,7 +133,10 @@ def action_edf(csv_file_list):
             same_timestamps_indices.append(df_message.index[df_message.loc[:, "seconds"].values == timestamp])
             lengths.append(len(df_message.index[df_message.loc[:, "seconds"].values == timestamp]))
 
-        # TODO: create an order replacement event type ??
+        if order_replacement:
+            # add a cancel price and volume column for replacement
+            df_message.insert(len(df_message.columns), "cancel price", 0)
+            df_message.insert(len(df_message.columns), "cancel volume", 0)
 
         remove_indices = []
         for indices in same_timestamps_indices:
@@ -142,24 +145,50 @@ def action_edf(csv_file_list):
                 current_row = df_message.loc[indices[1], :]
                 # order replacement: treat as separate cancellation + new limit order
                 if (previous_row["event type"] == 1) & (current_row["event type"] == 3):
-                    pass
-                # aggressive limit order which leaves residual: treat as a (unique) limit order
+                    if order_replacement:
+                        # "seconds", "event type", "volume", "direction", "price", "cancel price", "cancel volume"
+                        df_message.loc[indices[1], :] = [current_row["seconds"], 8, previous_row["volume"], previous_row["direction"], previous_row["price"], current_row["price"], current_row["volume"]]
+                        remove_indices.append(indices[0])
+                    else:
+                        pass
+                # aggressive limit order which leaves residual after executing against visible limit order: treat as a (unique) limit order
                 elif (previous_row["event type"] == 1) & (current_row["event type"] == 4):
-                    df_message.loc[indices[1], :] = [current_row["seconds"], 1, previous_row["volume"] + current_row["volume"], previous_row["direction"], previous_row["price"]]
+                    if order_replacement:
+                        df_message.loc[indices[1], :] = [current_row["seconds"], 1, previous_row["volume"] + current_row["volume"], previous_row["direction"], previous_row["price"], 0, 0]
+                    else:
+                        df_message.loc[indices[1], :] = [current_row["seconds"], 1, previous_row["volume"] + current_row["volume"], previous_row["direction"], previous_row["price"]]
                     remove_indices.append(indices[0])
                 # aggressive limit order which leaves residual after executing against hidden limit order: treat as a (unique) limit order
                 elif (previous_row["event type"] == 1) & (current_row["event type"] == 5):
-                    df_message.loc[indices[1], :] = [current_row["seconds"], 1, previous_row["volume"] + current_row["volume"], previous_row["direction"], previous_row["price"]]
+                    if order_replacement:
+                        df_message.loc[indices[1], :] = [current_row["seconds"], 1, previous_row["volume"] + current_row["volume"], previous_row["direction"], previous_row["price"], 0, 0]
+                    else:
+                        df_message.loc[indices[1], :] = [current_row["seconds"], 1, previous_row["volume"] + current_row["volume"], previous_row["direction"], previous_row["price"]]
                     remove_indices.append(indices[0])
-                # order replacement with market order executed: treat as separate cancellation + execution market order
+                # order replacement with new limit order executed
                 elif (previous_row["event type"] == 3) & (current_row["event type"] == 4):
-                    pass
-                # order replacement with hidden limit order executed: treat as separate cancellation + execution hidden limit order
+                    if order_replacement:
+                        # "seconds", "event type", "volume", "direction", "price", "cancel price", "cancel volume"
+                        df_message.loc[indices[1], :] = [current_row["seconds"], 8, current_row["volume"], previous_row["direction"], current_row["price"], previous_row["price"], previous_row["volume"]]
+                        remove_indices.append(indices[0])
+                    else:
+                        # treat as separate cancellation + execution limit order
+                        df_message.loc[indices[1], :] = [current_row["seconds"], 1, current_row["volume"], -1*current_row["direction"], current_row["price"]]
+                # order replacement with hidden limit order executed
                 elif (previous_row["event type"] == 3) & (current_row["event type"] == 5):
-                    pass
+                    if order_replacement:
+                        # "seconds", "event type", "volume", "direction", "price", "cancel price", "cancel volume"
+                        df_message.loc[indices[1], :] = [current_row["seconds"], 8, current_row["volume"], -1*current_row["direction"], current_row["price"], previous_row["price"], previous_row["volume"]]
+                        remove_indices.append(indices[0])
+                    else:
+                        # treat as separate cancellation + execution limit order
+                        df_message.loc[indices[1], :] = [current_row["seconds"], 1, current_row["volume"], -1*current_row["direction"], current_row["price"]]
                 # market order executing against both visible and limit orders, treat as a single market order
                 elif (previous_row["event type"] == 4) & (current_row["event type"] == 5):
-                    df_message.loc[indices[1], :] = [current_row["seconds"], 4, previous_row["volume"] + current_row["volume"], previous_row["direction"], previous_row["price"]]
+                    if order_replacement:
+                        df_message.loc[indices[1], :] = [current_row["seconds"], 4, previous_row["volume"] + current_row["volume"], previous_row["direction"], previous_row["price"], 0, 0]
+                    else:
+                        df_message.loc[indices[1], :] = [current_row["seconds"], 4, previous_row["volume"] + current_row["volume"], previous_row["direction"], previous_row["price"]]
                     remove_indices.append(indices[0])
                 else:
                     print(df_message.loc[indices, :])
@@ -168,28 +197,51 @@ def action_edf(csv_file_list):
                 row0 = df_message.loc[indices[0], :]
                 row1 = df_message.loc[indices[1], :]
                 row2 = df_message.loc[indices[2], :]
-                # order replacement with execution and residual: treat as separate cancellation + new aggressive limit order
+                # order replacement with execution and residual
                 if (row0["event type"] == 1) & (row1["event type"] == 3) & (row2["event type"] == 4):
-                    # leave indices[1], i.e. event type 3, unchanged but aggregate indices[0] and indices[2]
-                    df_message.loc[indices[2], :] = [row2["seconds"], 1, row0["volume"] + row2["volume"], row0["direction"], row0["price"]]
-                    remove_indices.append(indices[0])
-                # order replacement with execution against hidden limit order and residual: treat as separate cancellation + new aggressive limit order
+                    if order_replacement:
+                        # "seconds", "event type", "volume", "direction", "price", "cancel price", "cancel volume"
+                        df_message.loc[indices[2], :] = [row2["seconds"], 8, row0["volume"] + row2["volume"], row0["direction"], row0["price"], row1["price"], row1["volume"]]
+                        remove_indices.append(indices[0])
+                        remove_indices.append(indices[1])
+                    else:
+                        # treat as separate cancellation + new aggressive limit order
+                        # leave indices[1], i.e. event type 3, unchanged but aggregate indices[0] and indices[2]
+                        df_message.loc[indices[2], :] = [row2["seconds"], 1, row0["volume"] + row2["volume"], row0["direction"], row0["price"]]
+                        remove_indices.append(indices[0])
+                # order replacement with execution against hidden limit order and residual
                 elif (row0["event type"] == 1) & (row1["event type"] == 3) & (row2["event type"] == 5):
-                    # leave indices[1], i.e. event type 3, unchanged but aggregate indices[0] and indices[2]
-                    # print(df_message.loc[indices, :])
-                    df_message.loc[indices[2], :] = [row2["seconds"], 1, row0["volume"] + row2["volume"], row0["direction"], row0["price"]]
-                    remove_indices.append(indices[0])
-                # aggressive limit order executing against visible and hidden orders and leaving residual: treat as a single aggresive limit order
+                    if order_replacement:
+                        # "seconds", "event type", "volume", "direction", "price", "cancel price", "cancel volume"
+                        df_message.loc[indices[2], :] = [row2["seconds"], 8, row0["volume"] + row2["volume"], row0["direction"], row0["price"], row1["price"], row1["volume"]]
+                        remove_indices.append(indices[0])
+                        remove_indices.append(indices[1])
+                    else:
+                        # treat as separate cancellation + new aggressive limit order
+                        # leave indices[1], i.e. event type 3, unchanged but aggregate indices[0] and indices[2]
+                        df_message.loc[indices[2], :] = [row2["seconds"], 1, row0["volume"] + row2["volume"], row0["direction"], row0["price"]]
+                        remove_indices.append(indices[0])
+                # aggressive limit order executing against visible and hidden orders and leaving residual:  treat as a single aggresive limit order
                 elif (row0["event type"] == 1) & (row1["event type"] == 4) & (row2["event type"] == 5):
                     # aggregate indices[0], indices[1] and indices[2]
-                    df_message.loc[indices[2], :] = [row2["seconds"], 1, row0["volume"] + row1["volume"] + row2["volume"], row0["direction"], row0["price"]]
+                    if order_replacement:
+                        df_message.loc[indices[2], :] = [row2["seconds"], 1, row0["volume"] + row1["volume"] + row2["volume"], row0["direction"], row0["price"], 0, 0]
+                    else:
+                        df_message.loc[indices[2], :] = [row2["seconds"], 1, row0["volume"] + row1["volume"] + row2["volume"], row0["direction"], row0["price"]]
                     remove_indices.append(indices[0])
                     remove_indices.append(indices[1])
-                # order replacement with execution against visible and hidden orders: treat as separate cancellation + new market order
+                # order replacement with execution against visible and hidden orders
                 elif (row0["event type"] == 3) & (row1["event type"] == 4) & (row2["event type"] == 5):
-                    # leave indices[0], i.e. event type 3, unchanged but aggregate indices[1] and indices[2]
-                    df_message.loc[indices[2], :] = [row2["seconds"], 4, row1["volume"] + row2["volume"], row1["direction"], row1["price"]]
-                    remove_indices.append(indices[1])
+                    if order_replacement:
+                        # "seconds", "event type", "volume", "direction", "price", "cancel price", "cancel volume"
+                        df_message.loc[indices[2], :] = [row2["seconds"], 8, row1["volume"] + row2["volume"], -1*row1["direction"], row1["price"], row0["price"], row0["volume"]]
+                        remove_indices.append(indices[0])
+                        remove_indices.append(indices[1])
+                    else:
+                        # treat as separate cancellation + new limit order
+                        # leave indices[0], i.e. event type 3, unchanged but aggregate indices[1] and indices[2]
+                        df_message.loc[indices[2], :] = [row2["seconds"], 1, row1["volume"] + row2["volume"], -1*row1["direction"], row1["price"]]
+                        remove_indices.append(indices[1])
                 else:
                     print(df_message.loc[indices, :])
                     raise ValueError("Error: Unkown sequence of events")
@@ -213,18 +265,34 @@ def action_edf(csv_file_list):
         df_message.loc[df_message.index[df_message.loc[:, "event type"] == 4], "event type"] = "market order"
         df_message.loc[df_message.index[df_message.loc[:, "event type"] == 5], "event type"] = "market order"
 
+        if order_replacement:
+            df_message.loc[df_message.index[df_message.loc[:, "event type"] == 8], "event type"] = "order replacement"
+
         # compute depth from best bid/ask
         # 'The k-th row in the 'message' file describes the limit order event causing the change in the limit order book from line k-1 to line k in the 'orderbook' file.'
         previous_price = (df_message.loc[df_message.index[1:], "direction"].values == "buy") * df_orderbook.loc[df_orderbook.index[:-1], "BIDp1"].values + (df_message.loc[df_message.index[1:], "direction"].values == "sell") * df_orderbook.loc[df_orderbook.index[:-1], "ASKp1"].values
         df_message = df_message.drop(df_message.index[0], axis=0)
-        df_message.insert(5, "depth", df_message.loc[:, "price"].values - previous_price)
+        df_message.insert(len(df_message.columns), "depth", df_message.loc[:, "price"].values - previous_price)
+        if order_replacement:
+            df_message.insert(len(df_message.columns), "cancel depth", df_message.loc[:, "cancel price"].values - previous_price)
 
         # change sign of depth for buy actions
         df_message.loc[df_message.index[df_message.loc[:, "direction"] == "buy"], "depth"] *= -1
+        if order_replacement:
+            df_message.loc[df_message.index[df_message.loc[:, "direction"] == "buy"], "cancel depth"] *= -1
+
         # set to 0 the depth for market orders (irrelevant)
         df_message.loc[df_message.index[df_message.loc[:, "event type"] == "market order"], "depth"] = 0
+        if order_replacement:
+            # set to 0 the cancel depth (and volume) for limit orders, market orders and cancellations (irrelevant)
+            df_message.loc[df_message.index[df_message.loc[:, "event type"] == "limit order"], "cancel depth"] = 0
+            df_message.loc[df_message.index[df_message.loc[:, "event type"] == "market order"], "cancel depth"] = 0
+            df_message.loc[df_message.index[df_message.loc[:, "event type"] == "cancellation"], "cancel depth"] = 0
         # drop seconds and prices
         df_message = df_message.drop(["seconds", "price"], axis=1)
+        if order_replacement:
+            # drop cancel price
+            df_message = df_message.drop(["cancel price"], axis=1)
 
         counter.update(Counter([tuple(_) for _ in df_message.values.tolist()]))
     
@@ -239,25 +307,37 @@ if __name__ == "__main__":
                     #  'data_raw\WBA_data_dwn\WBA_2019-11-05_34200000_57600000_orderbook_10.csv',
                      'data_raw\WBA_data_dwn\WBA_2019-11-06_34200000_57600000_message_10.csv',
                      'data_raw\WBA_data_dwn\WBA_2019-11-06_34200000_57600000_orderbook_10.csv']
+    
+    order_replacement = True
 
-    counter = action_edf(csv_file_list)
+    counter = action_edf(csv_file_list, order_replacement=order_replacement)
 
     counter_df = pd.DataFrame.from_dict(counter, orient="index", columns=["frequency"]).reset_index()
     counter_df = counter_df.rename(columns={"index": "action"})
-    counter_df.loc[:, ["event type", "volume", "direction", "depth"]] = counter_df.loc[:, "action"].tolist()
+    if order_replacement:
+        counter_df.loc[:, ["event type", "volume", "direction", "cancel volume", "depth", "cancel depth"]] = counter_df.loc[:, "action"].tolist()
+    else:
+        counter_df.loc[:, ["event type", "volume", "direction", "depth"]] = counter_df.loc[:, "action"].tolist()
     counter_df = counter_df.drop("action", axis=1)
 
-    for display_quantity in ["depth", "volume"]:
+    for display_quantity in ["depth", "volume", "cancel volume", "cancel depth"]:
         display_df = counter_df.drop(["depth" if display_quantity == "volume" else "volume"], axis=1)
         display_df = display_df.groupby(["event type", "direction", display_quantity]).sum().reset_index()
-        print(display_df)
-        for event_type in ["limit order", "market order", "cancellation"]:
-            for direction in ["buy", "sell"]:
-                labels = display_df.loc[display_df.index[(display_df.loc[:, "event type"] == event_type) & (display_df.loc[:, "direction"] == direction)], display_quantity]
-                values = display_df.loc[display_df.index[(display_df.loc[:, "event type"] == event_type) & (display_df.loc[:, "direction"] == direction)], "frequency"]
-                fig, ax = plt.subplots(figsize=(10, 10))
-                if display_quantity == "depth":
-                    ax.bar(labels, values, width=50)
-                else:
-                    ax.bar(np.log(np.array(labels)), values, width=0.5)
-                fig.savefig('auxiliary_code/plots/'+ display_quantity + '_' + event_type + '_' + direction + '.png', format='png', bbox_inches='tight', pad_inches=0)
+        for event_type in ["limit order", "market order", "cancellation", "order replacement"]:
+            if (event_type in ["limit order", "cancellation"]) and (display_quantity in ["cancel volume", "cancel depth"]):
+                pass
+            elif (event_type == "market order") and (display_quantity in ["depth", "cancel volume", "cancel depth"]):
+                pass
+            else:
+                for direction in ["buy", "sell"]:
+                    labels = display_df.loc[display_df.index[(display_df.loc[:, "event type"] == event_type) & (display_df.loc[:, "direction"] == direction)], display_quantity]
+                    values = display_df.loc[display_df.index[(display_df.loc[:, "event type"] == event_type) & (display_df.loc[:, "direction"] == direction)], "frequency"]
+                    fig, ax = plt.subplots(figsize=(10, 10))
+                    if display_quantity[-5:] == "depth":
+                        ax.bar(labels, values, width=50)
+                    else:
+                        ax.set_yscale('log')
+                        ax.bar(np.log10(np.array(labels)), values, width=0.1)
+                        ax.set_xticks(np.log10(np.array([1, 10, 100, 1000, 10000])))
+                        ax.set_xticklabels(np.array([1, 10, 100, 1000, 10000]))
+                    fig.savefig('auxiliary_code/plots/' + event_type + '_' + direction + '_' + display_quantity + '.png', format='png', bbox_inches='tight', pad_inches=0)
