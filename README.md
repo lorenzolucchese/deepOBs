@@ -1,5 +1,5 @@
 # deepOBs
-This repo contains the code for the paper 'The Short-Term Predictability of Returns in Order Book Markets: A Deep Learning Perspective'.
+This repo contains the code for the paper ['The Short-Term Predictability of Returns in Order Book Markets: A Deep Learning Perspective'](https://arxiv.org/abs/2211.13777).
 
 The main methods, which we believe could be of use to other researchers, are found in:
 - [_data_process.py_](https://github.com/lorenzolucchese/deepOBs/blob/master/data_process.py): functions for processing order book data dowloaded from [LOBSTER](https://lobsterdata.com/) to raw order book, order flow and volume features and the corresponding returns;
