@@ -1,4 +1,4 @@
-# deepOBs
+# deepOBs [![DOI](https://zenodo.org/badge/476786054.svg)](https://zenodo.org/badge/latestdoi/476786054)
 This repo contains the code for the paper ['The Short-Term Predictability of Returns in Order Book Markets: A Deep Learning Perspective'](https://arxiv.org/abs/2211.13777).
 
 The main methods, which we believe could be of use to other researchers, are found in:
