@@ -1,5 +1,5 @@
-# deepOBs [![DOI](https://zenodo.org/badge/476786054.svg)](https://zenodo.org/badge/latestdoi/476786054)
-This repo contains the code for the paper ['The Short-Term Predictability of Returns in Order Book Markets: A Deep Learning Perspective'](https://arxiv.org/abs/2211.13777).
+# deepOBs
+This project aims to explore and analyse order book-driven deep learning models for predicting high-frequency returns in financial exchanges. 
 
 The main methods, which we believe could be of use to other researchers, are found in:
 - [_data_process.py_](https://github.com/lorenzolucchese/deepOBs/blob/master/data_process.py): functions for processing order book data dowloaded from [LOBSTER](https://lobsterdata.com/) to raw order book, order flow and volume features and the corresponding returns;
@@ -9,3 +9,7 @@ The main methods, which we believe could be of use to other researchers, are fou
 - [_MCS_results.py_](https://github.com/lorenzolucchese/deepOBs/blob/master/MCS_results.py): functions to perform the bootstrap Model Confidence Set (Hansen et al., [2011](https://www.jstor.org/stable/41057463)) procedure on results
 
 ![alt text](https://github.com/lorenzolucchese/deepOBs/blob/master/auxiliary_code/core.png)
+
+
+## Release v1.0 [![DOI](https://zenodo.org/badge/476786054.svg)](https://zenodo.org/badge/latestdoi/476786054)
+This release contains code and results for the paper ['The Short-Term Predictability of Returns in Order Book Markets: A Deep Learning Perspective'](https://arxiv.org/abs/2211.13777).
