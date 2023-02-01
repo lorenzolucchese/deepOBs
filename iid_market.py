@@ -2,6 +2,7 @@ import pandas as pd
 import re
 import datetime
 import numpy as np
+import random
 from collections import Counter
 import matplotlib.pyplot as plt
 
@@ -9,6 +10,19 @@ def action_edf(csv_file_list, order_replacement=True):
     """
     Function for mapping a set of LOBSTER data to the corresponding unconditional 
     distribution of actions. NOTE this might assume volumes are stationary.
+    :param csv_file_list: list of orderbook and message files from LOBSTER, list of str
+    :param order_replacement: whether to consider order replacements, bool
+    :return: counter: a collections.Counter object containing the empirical distribution function of all
+             actions on the orderbook with the following labelling, if order_replacement=True
+             ("event type", "volume", "direction", "cancel volume", "depth", "cancel depth")
+             otherwise
+             ("event type", "volume", "direction", "depth")
+             such that "event type" str in ["limit order", "market order", "cancellation", "order replacement"]
+                       "volume" int
+                       "direction" str in ["buy", "sell"]
+                       "cancel volume" int
+                       "depth" int (multiple of 100)
+                       "cancel depth" int (multiple of 100)
     """
 
     csv_orderbook = [name for name in csv_file_list if "orderbook" in name]
@@ -301,17 +315,7 @@ def action_edf(csv_file_list, order_replacement=True):
     return counter
 
 
-if __name__ == "__main__":
-    csv_file_list = [
-                    #  'data_raw\WBA_data_dwn\WBA_2019-11-05_34200000_57600000_message_10.csv',
-                    #  'data_raw\WBA_data_dwn\WBA_2019-11-05_34200000_57600000_orderbook_10.csv',
-                     'data_raw\WBA_data_dwn\WBA_2019-11-06_34200000_57600000_message_10.csv',
-                     'data_raw\WBA_data_dwn\WBA_2019-11-06_34200000_57600000_orderbook_10.csv']
-    
-    order_replacement = True
-
-    counter = action_edf(csv_file_list, order_replacement=order_replacement)
-
+def display_action_edf(counter, order_replacement = True):
     counter_df = pd.DataFrame.from_dict(counter, orient="index", columns=["frequency"]).reset_index()
     counter_df = counter_df.rename(columns={"index": "action"})
     if order_replacement:
@@ -341,3 +345,216 @@ if __name__ == "__main__":
                         ax.set_xticks(np.log10(np.array([1, 10, 100, 1000, 10000])))
                         ax.set_xticklabels(np.array([1, 10, 100, 1000, 10000]))
                     fig.savefig('auxiliary_code/plots/' + event_type + '_' + direction + '_' + display_quantity + '.png', format='png', bbox_inches='tight', pad_inches=0)
+
+
+def evolve_orderbook_one_step(orderbook_dict, action):
+    """
+    Function for updating an orderbook with a given action. Note that if the action is incompatible with 
+    current order book state (e.g. cancellations bigger than standing volues) this will return the orderbook as is.
+    :param orderbook_dict: current state of orderbook, dataframe with one row and columns
+                      ["ASKp1", "ASKs1", "BIDp1",  "BIDs1", ..., "ASKplevels", "ASKslevels", "BIDplevels",  "BIDslevels"]
+    :param action: the action updating the orderbook, tuple
+                   ("event type", "volume", "direction", "cancel volume", "depth", "cancel depth")
+                   or
+                   ("event type", "volume", "direction", "depth")
+                   such that "event type" str in ["limit order", "market order", "cancellation", "order replacement"]
+                       "volume" int
+                       "direction" str in ["buy", "sell"]
+                       "cancel volume" int
+                       "depth" int (multiple of 100)
+                       "cancel depth" int (multiple of 100)
+    :return orderbook: the updated orderbook, dataframe with one row and columns
+                       ["ASKp1", "ASKs1", "BIDp1",  "BIDs1", ..., "ASKplevels", "ASKslevels", "BIDplevels",  "BIDslevels"]
+    """
+    # decode action
+    if len(action) == 4:
+        event_type, volume, direction, depth = action
+    elif len(action) == 6:
+        event_type, volume, direction, cancel_volume, depth, cancel_depth = action
+    else:
+        raise ValueError("Unexpected action length, must be 4 or 6.")
+
+    bid_prices = sorted([price for price in orderbook_dict if orderbook_dict[price] > 0], reverse=True)
+    ask_prices = sorted([price for price in orderbook_dict if orderbook_dict[price] < 0])
+
+    best_bid = bid_prices[0]
+    best_ask = ask_prices[0]
+
+    # evolve orderbook_dict according to action
+    if event_type == "limit order":
+        if direction == "sell":
+            price = best_ask + depth
+            if price > best_bid:
+                try:
+                    orderbook_dict[price] -= volume
+                except:
+                    orderbook_dict[price] = - volume
+            else:
+                level = 0
+                residual_volume = volume
+                while residual_volume > 0:
+                    if level < len(bid_prices) and price <= bid_prices[level]:
+                        residual_volume = residual_volume - orderbook_dict[bid_prices[level]]
+                        orderbook_dict[bid_prices[level]] = max(0, -residual_volume)
+                        level += 1
+                    else:
+                        orderbook_dict[price] = - residual_volume
+                        break
+        elif direction == "buy":
+            price = best_bid - depth
+            if price < best_ask:
+                try:
+                    orderbook_dict[price] += volume
+                except:
+                    orderbook_dict[price] = volume
+            else:
+                level = 0
+                residual_volume = volume
+                while residual_volume > 0:
+                    if level < len(ask_prices) and price >= ask_prices[level]:
+                        residual_volume = residual_volume - np.abs(orderbook_dict[ask_prices[level]])
+                        orderbook_dict[ask_prices[level]] = - max(0, -residual_volume)
+                        level += 1
+                    else:
+                        orderbook_dict[price] = residual_volume
+                        break
+        else:
+            raise ValueError("direction must be buy or sell")        
+    elif event_type == "market order":
+        if direction == "sell":
+            level = 0
+            residual_volume = volume
+            while residual_volume > 0 and level < len(bid_prices):
+                residual_volume = residual_volume - orderbook_dict[bid_prices[level]]
+                orderbook_dict[bid_prices[level]] = max(0, -residual_volume)
+                level += 1
+        elif direction == "buy":
+            level = 0
+            residual_volume = volume
+            while residual_volume > 0 and level < len(ask_prices):
+                residual_volume = residual_volume - np.abs(orderbook_dict[ask_prices[level]])
+                orderbook_dict[ask_prices[level]] = - max(0, -residual_volume)
+                level += 1
+        else:
+            raise ValueError("direction must be buy or sell")
+    elif event_type == "cancellation":
+        if depth >= 0:
+            if direction == "sell":
+                price = best_ask + depth
+                try:
+                    if np.abs(orderbook_dict[price]) >= volume:
+                        orderbook_dict[price] += volume
+                except:
+                    pass
+            elif direction == "buy":
+                price = best_bid - depth
+                try:
+                    if np.abs(orderbook_dict[price]) >= volume:
+                        orderbook_dict[price] -= volume
+                except:
+                    pass
+            else:
+                raise ValueError("direction must be buy or sell")
+    elif event_type == "order replacement":
+        if cancel_depth >= 0:
+            cancel_action = ("cancellation", cancel_volume, direction, cancel_depth)
+            limit_order_action = ("limit order", volume, direction, depth)
+            orderbook_dict = evolve_orderbook_one_step(orderbook_dict, cancel_action)
+            orderbook_dict = evolve_orderbook_one_step(orderbook_dict, limit_order_action)
+        return orderbook_dict
+    else:
+        raise ValueError("event type must be limit order, market order, cancellation or order replacement")
+
+    return orderbook_dict
+
+
+def orderbook_state_to_dict(orderbook_state):
+    levels = orderbook_state.shape[1] // 4
+    orderbook_dict = {}
+    for level in range(1, levels+1):
+        orderbook_dict[orderbook_state["ASKp" + str(level)].values[0]] = - orderbook_state["ASKs" + str(level)].values[0]
+        orderbook_dict[orderbook_state["BIDp" + str(level)].values[0]] = orderbook_state["BIDs" + str(level)].values[0]
+    return orderbook_dict
+
+
+def orderbook_dict_to_state(orderbook_dict, columns):
+    orderbook_state = pd.DataFrame([[0]*len(columns)], columns=columns)
+    levels = len(columns) // 4
+
+    bid_prices = sorted([price for price in orderbook_dict if orderbook_dict[price] > 0], reverse=True)
+    ask_prices = sorted([price for price in orderbook_dict if orderbook_dict[price] < 0])
+
+    for level in range(1, levels+1):
+        if (level-1) < len(ask_prices):
+            orderbook_state["ASKp" + str(level)] = ask_prices[level-1]
+            orderbook_state["ASKs" + str(level)] = - orderbook_dict[ask_prices[level-1]]
+        else:
+            orderbook_state["ASKp" + str(level)] = np.NaN
+            orderbook_state["ASKs" + str(level)] = 999999
+        if (level-1) < len(bid_prices):
+            orderbook_state["BIDp" + str(level)] = bid_prices[level-1]
+            orderbook_state["BIDs" + str(level)] = orderbook_dict[bid_prices[level-1]]
+        else:
+            orderbook_state["BIDp" + str(level)] = np.NaN
+            orderbook_state["BIDs" + str(level)] = 999999
+    return orderbook_state
+
+
+
+def evolve_orderbook(orderbook_state, n_step, actions):
+    """
+    Function to evolve an orderbook state for a number of steps with a given set of action.
+    Note the empirical distribution function of actions should be provided as a collections.Counter object.
+    :param orderbook_state: current state of orderbook, dataframe with one row and columns
+                      ["ASKp1", "ASKs1", "BIDp1",  "BIDs1", ..., "ASKplevels", "ASKslevels", "BIDplevels",  "BIDslevels"]
+    :param n_step: the number of steps to evlove, int
+    :param actions: counter: a collections.Counter object containing the empirical distribution function of all
+             actions on the orderbook with the following labelling, if order_replacement=True
+             ("event type", "volume", "direction", "cancel volume", "depth", "cancel depth")
+             otherwise
+             ("event type", "volume", "direction", "depth")
+             such that "event type" str in ["limit order", "market order", "cancellation", "order replacement"]
+                       "volume" int
+                       "direction" str in ["buy", "sell"]
+                       "cancel volume" int
+                       "depth" int (multiple of 100)
+                       "cancel depth" int (multiple of 100)
+    :return orderbook: the updated orderbook, dataframe with n_step rows and columns
+                       ["ASKp1", "ASKs1", "BIDp1",  "BIDs1", ..., "ASKplevels", "ASKslevels", "BIDplevels",  "BIDslevels"]
+    """
+    orderbook = orderbook_state.copy()
+    orderbook_dict = orderbook_state_to_dict(orderbook_state)
+    levels = orderbook_state.shape[1] // 4
+    while len(orderbook) < n_step + 1:
+        action = random.choices(list(actions.keys()), weights=list(actions.values()), k=1)[0]
+        orderbook_dict = evolve_orderbook_one_step(orderbook_dict, action)
+        orderbook_state = orderbook_dict_to_state(orderbook_dict, orderbook_state.columns)
+        condition = (orderbook_state.values != orderbook.iloc[-1, :].values).any()
+        if condition:
+            orderbook = pd.concat([orderbook, orderbook_state], ignore_index=True)
+    return orderbook
+
+
+if __name__ == "__main__":
+    csv_file_list = [
+                    #  'data_raw\WBA_data_dwn\WBA_2019-11-05_34200000_57600000_message_10.csv',
+                    #  'data_raw\WBA_data_dwn\WBA_2019-11-05_34200000_57600000_orderbook_10.csv',
+                     'data_raw\WBA_data_dwn\WBA_2019-11-06_34200000_57600000_message_10.csv',
+                     'data_raw\WBA_data_dwn\WBA_2019-11-06_34200000_57600000_orderbook_10.csv']
+    
+    order_replacement = True
+
+    actions = action_edf(csv_file_list, order_replacement=order_replacement)
+
+    # display_action_edf(actions)
+
+    orderbook_state = pd.DataFrame([[10000, 100, 9900, 300, 10200, 400, 9800, 200, 10300, 150, 9500, 1000]], 
+                                   columns = ["ASKp1", "ASKs1", "BIDp1",  "BIDs1", "ASKp2", "ASKs2", "BIDp2",  "BIDs2", "ASKp3", "ASKs3", "BIDp3",  "BIDs3"])
+
+    # action = ("order replacement", 350, "sell", 350, -100, 200)
+
+    print(orderbook_state)
+
+    orderbook = evolve_orderbook(orderbook_state, 100, actions)
+
+    print(orderbook)
