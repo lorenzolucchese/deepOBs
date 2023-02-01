@@ -403,7 +403,7 @@ class ProcessL3(object):
 
 def process_L3_orderbook(orderbook_name, TICKER, output_path, NF, queue_depth, horizons, smoothing, k):
     """
-    Function carrying our L3 volume processing of single order book orderbook_name. The data is treated in the following way:
+    Function carrying out L3 volume processing of single order book orderbook_name. The data is treated in the following way:
     - order book states with crossed quotes are removed.
     - each state in the orderbook is time-stamped, with states occurring at the same time collapsed
       onto the last state.
