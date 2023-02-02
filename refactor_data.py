@@ -478,4 +478,4 @@ if __name__ == "__main__":
     TICKERs = ["LILAK", "QRTEA", "XRAY", "CHTR", "PCAR", "EXC", "AAL", "WBA", "ATVI", "AAPL"]
     for TICKER in TICKERs:
         os.mkdir('data/' + TICKER)
-	refactor_data(TICKER)
+        refactor_data(TICKER)
