@@ -2,14 +2,13 @@ import tensorflow as tf
 import pandas as pd
 import numpy as np
 
-def CustomtfDataset(files, NF, horizon, n_horizons, tot_horizons, model_inputs, task, alphas, multihorizon, normalise, batch_size, T, roll_window, shuffle, teacher_forcing = False):
+def CustomtfDataset(files, NF, horizon, n_horizons, model_inputs, task, alphas, multihorizon, normalise, batch_size, T, roll_window, shuffle, teacher_forcing = False):
     """
     Create custom tf.dataset object to be used by model.
     :param files: files with data, list of str
     :param NF: number of features, int
     :param horizon: prediction horizon, between 0 and tot_horizons, int
     :param n_horizons: number of horizons in multihorizon, int
-    :param tot_horizons: total number of horizons present in each file, int
     :param model_inputs: which input is being used "orderbooks", "orderflows", "volumes" or "volumes_L3", str
     :param task: ML task, "regression" or "classification", str
     :param alphas: alphas for classification (down, no change, up) = ((-infty, -alpha), [-alpha, +alpha] (+alpha, +infty)), (tot_horizons,) array
@@ -56,30 +55,28 @@ def CustomtfDataset(files, NF, horizon, n_horizons, tot_horizons, model_inputs, 
 
     if (task == "classification")&(alphas.size == 0):
         raise ValueError('alphas must be assigned if task is classification.')
+    
+    # feature_type is one of ["orderbook_features", "orderflow_features", "volume_features"]
+    feature_type = model_inputs[:-1] + "_features"
+    if model_inputs == "volumes_L3":
+        feature_type = model_inputs[:-4] + "_features"
 
     # create combined dataset
     tf_datasets = []
     for file in files:
-        if model_inputs in ["orderbooks", "orderflows"]:
-            dataset = pd.read_csv(file).to_numpy()
-
-            features = dataset[:, :NF]
-            features = np.expand_dims(features, axis=-1)
-            responses = dataset[(T-1):, -tot_horizons:]
-            responses = responses[:, horizon]
-
-        elif model_inputs[:7] == "volumes":
-            dataset = np.load(file)
-
-            features = dataset['features']
-            if model_inputs == "volumes":
-                features = np.sum(features, axis = 2)
-            mid = features.shape[1]
+        dataset = np.load(file)
+        features = dataset[feature_type]
+        if model_inputs == "volumes":
+            features = np.sum(features, axis = 2)
+        mid = features.shape[1]
+        if model_inputs[:7] == "volumes":
             features = features[:, (mid//2 - NF//2):(mid//2 + NF//2)]
-            features = np.expand_dims(features, axis=-1)
-            features = tf.convert_to_tensor(features, dtype=tf.float32)
-            
-            responses = dataset['responses'][(T-1):, horizon]
+        else:
+            features = features[:, :NF]
+        features = np.expand_dims(features, axis=-1)
+        features = tf.convert_to_tensor(features, dtype=tf.float32)
+        
+        responses = dataset['responses'][(T-1):, horizon]
 
         if task == "classification":
             if multihorizon:
@@ -113,14 +110,13 @@ def CustomtfDataset(files, NF, horizon, n_horizons, tot_horizons, model_inputs, 
 
     return tf_dataset
 
-def CustomtfDatasetUniv(dict_of_files, NF, horizon, n_horizons, tot_horizons, model_inputs, task, dict_of_alphas, multihorizon, normalise, batch_size, T, roll_window, shuffle, teacher_forcing = False):
+def CustomtfDatasetUniv(dict_of_files, NF, horizon, n_horizons, model_inputs, task, dict_of_alphas, multihorizon, normalise, batch_size, T, roll_window, shuffle, teacher_forcing = False):
     """
     Create custom tf.dataset object to be used by model, when using multiple TICKERs with different files and alphas.
     :param dict_of_files: the files with data for each TICKER, dict of lists of strs
     :param NF: number of features, int
     :param horizon: prediction horizon, int
     :param n_horizons: number of horizons in multihorizon, int
-    :param tot_horizons: total number of horizons present in each file, int
     :param model_inputs: which input is being used "orderbooks", "orderflows", "volumes" pr "volumes_L3", str
     :param task: ML task, "regression" or "classification", str
     :param alphas: alphas for classification (down, no change, up) = ((-infty, -alpha), [-alpha, +alpha] (+alpha, +infty)), (tot_horizons,) array
@@ -141,7 +137,6 @@ def CustomtfDatasetUniv(dict_of_files, NF, horizon, n_horizons, tot_horizons, mo
                                            NF, 
                                            horizon, 
                                            n_horizons,
-                                           tot_horizons,
                                            model_inputs = model_inputs,
                                            task = task, 
                                            alphas = alphas, 

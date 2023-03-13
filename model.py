@@ -7,7 +7,7 @@ import itertools
 
 from keras import backend as K
 from keras.models import Model
-from keras.layers import Dense, Dropout, LeakyReLU, Activation, Input, CuDNNLSTM, Reshape, Conv2D, Conv3D, MaxPooling2D, concatenate, Lambda, dot, BatchNormalization, Layer
+from keras.layers import Dense, Dropout, LeakyReLU, Activation, Input, CuDNNLSTM, LSTM, Reshape, Conv2D, Conv3D, MaxPooling2D, concatenate, Lambda, dot, BatchNormalization, Layer
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.metrics import CategoricalAccuracy, MeanSquaredError, MeanMetricWrapper
 
@@ -153,7 +153,6 @@ class deepOB:
                  multihorizon, 
                  decoder, 
                  n_horizons,
-                 tot_horizons,
                  train_roll_window,
                  imbalances,                 
                  batch_size = 256,
@@ -174,7 +173,6 @@ class deepOB:
         :param multihorizon: whether the predictions are multihorizon, if True horizon = slice(0, n_horizons)
         :param decoder: the decoder to use for multihorizon forecasts, "seq2seq" or "attention"
         :param n_horizons: the number of forecast horizons in multihorizon, int
-        :param tot_horizons: the number of forecast horizons in the processed data, int
         :param train_roll_window: the roll window to use when selecting training/validation the data, int
         :param imbalances: the imbalances used to weight the training categorical crossentropy loss, (class, tot_horizons) array
                if multihorizon = True, (class, n_horizons) array
@@ -202,7 +200,6 @@ class deepOB:
         self.multihorizon = multihorizon
         self.decoder = decoder
         self.n_horizons = n_horizons
-        self.tot_horizons = tot_horizons
         self.orderbook_updates = orderbook_updates
         self.data_dir = data_dir
         self.files = files
@@ -216,13 +213,13 @@ class deepOB:
         elif model_inputs in ["volumes", "volumes_L3"]:
             normalise = True
         if not universal:
-            self.train_dataset = CustomtfDataset(files = self.files["train"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise, batch_size = batch_size,  roll_window = train_roll_window, shuffle = True)
-            self.val_dataset = CustomtfDataset(files = self.files["val"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = train_roll_window, shuffle = False)
-            self.test_dataset = CustomtfDataset(files = self.files["test"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = 1, shuffle = False)
+            self.train_dataset = CustomtfDataset(files = self.files["train"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise, batch_size = batch_size,  roll_window = train_roll_window, shuffle = True)
+            self.val_dataset = CustomtfDataset(files = self.files["val"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = train_roll_window, shuffle = False)
+            self.test_dataset = CustomtfDataset(files = self.files["test"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = 1, shuffle = False)
         else:
-            self.train_dataset = CustomtfDatasetUniv(dict_of_files = self.files["train"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise, batch_size = batch_size,  roll_window = train_roll_window, shuffle = True)
-            self.val_dataset = CustomtfDatasetUniv(dict_of_files = self.files["val"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = train_roll_window, shuffle = False)
-            self.test_dataset = CustomtfDatasetUniv(dict_of_files = self.files["test"], NF = self.NF, n_horizons = self.n_horizons, tot_horizons = self.tot_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = 1, shuffle = False)
+            self.train_dataset = CustomtfDatasetUniv(dict_of_files = self.files["train"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise, batch_size = batch_size,  roll_window = train_roll_window, shuffle = True)
+            self.val_dataset = CustomtfDatasetUniv(dict_of_files = self.files["val"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = train_roll_window, shuffle = False)
+            self.test_dataset = CustomtfDatasetUniv(dict_of_files = self.files["test"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = 1, shuffle = False)
 
 
     def create_model(self):
@@ -397,7 +394,7 @@ class deepOB:
 
         if not(self.multihorizon):
             ############################################ LSTM module ############################################
-            conv_lstm = CuDNNLSTM(self.number_of_lstm)(inception_output)
+            conv_lstm = LSTM(self.number_of_lstm)(inception_output)
             out = Dense(output_dim, activation=output_activation)(conv_lstm)
             # send to float32 for stability
             out = Activation("linear", dtype="float32")(out)
@@ -407,13 +404,13 @@ class deepOB:
             if self.decoder == "seq2seq":
                 ############################################ LSTM module ############################################
                 encoder_inputs = inception_output
-                encoder = CuDNNLSTM(self.number_of_lstm, return_state=True)
+                encoder = LSTM(self.number_of_lstm, return_state=True)
                 encoder_outputs, state_h, state_c = encoder(encoder_inputs)
                 states = [state_h, state_c]
 
                 # Set up the decoder, which will only process one time step at a time.
                 decoder_inputs = Input(shape=(1, output_dim), name = "decoder_input")
-                decoder_lstm = CuDNNLSTM(self.number_of_lstm, return_sequences=True, return_state=True)
+                decoder_lstm = LSTM(self.number_of_lstm, return_sequences=True, return_state=True)
                 decoder_dense = Dense(output_dim, activation=output_activation)
 
                 all_outputs = []
@@ -445,14 +442,14 @@ class deepOB:
             elif self.decoder == "attention":
                 ############################################ LSTM module ############################################
                 encoder_inputs = inception_output
-                encoder = CuDNNLSTM(self.number_of_lstm, return_state=True, return_sequences=True)
+                encoder = LSTM(self.number_of_lstm, return_state=True, return_sequences=True)
                 encoder_outputs, state_h, state_c = encoder(encoder_inputs)
                 states = [state_h, state_c]
 
                 # Set up the decoder, which will only process one time step at a time.
                 # The attention decoder will have a different context vector at each time step, depending on attention weights.
                 decoder_inputs = Input(shape=(1, output_dim))
-                decoder_lstm = CuDNNLSTM(self.number_of_lstm, return_sequences=True, return_state=True)
+                decoder_lstm = LSTM(self.number_of_lstm, return_sequences=True, return_state=True)
                 decoder_dense = Dense(output_dim, activation=output_activation, name="output_layer")
 
                 # start off decoder with
@@ -535,7 +532,7 @@ class deepOB:
                        max_queue_size=10, use_multiprocessing=True,
                        callbacks=[model_checkpoint_callback, early_stopping])
 
-    def evaluate_model(self, load_weights_filepath, results_filepath, eval_set = "test"):
+    def evaluate_model(self, load_weights_filepath, results_filepath, eval_set = "test", verbose = 2):
         """
         Evaluate self.model with the weights at load_weights_filepath on eval_set.
         Save results in results_filepath. Format of results varies depending on ML task:
@@ -549,7 +546,7 @@ class deepOB:
         """
         self.model.load_weights(load_weights_filepath).expect_partial()
 
-        print("Evaluating performance on ", eval_set, "set...")
+        print("Evaluating performance on", eval_set, "set...")
 
         if eval_set == "test":
             dataset = self.test_dataset
@@ -560,7 +557,7 @@ class deepOB:
         else:
             raise ValueError("eval_set must be test, val or train.")
         
-        predY = np.squeeze(self.model.predict(dataset, verbose=2))
+        predY = np.squeeze(self.model.predict(dataset, verbose=verbose))
         evalY = np.concatenate([y for _, y in dataset], axis = 0)
         
         if self.task == "classification":

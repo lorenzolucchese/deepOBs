@@ -1,4 +1,5 @@
 from model import deepOB
+from config.directories import ROOT_DIR
 from data_methods import get_class_distributions_univ
 import datetime as dt
 import sys
@@ -59,9 +60,9 @@ if __name__ == "__main__":
     dates = [str(start_date + dt.timedelta(days=_)) for _ in range((end_date - start_date).days + 1)]
     weeks = list(zip(*[dates[i::7] for i in range(5)]))
 
-    univ_filepath = "results/universal"
+    univ_filepath = os.path.join(ROOT_DIR, "results", "universal")
     os.makedirs(univ_filepath, exist_ok=True)
-    window_filepath = univ_filepath + "/W" + str(window)
+    window_filepath = os.path.join(univ_filepath, "W" + str(window))
     os.makedirs(window_filepath, exist_ok=True)
 
     # make universal dicts from stock specific train, val and test dates, alphas and distributions
@@ -72,22 +73,22 @@ if __name__ == "__main__":
     imbalances = np.array([])
 
     for TICKER in TICKERS:
-        TICKER_filepath = "results/" + TICKER
-        TICKER_window_filepath = TICKER_filepath + "/W" + str(window)
+        TICKER_filepath = os.path.join(ROOT_DIR, "results", TICKER)
+        TICKER_window_filepath = os.path.join(TICKER_filepath, "W" + str(window))
 
-        val_train_test_dates = pickle.load(open(TICKER_window_filepath + "/val_train_test_dates.pkl", "rb"))
-        alphas[TICKER] = pickle.load(open(TICKER_window_filepath + "/alphas.pkl", "rb"))
+        val_train_test_dates = pickle.load(open(os.path.join(TICKER_window_filepath, "val_train_test_dates.pkl"), "rb"))
+        alphas[TICKER] = pickle.load(open(os.path.join(TICKER_window_filepath, "alphas.pkl"), "rb"))
         
         val_dates[TICKER] = val_train_test_dates[0]
         train_dates[TICKER] = val_train_test_dates[1]
         test_dates[TICKER] = val_train_test_dates[2]
 
-    pickle.dump([val_dates, train_dates, test_dates], open(window_filepath + "/val_train_test_dates.pkl", "wb"))
-    pickle.dump(alphas, open(window_filepath + "/alphas.pkl", "wb"))
+    pickle.dump([val_dates, train_dates, test_dates], open(os.path.join(window_filepath, "val_train_test_dates.pkl"), "wb"))
+    pickle.dump(alphas, open(os.path.join(window_filepath, "alphas.pkl"), "wb"))
 
     # iterate through model types
     for m, model_type in enumerate(model_list):
-        model_filepath = window_filepath + "/" + model_type
+        model_filepath = os.path.join(window_filepath, model_type)
         os.makedirs(model_filepath, exist_ok=True)
         
         # set local parameters
@@ -102,7 +103,7 @@ if __name__ == "__main__":
         train_val_dict = {}
 
         for TICKER in TICKERS_insample:        
-            data_dir = "data/" + TICKER + "_" + features
+            data_dir = os.path.join(ROOT_DIR, "data", TICKER + "_" + features)
             file_list = os.listdir(data_dir)
             val_files_dict[TICKER] = [os.path.join(data_dir, file) for date in val_dates[TICKER] for file in file_list if date in file]
             train_files_dict[TICKER] = [os.path.join(data_dir, file) for date in train_dates[TICKER] for file in file_list if date in file]
@@ -121,7 +122,7 @@ if __name__ == "__main__":
         test_files_dict = {}
 
         for TICKER in TICKERS_outofsample:        
-            data_dir = "data/" + TICKER + "_" + features
+            data_dir = os.path.join(ROOT_DIR, "data", TICKER + "_" + features)
             file_list = os.listdir(data_dir)
             val_files_dict[TICKER] = [os.path.join(data_dir, file) for date in val_dates[TICKER] for file in file_list if date in file]
             train_files_dict[TICKER] = [os.path.join(data_dir, file) for date in train_dates[TICKER] for file in file_list if date in file]
@@ -142,20 +143,20 @@ if __name__ == "__main__":
             
             imbalances = distributions.to_numpy()
 
-            pickle.dump(distributions, open(window_filepath + "/distributions.pkl", "wb"))
-            pickle.dump(val_distributions, open(window_filepath + "/val_distributions.pkl", "wb"))
-            pickle.dump(test_distributions, open(window_filepath + "/test_distributions.pkl", "wb"))
-            pickle.dump(train_val_distributions, open(window_filepath + "/train_val_distributions.pkl", "wb"))
+            pickle.dump(distributions, open(os.path.join(window_filepath, "distributions.pkl"), "wb"))
+            pickle.dump(val_distributions, open(os.path.join(window_filepath, "val_distributions.pkl"), "wb"))
+            pickle.dump(test_distributions, open(os.path.join(window_filepath, "test_distributions.pkl"), "wb"))
+            pickle.dump(train_val_distributions, open(os.path.join(window_filepath, "train_val_distributions.pkl"), "wb"))
         else:
             pass
         
-        data_dir = "data"
+        data_dir = os.path.join(ROOT_DIR, "data")
 
         # iterate through horizons
         for h in range_models:
             horizon = h
-            results_filepath = model_filepath + "/" + "h" + str(orderbook_updates[h])
-            checkpoint_filepath = results_filepath + "/" + "weights"
+            results_filepath = os.path.join(model_filepath, "h" + str(orderbook_updates[h]))
+            checkpoint_filepath = os.path.join(results_filepath, "weights")
             os.makedirs(results_filepath, exist_ok=True)
 
             # create model
@@ -194,7 +195,7 @@ if __name__ == "__main__":
                             verbose = training_verbose,
                             patience = patience)
 
-            results_filepath_insample = results_filepath + "/" + "TICKERS_in_sample"
+            results_filepath_insample = os.path.join(results_filepath, "TICKERS_in_sample")
             os.makedirs(results_filepath_insample, exist_ok=True)
 
             print("testing model in sample:", results_filepath_insample)
@@ -210,7 +211,7 @@ if __name__ == "__main__":
                                 eval_set = "val",
                                 results_filepath = results_filepath_insample)
 
-            results_filepath_outofsample = results_filepath + "/" + "TICKERS_out_of_sample"
+            results_filepath_outofsample = os.path.join(results_filepath, "TICKERS_out_of_sample")
             os.makedirs(results_filepath_outofsample, exist_ok=True)
 
             # evaluate "out-of-sample": need to re-create model with different datasets (but do not train again!)
@@ -250,7 +251,7 @@ if __name__ == "__main__":
 
             # evaluate on each TICKER: need to re-create model with different datasets (but do not train again!)
             for TICKER in TICKERS:        
-                data_dir = "data/" + TICKER + "_" + features
+                data_dir = os.path.join(ROOT_DIR, "data", TICKER + "_" + features)
                 file_list = os.listdir(data_dir)
                 val_files_dict = [os.path.join(data_dir, file) for date in val_dates[TICKER] for file in file_list if date in file]
                 train_files_dict = [os.path.join(data_dir, file) for date in train_dates[TICKER] for file in file_list if date in file]
@@ -262,7 +263,7 @@ if __name__ == "__main__":
                     "test": test_files_dict
                 }
 
-                results_filepath_stock = results_filepath + "/" + TICKER
+                results_filepath_stock = os.path.join(results_filepath, TICKER)
                 os.makedirs(results_filepath_stock, exist_ok=True)
 
                 model = deepOB(T = T, 

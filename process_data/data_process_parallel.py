@@ -7,6 +7,8 @@ import numpy as np
 import re
 from multiprocessing import Pool
 
+#TODO: make a single function to process multiple features parallely. For features which require rolling window standardization do a first sequential pass to compute standardization constants and then do parallel pass for processing & saving.
+
 def multiprocess_orderbooks(TICKER, input_path, output_path, log_path, horizons=np.array([10, 20, 30, 50, 100]), NF_volume=40, queue_depth=10, smoothing="uniform", k=10):
     """
     Pre-process LOBSTER data into feature-response pairs parallely. The data must be stored in the input_path
@@ -417,65 +419,3 @@ def process_orderbook(orderbook_name, TICKER, output_path, NF_volume, queue_dept
     np.savez(output_name + ".npz", orderbook_features=orderbook_features, orderflow_features=orderflow_features, volume_features=volume_features, responses=returns)
 
     return log + orderbook_name + ' completed.'
-
-def refactor_data(TICKER):
-    logs = []
-    # paths
-    orderbooks_dir = 'data/' + TICKER + '_orderbooks'
-    orderflows_dir = 'data/' + TICKER + '_orderflows'
-    volumes_dir = 'data/' + TICKER + '_volumes'
-    output_path = 'data/' + TICKER
-    # files
-    orderbooks_file_list = glob.glob(os.path.join(orderbooks_dir, "*.{}".format("csv")))
-    orderflows_file_list = glob.glob(os.path.join(orderflows_dir, "*.{}".format("csv")))
-    volumes_file_list = glob.glob(os.path.join(volumes_dir, "*.{}".format("npz")))
-    dates = [re.split('_|\.', file_name)[-2] for file_name in orderbooks_file_list]
-    for date in dates:
-        try:
-            # get filename for date
-            orderbook_file = [file_name for file_name in orderbooks_file_list if date in file_name][0]
-            orderflow_file = [file_name for file_name in orderflows_file_list if date in file_name][0]
-            volume_file = [file_name for file_name in volumes_file_list if date in file_name][0]
-            # load orderbook data
-            orderbook_load = pd.read_csv(orderbook_file)
-            orderbook_features = orderbook_load.loc[:, [feature for feature in orderbook_load.columns if ('ASK' in feature or 'BID' in feature)]].values
-            orderbook_responses = orderbook_load.loc[:, [feature for feature in orderbook_load.columns if not ('ASK' in feature or 'BID' in feature)]].values
-            # load orderflow data
-            orderflow_load = pd.read_csv(orderflow_file)
-            orderflow_features = orderflow_load.loc[:, [feature for feature in orderflow_load.columns if ('ASK' in feature or 'BID' in feature)]].values
-            orderflow_responses = orderflow_load.loc[:, [feature for feature in orderflow_load.columns if not ('ASK' in feature or 'BID' in feature)]].values
-            # load volume data
-            volume_load = np.load(volume_file)
-            volume_features, volume_responses = volume_load['features'], volume_load['responses']
-            # note the arrays match based on index as follows: 
-            # orderflow starts one index after orderbook (as it is a diff), while volume has the same index as orderbook
-            # thus drop first lines in orderbooks and volumes
-            orderbook_features, orderbook_responses = orderbook_features[1:], orderbook_responses[1:]
-            volume_features, volume_responses = volume_features[1:], volume_responses[1:] 
-            # sanity check (some numerical error is ok)
-            assert(np.allclose(orderbook_responses, orderflow_responses))
-            assert(np.allclose(orderbook_responses, volume_responses))
-            # save as single .npz file
-            output_name = os.path.join(output_path, TICKER + "_" + "data" + "_" + date)
-            np.savez(output_name + ".npz", orderbook_features=orderbook_features, orderflow_features=orderflow_features, volume_features=volume_features, responses=orderbook_responses)
-        except Exception as e: 
-            logs.append('An exception occured, for the following TICKER ' + TICKER + ' and date ' + date + '.')
-            logs.append(str(e) + '.')
-        else:
-            del volume_load, volume_features, volume_responses
-            os.remove(orderbook_file)
-            os.remove(orderflow_file)
-            os.remove(volume_file)
-
-    with open("data/logs/processing_logs.txt", "w") as f:
-        for log in logs:
-            f.write(log + "\n")
-
-    print("please check processing logs.")
-
-    
-if __name__ == "__main__":
-    TICKERs = ["LILAK", "QRTEA", "XRAY", "CHTR", "PCAR", "EXC", "AAL", "WBA", "ATVI", "AAPL"]
-    for TICKER in TICKERs:
-        os.mkdir('data/' + TICKER)
-        refactor_data(TICKER)

@@ -1,5 +1,5 @@
 # deepOBs
-This project aims to explore and analyse order book-driven deep learning models for predicting high-frequency returns in financial exchanges. 
+This project aims to explore and analyze order book-driven deep learning models for predicting high-frequency returns in financial exchanges with a limit order book market structure. 
 
 The main methods, which we believe could be of use to other researchers, are found in:
 - [_data_process.py_](https://github.com/lorenzolucchese/deepOBs/blob/master/data_process.py): functions for processing order book data dowloaded from [LOBSTER](https://lobsterdata.com/) to raw order book, order flow and volume features and the corresponding returns;

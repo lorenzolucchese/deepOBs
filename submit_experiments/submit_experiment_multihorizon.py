@@ -1,4 +1,5 @@
 from model import deepOB
+from config.directories import ROOT_DIR
 import datetime as dt
 import sys
 import numpy as np
@@ -59,28 +60,28 @@ if __name__ == "__main__":
     dates = [str(start_date + dt.timedelta(days=_)) for _ in range((end_date - start_date).days + 1)]
     weeks = list(zip(*[dates[i::7] for i in range(5)]))
 
-    TICKER_filepath = "results/" + TICKER
+    TICKER_filepath = os.path.join(ROOT_DIR, "results", TICKER)
     os.makedirs(TICKER_filepath, exist_ok=True)
     
     # iterate through windows
     for d in range(0, len(weeks), slide_by):
         window = d // slide_by
 
-        window_filepath = TICKER_filepath + "/W" + str(window)
+        window_filepath = os.path.join(TICKER_filepath, "W" + str(window))
         os.makedirs(window_filepath, exist_ok=True)
 
         # load train, val and test dates, alphas and distributions
-        val_train_test_dates = pickle.load(open(window_filepath + "/val_train_test_dates.pkl", "rb"))
+        val_train_test_dates = pickle.load(open(os.path.join(window_filepath, "val_train_test_dates.pkl"), "rb"))
         [val_dates, train_dates, test_dates] = val_train_test_dates
 
-        alphas = pickle.load(open(window_filepath + "/alphas.pkl", "rb"))[:len(orderbook_updates)]
+        alphas = pickle.load(open(os.path.join(window_filepath, "alphas.pkl"), "rb"))[:len(orderbook_updates)]
         
-        distributions = pickle.load(open(window_filepath + "/distributions.pkl", "rb"))
+        distributions = pickle.load(open(os.path.join(window_filepath, "distributions.pkl"), "rb"))
         imbalances = distributions.to_numpy()[:, :len(orderbook_updates)]
 
         # iterate through model types
         for m, model_type in enumerate(model_list):
-            model_filepath = window_filepath + "/" + model_type
+            model_filepath = os.path.join(window_filepath, model_type)
             os.makedirs(model_filepath, exist_ok=True)
             
             # set local parameters
@@ -88,7 +89,7 @@ if __name__ == "__main__":
             model_inputs = model_inputs_list[m]
             levels = levels_list[m]
             
-            data_dir = "data/" + TICKER + "_" + features
+            data_dir = os.path.join(ROOT_DIR, "data", TICKER + "_" + features)
             file_list = os.listdir(data_dir)
             files = {
                 "val": [os.path.join(data_dir, file) for date in val_dates for file in file_list if date in file],
@@ -97,8 +98,8 @@ if __name__ == "__main__":
             }
             
             horizon = slice(0, n_horizons)
-            results_filepath = model_filepath + "/" + decoder
-            checkpoint_filepath = results_filepath + "/" + "weights"
+            results_filepath = os.path.join(model_filepath, decoder)
+            checkpoint_filepath = os.path.join(results_filepath, "weights")
             os.makedirs(results_filepath, exist_ok=True)
 
             # create model

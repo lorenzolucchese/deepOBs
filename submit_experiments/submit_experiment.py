@@ -1,5 +1,6 @@
 from model import deepOB
 from data_methods import get_alphas, get_class_distributions
+from config.directories import ROOT_DIR
 import datetime as dt
 import sys
 import numpy as np
@@ -56,7 +57,7 @@ if __name__ == "__main__":
     dates = [str(start_date + dt.timedelta(days=_)) for _ in range((end_date - start_date).days + 1)]
     weeks = list(zip(*[dates[i::7] for i in range(5)]))
 
-    TICKER_filepath = "results/" + TICKER
+    TICKER_filepath = os.path.join(ROOT_DIR, "results", TICKER)
     os.makedirs(TICKER_filepath, exist_ok=True)
 
     # select specific window
@@ -79,15 +80,15 @@ if __name__ == "__main__":
         val_dates = train_val_dates[:5]
         train_dates = train_val_dates[5:]
 
-        window_filepath = TICKER_filepath + "/W" + str(window)
+        window_filepath = os.path.join(TICKER_filepath, "W" + str(window))
         os.makedirs(window_filepath, exist_ok=True)
-        pickle.dump([val_dates, train_dates, test_dates], open(window_filepath + "/val_train_test_dates.pkl", "wb"))
+        pickle.dump([val_dates, train_dates, test_dates], open(os.path.join(window_filepath, "val_train_test_dates.pkl"), "wb"))
 
         alphas = np.array([])
 
         # iterate through model types
         for m, model_type in enumerate(model_list):
-            model_filepath = window_filepath + "/" + model_type
+            model_filepath = os.path.join(window_filepath, model_type)
             os.makedirs(model_filepath, exist_ok=True)
             
             # set local parameters
@@ -95,7 +96,7 @@ if __name__ == "__main__":
             model_inputs = model_inputs_list[m]
             levels = levels_list[m]
             
-            data_dir = "data/" + TICKER + "_" + features
+            data_dir = os.path.join(ROOT_DIR, "data", TICKER + "_" + features)
             file_list = os.listdir(data_dir)
             files = {
                 "val": [os.path.join(data_dir, file) for date in val_dates for file in file_list if date in file],
@@ -107,13 +108,13 @@ if __name__ == "__main__":
             if alphas.size == 0:
                 print("getting alphas...")
                 alphas, distributions = get_alphas(files["train"], orderbook_updates)
-                pickle.dump(alphas, open(window_filepath + "/alphas.pkl", "wb"))
-                pickle.dump(distributions, open(window_filepath + "/distributions.pkl", "wb"))
+                pickle.dump(alphas, open(os.path.join(window_filepath, "alphas.pkl"), "wb"))
+                pickle.dump(distributions, open(os.path.join(window_filepath, "distributions.pkl"), "wb"))
 
                 val_distributions = get_class_distributions(files["val"], alphas, orderbook_updates)
                 test_distributions = get_class_distributions(files["test"], alphas, orderbook_updates)
-                pickle.dump(val_distributions, open(window_filepath + "/val_distributions.pkl", "wb"))
-                pickle.dump(test_distributions, open(window_filepath + "/test_distributions.pkl", "wb"))
+                pickle.dump(val_distributions, open(os.path.join(window_filepath, "val_distributions.pkl"), "wb"))
+                pickle.dump(test_distributions, open(os.path.join(window_filepath + "test_distributions.pkl"), "wb"))
             else:
                 pass
             imbalances = distributions.to_numpy()
@@ -121,8 +122,8 @@ if __name__ == "__main__":
             # iterate through horizons
             for h in range(tot_horizons):
                 horizon = h
-                results_filepath = model_filepath + "/" + "h" + str(orderbook_updates[h])
-                checkpoint_filepath = results_filepath + "/" + "weights"
+                results_filepath = os.path.join(model_filepath, "h" + str(orderbook_updates[h]))
+                checkpoint_filepath = os.path.join(results_filepath, "weights")
                 os.makedirs(results_filepath, exist_ok=True)
 
                 # create model
