@@ -3,13 +3,12 @@ import glob
 import pandas as pd
 import re
 import datetime
+import time
 import numpy as np
 import re
 from multiprocessing import Pool
 
-#TODO: make a single function to process multiple features parallely. For features which require rolling window standardization do a first sequential pass to compute standardization constants and then do parallel pass for processing & saving.
-
-def multiprocess_orderbooks(TICKER, input_path, output_path, log_path, horizons=np.array([10, 20, 30, 50, 100]), NF_volume=40, queue_depth=10, smoothing="uniform", k=10):
+def multiprocess_orderbooks(TICKER, input_path, output_path, log_path, stats_path, horizons=np.array([10, 20, 30, 50, 100]), NF_volume=40, queue_depth=10, smoothing="uniform", k=10):
     """
     Pre-process LOBSTER data into feature-response pairs parallely. The data must be stored in the input_path
     directory as daily message book and order book files. For details of processing steps see description of process_orderbook function.
@@ -23,6 +22,7 @@ def multiprocess_orderbooks(TICKER, input_path, output_path, log_path, horizons=
                        "ASKp1", "ASKs1", "BIDp1",  "BIDs1", ..., "ASKplevels", "ASKslevels", "BIDplevels",  "BIDslevels", str
     :param output_path: the path where we wish to save the processed datasets (as .npz files), str
     :param log_path: the path where processing logs are saved, str
+    :param stats_path: the path where the stats for subsequent standardization are saved, str
     :param NF_volume: number of features for volume representation, only used if volume in features
                for volumes NF = 2W where W is number of ticks on each side of mid, int
                for orderbooks NF = 4*levels
@@ -53,7 +53,7 @@ def multiprocess_orderbooks(TICKER, input_path, output_path, log_path, horizons=
     
     try:
         pool = Pool(os.cpu_count() - 2)  # leave 2 cpus free
-        engine = ProcessOrderbook(TICKER, output_path, NF_volume, queue_depth, horizons, smoothing, k)
+        engine = ProcessOrderbook(TICKER, output_path, stats_path, NF_volume, queue_depth, horizons, smoothing, k)
         logs = pool.map(engine, csv_orderbook)
     finally: # To make sure processes are closed in the end, even if errors happen
         pool.close()
@@ -72,9 +72,10 @@ class ProcessOrderbook(object):
     """
     Multiprocessing engine for pre-processing LOBSTER data into feature-response npz files.
     """
-    def __init__(self, TICKER, output_path, NF_volume, queue_depth, horizons, smoothing, k):
+    def __init__(self, TICKER, output_path, stats_path, NF_volume, queue_depth, horizons, smoothing, k):
         self.TICKER = TICKER
         self.output_path = output_path
+        self.stats_path = stats_path
         self.NF_volume = NF_volume
         self.queue_depth = queue_depth
         self.horizons = horizons
@@ -82,11 +83,11 @@ class ProcessOrderbook(object):
         self.k = k
 
     def __call__(self, orderbook_name):
-        output = process_orderbook(orderbook_name, self.TICKER, self.output_path, self.NF_volume, self.queue_depth, self.horizons, self.smoothing, self.k)
+        output = process_orderbook(orderbook_name, self.TICKER, self.output_path, self.stats_path, self.NF_volume, self.queue_depth, self.horizons, self.smoothing, self.k)
         return output
 
 
-def process_orderbook(orderbook_name, TICKER, output_path, NF_volume, queue_depth, horizons, smoothing, k):
+def process_orderbook(orderbook_name, TICKER, output_path, stats_path, NF_volume, queue_depth, horizons, smoothing, k):
     """
     Function carrying out processing of single order book orderbook_name. Features are not normalised.
     The data is treated in the following way:
@@ -102,6 +103,7 @@ def process_orderbook(orderbook_name, TICKER, output_path, NF_volume, queue_dept
                           str
     :param TICKER: the TICKER to be considered, str
     :param output_path: the path where we wish to save the processed datasets (as .npz files), str
+    :param stats_path: the path where the stats for subsequent standardization are saved, str
     :param NF_volume: number of features for volume representation, only used if volume in features
                for volumes NF = 2W where W is number of ticks on each side of mid, int
                for orderbooks NF = 4*levels
@@ -387,7 +389,7 @@ def process_orderbook(orderbook_name, TICKER, output_path, NF_volume, queue_dept
     # need then to remove all same timestamps (collapse to last) and first/last 10 minutes
     volumes = volumes[df_orderbook_full.index.isin(df_orderbook.index), :, :]
 
-    ### compute responses
+    ### compute mid returns
     if smoothing == "horizon":
         # create labels for returns with smoothing labelling method
         for h in horizons:
@@ -403,19 +405,62 @@ def process_orderbook(orderbook_name, TICKER, output_path, NF_volume, queue_dept
             smooth_pct_change = rolling_mid[h:]/df_orderbook["mid price"][:-h] - 1
             df_orderbook[str(h)] = smooth_pct_change
 
-    # drop seconds and mid price columns
+    ### drop seconds and mid price columns
+    timestamps = df_orderbook["seconds"]
     df_orderbook = df_orderbook.drop(["seconds", "mid price"], axis=1)
 
-    # drop elements with na predictions at the end which cannot be used for training
+    ### drop elements with na returns at the end which cannot be used for training
     if smoothing == "horizon":
         k = 0
-    orderbook_features = df_orderbook.iloc[:-(max(horizons)+k//2), :-len(horizons)].values
-    orderflow_features = df_orderflow.iloc[:-(max(horizons)+k//2), :].values
+    orderbook_features = df_orderbook.iloc[:-(max(horizons)+k//2), :-len(horizons)]
+    orderflow_features = df_orderflow.iloc[:-(max(horizons)+k//2), :]
     volume_features = volumes[:-(max(horizons)+k//2), :, :]
-    returns = df_orderbook.iloc[:-(max(horizons)+k//2), -len(horizons):].values
+    mid_returns = df_orderbook.iloc[:-(max(horizons)+k//2), -len(horizons):].values
 
     # save
     output_name = os.path.join(output_path, TICKER + "_" + "data" + "_" + str(date.date()))
-    np.savez(output_name + ".npz", orderbook_features=orderbook_features, orderflow_features=orderflow_features, volume_features=volume_features, responses=returns)
+    np.savez(output_name + ".npz", timestamps=timestamps, orderbook_features=orderbook_features.values, orderflow_features=orderflow_features.values, volume_features=volume_features, mid_returns=mid_returns)
+
+    ### save mean, standard deviation and count for rolling window normalisation
+    orderbook_stats = pd.DataFrame([orderbook_features.mean(axis=0), orderbook_features.std(axis=0), orderbook_features.count(axis=0)], index = ['mean', 'std', 'count'])
+    orderflow_stats = pd.DataFrame([orderflow_features.mean(axis=0), orderflow_features.std(axis=0), orderflow_features.count(axis=0)], index = ['mean', 'std', 'count'])
+
+    orderbook_stats.to_csv(os.path.join(stats_path, TICKER + '_orderbook_stats_' + str(date.date())))
+    orderflow_stats.to_csv(os.path.join(stats_path, TICKER + '_orderflow_stats_' + str(date.date())))
 
     return log + orderbook_name + ' completed.'
+
+if __name__ == "__main__":
+    ROOT_DIR = "."
+
+    # set global parameters
+    TICKER = "WBA"
+
+    input_path = os.path.join(ROOT_DIR, "data_raw", TICKER + "_data_dwn")
+    log_path = os.path.join(ROOT_DIR, "data", "logs", TICKER + "_processing_logs")
+    horizons = np.array([10, 20, 30, 50, 100, 200, 300, 500, 1000])
+
+    os.makedirs(log_path, exist_ok=True)
+
+    # ============================================================================
+    # LOBSTER DATA (multiprocess)
+
+    output_path = os.path.join(ROOT_DIR, "data", TICKER)
+    os.makedirs(output_path, exist_ok=True)
+    stats_path = os.path.join(output_path, "stats")
+    os.makedirs(stats_path, exist_ok=True)
+
+    startTime = time.time()
+    multiprocess_orderbooks(TICKER=TICKER,
+                            input_path=input_path, 
+                            output_path=output_path,
+                            log_path=log_path, 
+                            stats_path=stats_path,
+                            horizons=horizons, 
+                            NF_volume=40, 
+                            queue_depth=10, 
+                            smoothing="uniform", 
+                            k=10)
+    executionTime = (time.time() - startTime)
+
+    print("Volumes execution time in minutes: " + str(executionTime/60))
