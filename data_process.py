@@ -425,42 +425,29 @@ def process_orderbook(orderbook_name, TICKER, output_path, stats_path, NF_volume
     orderbook_stats = pd.DataFrame([orderbook_features.mean(axis=0), orderbook_features.std(axis=0), orderbook_features.count(axis=0)], index = ['mean', 'std', 'count'])
     orderflow_stats = pd.DataFrame([orderflow_features.mean(axis=0), orderflow_features.std(axis=0), orderflow_features.count(axis=0)], index = ['mean', 'std', 'count'])
 
-    orderbook_stats.to_csv(os.path.join(stats_path, TICKER + '_orderbook_stats_' + str(date.date())))
-    orderflow_stats.to_csv(os.path.join(stats_path, TICKER + '_orderflow_stats_' + str(date.date())))
+    orderbook_stats.to_csv(os.path.join(stats_path, TICKER + '_orderbook_stats_' + str(date.date()) + '.csv'))
+    orderflow_stats.to_csv(os.path.join(stats_path, TICKER + '_orderflow_stats_' + str(date.date()) + '.csv'))
 
     return log + orderbook_name + ' completed.'
 
-if __name__ == "__main__":
-    ROOT_DIR = "."
+def aggregate_stats(TICKER, stats_path, features=["orderbook", "orderflow"]):
+    """
+    Function for aggregating processed features (e.g. orderbook and orderflow)
+    :param TICKER: the TICKER to be considered, str
+    :param stats_path: the path where daily stats are saved, str
+    :param features: features for which to aggregate stats, list of str
+    """
+    csv_file_list = glob.glob(os.path.join(stats_path, "*.{}".format("csv")))
 
-    # set global parameters
-    TICKER = "WBA"
+    print(csv_file_list)
 
-    input_path = os.path.join(ROOT_DIR, "data_raw", TICKER + "_data_dwn")
-    log_path = os.path.join(ROOT_DIR, "data", "logs", TICKER + "_processing_logs")
-    horizons = np.array([10, 20, 30, 50, 100, 200, 300, 500, 1000])
+    for feature in features:
+        feature_stats = {datetime.strptime(re.search(r'\d{4}-\d{2}-\d{2}', name).group(), '%Y-%m-%d').date(): pd.read_csv(name) for name in csv_file_list if feature in name and re.search(r'\d{4}-\d{2}-\d{2}', name) is not None}
+    
+        feature_stats = dict(sorted(feature_stats.items()))
 
-    os.makedirs(log_path, exist_ok=True)
+        print(feature_stats)
+    
+        aggregated_feature_stats = pd.concat(feature_stats, names=['Date'])
 
-    # ============================================================================
-    # LOBSTER DATA (multiprocess)
-
-    output_path = os.path.join(ROOT_DIR, "data", TICKER)
-    os.makedirs(output_path, exist_ok=True)
-    stats_path = os.path.join(output_path, "stats")
-    os.makedirs(stats_path, exist_ok=True)
-
-    startTime = time.time()
-    multiprocess_orderbooks(TICKER=TICKER,
-                            input_path=input_path, 
-                            output_path=output_path,
-                            log_path=log_path, 
-                            stats_path=stats_path,
-                            horizons=horizons, 
-                            NF_volume=40, 
-                            queue_depth=10, 
-                            smoothing="uniform", 
-                            k=10)
-    executionTime = (time.time() - startTime)
-
-    print("Volumes execution time in minutes: " + str(executionTime/60))
+        print(aggregated_feature_stats)
