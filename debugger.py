@@ -9,7 +9,7 @@ import tensorflow as tf
 from keras.layers import Reshape, concatenate
 from custom_datasets import CustomtfDataset
 from data_methods import get_alphas
-from model import deepOB
+from model import deepOB, linearOB
 from config.directories import ROOT_DIR
 import datetime as dt
 
@@ -46,7 +46,7 @@ if __name__ == '__main__':
     train_roll_window = 1000
     batch_size = 256
     number_of_lstm = 64
-    model_list = ["deepLOB_L1", "deepOF_L1", "deepLOB_L2", "deepOF_L2", "deepVOL_L2", "deepVOL_L3"]
+    model_list = ["linearLOB_L1", "linearOF_L1", "linearLOB_L2", "linearOF_L2", "linearVOL_L2", "linearVOL_L3"]
     features_list = ["orderbooks", "orderflows", "orderbooks", "orderflows", "volumes", "volumes"]
     model_inputs_list = ["orderbooks", "orderflows", "orderbooks", "orderflows", "volumes", "volumes_L3"]
     levels_list = [1, 1, 10, 10, 10, 10]
@@ -56,6 +56,8 @@ if __name__ == '__main__':
     window_filepath = os.path.join(TICKER_filepath, "W8")
 
     # select specific window
+    train_dates = ["2019-11-05", "2019-11-06"]
+    val_dates = ["2019-11-05", "2019-11-06"]
     test_dates = ["2019-11-05", "2019-11-06"]
 
     # set random seeds
@@ -91,29 +93,31 @@ if __name__ == '__main__':
         for h in range(n_horizons):
             horizon = h
             results_filepath = os.path.join(model_filepath, "h" + str(orderbook_updates[h]))
-            checkpoint_filepath = os.path.join(ROOT_DIR, "results", TICKER, "W8", model_type, "h" + str(orderbook_updates[h]), "weights")
+            checkpoint_filepath = os.path.join(model_filepath, "weights")
             os.makedirs(results_filepath, exist_ok=True)
 
             # create model
-            model = deepOB(T = T, 
-                           levels = levels, 
-                           horizon = horizon, 
-                           number_of_lstm = number_of_lstm,
-                           data_dir = data_dir, 
-                           files = files, 
-                           model_inputs = model_inputs, 
-                           queue_depth = queue_depth,
-                           task = task, 
-                           alphas = alphas, 
-                           orderbook_updates = orderbook_updates,
-                           multihorizon = multihorizon, 
-                           decoder = decoder, 
-                           n_horizons = n_horizons,
-                           train_roll_window = train_roll_window,
-                           imbalances = imbalances,
-                           batch_size = batch_size)
-
-            model.create_model()
+            model = linearOB(T = T, 
+                            levels = levels, 
+                            horizon = horizon,
+                            data_dir = data_dir, 
+                            files = files, 
+                            model_inputs = model_inputs, 
+                            queue_depth = queue_depth,
+                            task = task, 
+                            alphas = alphas, 
+                            orderbook_updates = orderbook_updates,
+                            train_roll_window = train_roll_window,
+                            imbalances = imbalances,
+                            batch_size = batch_size)
+            
+            model.fit_model(epochs=epochs,
+                            checkpoint_filepath=checkpoint_filepath,
+                            load_weights=False,
+                            load_weights_filepath=None,
+                            verbose=testing_verbose,
+                            patience=10,
+                            CV_l1=10.**np.arange(-8, -6))
 
             # evaluate model
             model.evaluate_model(load_weights_filepath = checkpoint_filepath,

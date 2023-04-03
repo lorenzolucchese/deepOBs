@@ -7,9 +7,9 @@ import itertools
 
 from keras import backend as K
 from keras.models import Model
-from keras.layers import Dense, Dropout, LeakyReLU, Activation, Input, CuDNNLSTM, LSTM, Reshape, Conv2D, Conv3D, MaxPooling2D, concatenate, Lambda, dot, BatchNormalization, Layer
+from keras.layers import Dense, Flatten, Dropout, LeakyReLU, Activation, Input, CuDNNLSTM, LSTM, Reshape, Conv2D, Conv3D, MaxPooling2D, concatenate, Lambda, dot, BatchNormalization, Layer
 from keras.callbacks import EarlyStopping, ModelCheckpoint
-from keras.metrics import CategoricalAccuracy, MeanSquaredError, MeanMetricWrapper
+from keras.metrics import CategoricalAccuracy, MeanSquaredError, MeanMetricWrapper, CategoricalCrossentropy
 
 from sklearn.metrics import classification_report, confusion_matrix, mean_absolute_error, mean_squared_error, r2_score
 import matplotlib.pyplot as plt
@@ -157,7 +157,7 @@ class deepOB:
                  imbalances,                 
                  batch_size = 256,
                  universal = False):
-        """Paramter initialization and creation of train, val and test tf.datasets.
+        """Parameter initialization and creation of train, val and test tf.datasets.
         :param horizon: the horizon to consider, int (between 0 and tot_horizon)
         :param number_of_lstm: number of hidden nodes in lstm, int
         :param data_dir: parent directory for data
@@ -611,6 +611,229 @@ class deepOB:
                     print(results)
                     regression_fit_plot(evalY, predY, title = eval_set + str(self.orderbook_updates[h]), 
                                         path = results_filepath + "/fit_plot_" + eval_set + "_h" + str(self.orderbook_updates[h]) + ".png")
+
+class linearOB:
+    """
+    Object which allows to build, train and evaluate a family of linear learning models for order book driven
+    mid-price prediction.
+    """
+    def __init__(self, 
+                 horizon,
+                 data_dir, 
+                 files, 
+                 model_inputs, 
+                 T,
+                 levels, 
+                 queue_depth,
+                 task, 
+                 orderbook_updates,
+                 alphas,
+                 train_roll_window,
+                 imbalances,                 
+                 batch_size=256,
+                 universal=False):
+        """Parameter initialization and creation of train, val and test tf.datasets.
+        :param horizon: the horizon to consider, int (between 0 and tot_horizon)
+        :param data_dir: parent directory for data
+        :param files: a dict of lists containing "train", "val" and "test" lists of files (if universal these are dicts of TICKER-specific lists of files)
+        :param model_inputs: which input is being used "orderbooks", "orderflows", "volumes" or "volumes_L3"
+        :param T: length of lookback window for features
+        :param levels: number of levels in model (note these have different meaning for orderbooks/orderflows and volumes)
+        :param queue_depth: the depth of the queue when "volumes_L3" input is used
+        :param task: ML task, "regression" or "classification"
+        :param orderbook_updates: (tot_horizons,) array with the number of orderbook updates corresponding to each horizon
+        :param alphas: (tot_horizons) array of alphas to use when task = "classification", (down, no change, up) = ((-infty, -alpha), [-alpha, +alpha] (+alpha, +infty))
+        :param train_roll_window: the roll window to use when selecting training/validation the data, int
+        :param imbalances: the imbalances used to weight the training categorical crossentropy loss, (class, tot_horizons) array
+        :param batch_size: the batch size to use when training the model, int
+        :param universal: whether the model is trained/evaluated on multiple stocks simultaneously, bool
+        """
+        self.T = T
+        self.levels = levels
+        if model_inputs == "orderbooks":
+            self.NF = 4*levels
+        elif model_inputs in ["orderflows", "volumes", "volumes_L3"]:
+            self.NF = 2*levels
+        else:
+            raise ValueError("model_inputs must be orderbook, orderflow, volumes or volumes_L3")
+        self.horizon = horizon
+        self.model_inputs = model_inputs
+        self.queue_depth = queue_depth
+        if model_inputs == "volumes_L3" and queue_depth is None:
+            raise ValueError("if model_inputs is volumes_L3, queue_depth must be specified.")
+        self.task = task
+        self.alphas = alphas
+        self.orderbook_updates = orderbook_updates
+        self.data_dir = data_dir
+        self.files = files
+        self.batch_size = batch_size
+        self.train_roll_window = train_roll_window
+        self.imbalances = imbalances
+    
+        if model_inputs in ["orderbooks", "orderflows"]:
+            data_transform = "standardize_rolling_5"
+        elif model_inputs in ["volumes", "volumes_L3"]:
+            data_transform = "normalize"
+        if not universal:
+            self.train_dataset = CustomtfDataset(files = self.files["train"], NF = self.NF, n_horizons = None, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, alphas = self.alphas, multihorizon = False, T = self.T, data_transform = data_transform, batch_size = batch_size,  roll_window = train_roll_window, shuffle = True)
+            self.val_dataset = CustomtfDataset(files = self.files["val"], NF = self.NF, n_horizons = None, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, alphas = self.alphas, multihorizon = False, T = self.T, data_transform = data_transform, batch_size = batch_size, roll_window = train_roll_window, shuffle = False)
+            self.test_dataset = CustomtfDataset(files = self.files["test"], NF = self.NF, n_horizons = None, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, alphas = self.alphas, multihorizon = False, T = self.T, data_transform = data_transform, batch_size = batch_size, roll_window = 1, shuffle = False)
+        else:
+            self.train_dataset = CustomtfDatasetUniv(dict_of_files = self.files["train"], NF = self.NF, n_horizons = None, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, dict_of_alphas = self.alphas, multihorizon = False, T = self.T, data_transform = data_transform, batch_size = batch_size,  roll_window = train_roll_window, shuffle = True)
+            self.val_dataset = CustomtfDatasetUniv(dict_of_files = self.files["val"], NF = self.NF, n_horizons = None, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, dict_of_alphas = self.alphas, multihorizon = False, T = self.T, data_transform = data_transform, batch_size = batch_size, roll_window = train_roll_window, shuffle = False)
+            self.test_dataset = CustomtfDatasetUniv(dict_of_files = self.files["test"], NF = self.NF, n_horizons = None, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, dict_of_alphas = self.alphas, multihorizon = False, T = self.T, data_transform = data_transform, batch_size = batch_size, roll_window = 1, shuffle = False)
+
+
+    def create_model(self, l1=1e-5):
+        """
+        Create the LASSO logistic regression learning model as a keras.models.Model object according to initialization parameters.
+        """
+        # network parameters
+        if self.task == "classification":
+            output_activation = "softmax"
+            output_dim = 3
+            if self.imbalances is None:
+                loss = "categorical_crossentropy"
+            else:
+                weights = np.vstack([1 / self.imbalances[:, self.horizon]]*3).T
+                loss = partial(weighted_categorical_crossentropy, weights=weights)
+            h = str(self.orderbook_updates[self.horizon])
+            metrics = [CategoricalAccuracy(name = "accuracy" + h), CategoricalCrossentropy(name = "cce")]
+        elif self.task == "regression":
+            output_activation = "linear"
+            output_dim = 1
+            loss = "mean_squared_error"
+            metrics = ["mean_squared_error"]
+            h = str(self.orderbook_updates[self.horizon])
+            metrics = [MeanSquaredError(name = "mse"+ h)]
+        else:
+            raise ValueError("task must be either classification or regression.")
+        self.metrics = metrics
+
+        adam = tf.keras.optimizers.Adam(learning_rate=0.001, epsilon=1)
+
+        if self.model_inputs in ["orderbooks", "orderflows", "volumes"]:
+            input_lmd = Input(shape=(self.T, self.NF, 1), name="input")
+        elif self.model_inputs == "volumes_L3":
+            input_lmd = Input(shape=(self.T, self.NF, self.queue_depth, 1), name="input")#
+
+        # flatten and apply dense layer with appropriate activation
+        flattened = Flatten()(input_lmd)
+        output = Dense(output_dim, activation=output_activation, kernel_regularizer=tf.keras.regularizers.L1(l1=l1), bias_regularizer=tf.keras.regularizers.L1(l1=l1))(flattened)
+
+        # send to float32 for stability
+        output = Activation("linear", dtype="float32")(output)
+        
+        # compile model
+        self.model = Model(inputs=input_lmd, outputs=output)
+        
+        self.model.compile(loss=loss, metrics=metrics, optimizer=adam)
+
+    def fit_model(self, 
+                  epochs,
+                  checkpoint_filepath,
+                  load_weights=False, 
+                  load_weights_filepath=None, 
+                  verbose=1, 
+                  patience=10,
+                  CV_l1=10.**np.arange(-8, 6)):
+        """
+        Fit self.model on self.train_dataset and self.val_dataset using Adam optimizer.
+        :param epochs: number of epochs to train for, int
+        :param checkpoint_filepath: where to save checkpoint weights, str
+        :param load_weights: whether to load weights or randomly initialize them, bool
+        :param load_weights_filepath: if load_weights = True, where to load weights from, str
+        :param verbose: the verbosity of training output, int
+        :param patience: early stopping patience, i.e. the number of epochs with no val_loss decrease after which to stop the training procedure, int
+        :param CV_l1: set of l1-regularization hyperparameters to cross-validate over self.val_dataset, np.array
+        """
+        CV_loss = {}
+
+        # implement LASSO penalisation with cross validation on val set
+        early_stopping = EarlyStopping(monitor="val_loss", patience=patience, mode="auto", restore_best_weights=True)
+
+        for l1 in CV_l1:
+            self.create_model(l1)
+
+            if load_weights == True:
+                self.model.load_weights(load_weights_filepath)
+
+            history = self.model.fit(self.train_dataset, validation_data=self.val_dataset,
+                                     epochs=epochs, verbose=verbose, workers=8,
+                                     max_queue_size=10, use_multiprocessing=True,
+                                     callbacks=[early_stopping])
+            
+            CV_loss[l1] = min(history.history["val_cce"])
+        
+        # use best hyper-param
+        l1 = min(CV_loss, key=CV_loss.get)
+
+        self.create_model(l1)
+
+        model_checkpoint_callback = ModelCheckpoint(filepath=checkpoint_filepath,
+        					                        save_weights_only=True,
+						                            monitor="val_loss",
+                                                    mode="auto",
+                                                    save_best_only=True)
+
+        self.model.fit(self.train_dataset, validation_data=self.val_dataset,
+                       epochs=epochs, verbose=verbose, workers=8,
+                       max_queue_size=10, use_multiprocessing=True,
+                       callbacks=[model_checkpoint_callback, early_stopping])
+
+
+    def evaluate_model(self, load_weights_filepath, results_filepath, eval_set = "test", verbose = 2):
+        """
+        Evaluate self.model with the weights at load_weights_filepath on eval_set.
+        Save results in results_filepath. Format of results varies depending on ML task:
+        - if classification save sklearn's classification report, confusion matrix and categorical crossentropy
+          (if multihorizon do this for each horizon)
+        - if regression save mean squared error, mean average error and r2, as well as produce a plot of y_true vs y_pred
+          (if multihorizon do this for each horizon)
+        :param load_weights_filepath: weights to load, str
+        :param results_filepath: where to save results, str
+        :param eval_set: dataset on which to evaluate performance, "train", "val" or "test", str
+        """
+        self.model.load_weights(load_weights_filepath).expect_partial()
+
+        print("Evaluating performance on", eval_set, "set...")
+
+        if eval_set == "test":
+            dataset = self.test_dataset
+        elif eval_set == "val":
+            dataset = self.val_dataset
+        elif eval_set == "train":
+            dataset = self.train_dataset
+        else:
+            raise ValueError("eval_set must be test, val or train.")
+        
+        predY = np.squeeze(self.model.predict(dataset, verbose=verbose))
+        evalY = np.concatenate([y for _, y in dataset], axis = 0)
+        
+        if self.task == "classification":
+            classification_report_dict = classification_report(np.argmax(evalY, axis=1), np.argmax(predY, axis=1), digits=4, output_dict=True, zero_division=0)
+            confusion_matrix_array = confusion_matrix(np.argmax(evalY, axis=1), np.argmax(predY, axis=1))
+            categorical_crossentropy = tf.keras.losses.CategoricalCrossentropy()(evalY, predY).numpy()
+            pickle.dump(classification_report_dict, open(results_filepath + "/classification_report_" + eval_set + ".pkl", "wb"))
+            pickle.dump(confusion_matrix_array, open(results_filepath + "/confusion_matrix_" + eval_set + ".pkl", "wb"))
+            pickle.dump(categorical_crossentropy, open(results_filepath + "/categorical_crossentropy_" + eval_set + ".pkl", "wb"))
+
+            print("Prediction horizon:", self.orderbook_updates[self.horizon], " orderbook updates")
+            print("Categorical crossentropy:", categorical_crossentropy)
+            print(classification_report_dict)
+            print(confusion_matrix_array)
+        elif self.task == "regression":
+            mse = mean_squared_error(evalY, predY)
+            mae = mean_absolute_error(evalY, predY)
+            r2 = r2_score(evalY, predY)
+            results = {"MSE": mse, "MAE": mae, "r2": r2}
+            pickle.dump(results, open(results_filepath + "/regression_metrics_" + eval_set + ".pkl", "wb"))
+
+            print("Prediction horizon:", self.orderbook_updates[self.horizon], " orderbook updates")
+            print(results)
+            regression_fit_plot(evalY, predY, title = eval_set + str(self.orderbook_updates[self.horizon]), 
+                                path = results_filepath + "/fit_plot_" + eval_set + ".png")
+            
 
 def regression_fit_plot(evalY, predY, title, path):
     """
