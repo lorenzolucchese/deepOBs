@@ -1,4 +1,4 @@
-from data_process import multiprocess_orderbooks
+from data_process import multiprocess_orderbooks, aggregate_stats
 from config.directories import ROOT_DIR
 import os
 import time
@@ -38,4 +38,6 @@ if __name__ == "__main__":
     executionTime = (time.time() - startTime)
 
     print("Execution time in minutes: " + str(executionTime/60))
+
+    aggregate_stats(TICKER, stats_path)
     

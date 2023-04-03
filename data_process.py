@@ -2,7 +2,7 @@ import os
 import glob
 import pandas as pd
 import re
-import datetime
+from datetime import datetime
 import time
 import numpy as np
 import re
@@ -140,7 +140,7 @@ def process_orderbook(orderbook_name, TICKER, output_path, stats_path, NF_volume
 
     # get date
     match = re.findall(r"\d{4}-\d{2}-\d{2}", orderbook_name)[-1]
-    date = datetime.datetime.strptime(match, "%Y-%m-%d")
+    date = datetime.strptime(match, "%Y-%m-%d")
 
     # read times from message file. keep a record of problematic files
     message_name = orderbook_name.replace("orderbook", "message")
@@ -439,15 +439,13 @@ def aggregate_stats(TICKER, stats_path, features=["orderbook", "orderflow"]):
     """
     csv_file_list = glob.glob(os.path.join(stats_path, "*.{}".format("csv")))
 
-    print(csv_file_list)
-
     for feature in features:
-        feature_stats = {datetime.strptime(re.search(r'\d{4}-\d{2}-\d{2}', name).group(), '%Y-%m-%d').date(): pd.read_csv(name) for name in csv_file_list if feature in name and re.search(r'\d{4}-\d{2}-\d{2}', name) is not None}
+        feature_stats = {datetime.strptime(re.search(r'\d{4}-\d{2}-\d{2}', name).group(), '%Y-%m-%d').date(): pd.read_csv(name, index_col=0) for name in csv_file_list if feature in name and re.search(r'\d{4}-\d{2}-\d{2}', name) is not None}
     
         feature_stats = dict(sorted(feature_stats.items()))
-
-        print(feature_stats)
     
         aggregated_feature_stats = pd.concat(feature_stats, names=['Date'])
 
-        print(aggregated_feature_stats)
+        aggregated_feature_stats.index = aggregated_feature_stats.index.rename('stat', level=1)
+
+        aggregated_feature_stats.to_csv(os.path.join(stats_path, TICKER + '_' + feature + '_stats.csv'))
