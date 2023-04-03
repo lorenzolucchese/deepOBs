@@ -89,7 +89,7 @@ class ProcessOrderbook(object):
 
 def process_orderbook(orderbook_name, TICKER, output_path, stats_path, NF_volume, queue_depth, horizons, smoothing, k):
     """
-    Function carrying out processing of single order book orderbook_name. Features are not normalised.
+    Function carrying out processing of single order book orderbook_name. Features are not normalized.
     The data is treated in the following way:
     - order book states with crossed quotes are removed.
     - each state in the orderbook is time-stamped, with states occurring at the same time collapsed

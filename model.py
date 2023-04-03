@@ -209,17 +209,17 @@ class deepOB:
         self.universal = universal
     
         if model_inputs in ["orderbooks", "orderflows"]:
-            normalise = False
+            data_transform = "standardize_rolling_5"
         elif model_inputs in ["volumes", "volumes_L3"]:
-            normalise = True
+            data_transform = "normalize"
         if not universal:
-            self.train_dataset = CustomtfDataset(files = self.files["train"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise, batch_size = batch_size,  roll_window = train_roll_window, shuffle = True)
-            self.val_dataset = CustomtfDataset(files = self.files["val"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = train_roll_window, shuffle = False)
-            self.test_dataset = CustomtfDataset(files = self.files["test"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = 1, shuffle = False)
+            self.train_dataset = CustomtfDataset(files = self.files["train"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, data_transform = data_transform, batch_size = batch_size,  roll_window = train_roll_window, shuffle = True)
+            self.val_dataset = CustomtfDataset(files = self.files["val"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, data_transform = data_transform, batch_size = batch_size, roll_window = train_roll_window, shuffle = False)
+            self.test_dataset = CustomtfDataset(files = self.files["test"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, data_transform = data_transform, batch_size = batch_size, roll_window = 1, shuffle = False)
         else:
-            self.train_dataset = CustomtfDatasetUniv(dict_of_files = self.files["train"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise, batch_size = batch_size,  roll_window = train_roll_window, shuffle = True)
-            self.val_dataset = CustomtfDatasetUniv(dict_of_files = self.files["val"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = train_roll_window, shuffle = False)
-            self.test_dataset = CustomtfDatasetUniv(dict_of_files = self.files["test"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, normalise = normalise,  batch_size = batch_size, roll_window = 1, shuffle = False)
+            self.train_dataset = CustomtfDatasetUniv(dict_of_files = self.files["train"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, data_transform = data_transform, batch_size = batch_size,  roll_window = train_roll_window, shuffle = True)
+            self.val_dataset = CustomtfDatasetUniv(dict_of_files = self.files["val"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, data_transform = data_transform, batch_size = batch_size, roll_window = train_roll_window, shuffle = False)
+            self.test_dataset = CustomtfDatasetUniv(dict_of_files = self.files["test"], NF = self.NF, n_horizons = self.n_horizons, model_inputs = self.model_inputs, horizon = self.horizon, task = self.task, dict_of_alphas = self.alphas, multihorizon = self.multihorizon, T = self.T, data_transform = data_transform, batch_size = batch_size, roll_window = 1, shuffle = False)
 
 
     def create_model(self):

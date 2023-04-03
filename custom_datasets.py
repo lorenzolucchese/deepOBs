@@ -1,8 +1,10 @@
 import tensorflow as tf
 import pandas as pd
 import numpy as np
+import os
+import re
 
-def CustomtfDataset(files, NF, horizon, n_horizons, model_inputs, task, alphas, multihorizon, normalise, batch_size, T, roll_window, shuffle, teacher_forcing = False):
+def CustomtfDataset(files, NF, horizon, n_horizons, model_inputs, task, alphas, multihorizon, data_transform, batch_size, T, roll_window, shuffle, teacher_forcing = False):
     """
     Create custom tf.dataset object to be used by model.
     :param files: files with data, list of str
@@ -13,7 +15,9 @@ def CustomtfDataset(files, NF, horizon, n_horizons, model_inputs, task, alphas, 
     :param task: ML task, "regression" or "classification", str
     :param alphas: alphas for classification (down, no change, up) = ((-infty, -alpha), [-alpha, +alpha] (+alpha, +infty)), (tot_horizons,) array
     :param multihorizon: whether the predictions are multihorizon, if True horizon = slice(0, n_horizons), bool
-    :param normalise: whether to normalise the data, bool
+    :param data_transform: transformation to apply to data, bool
+                if "normalize_auto": divide by the largest value to scale between 0 & 1
+                if "standardize_rolling_n": use the previous n days mean and std to standardize using data in aggregate stats
     :param T: length of lookback window for features, int
     :param batch_size: batch size for dataset, int
     :param roll_window: length of window to roll forward when extracting features/responses, int
@@ -61,11 +65,34 @@ def CustomtfDataset(files, NF, horizon, n_horizons, model_inputs, task, alphas, 
     if model_inputs == "volumes_L3":
         feature_type = model_inputs[:-4] + "_features"
 
+    # rolling window standardization
+    if data_transform[:-2] == "standardize_rolling":
+        TICKER = os.path.basename(files[0]).split('_')[0]
+        n = int(data_transform[-1])
+        aggregated_stats = pd.read_csv(os.path.join(os.path.dirname(files[0]), 'stats', TICKER + '_' + model_inputs[:-1] + '_stats.csv'), index_col=[0, 1])
+        dates = aggregated_stats.index.levels[0]
+        standardizations = pd.DataFrame(index = pd.MultiIndex.from_product([dates, ["mean", "std", "count"]], names=['Date', 'stat']), columns = aggregated_stats.columns)
+        for i, date in enumerate(dates):
+            means = aggregated_stats.xs("mean", level=1).loc[dates[i-n:i], :].copy()
+            stds = aggregated_stats.xs("std", level=1).loc[dates[i-n:i], :].copy()
+            counts = aggregated_stats.xs("count", level=1).loc[dates[i-n:i], :].copy()
+            # total count
+            count = counts.sum(axis=0)
+            # aggregate mean
+            mean = (means * counts).sum(axis=0) / count
+            # aggregate std
+            std = np.sqrt((((counts - 1)*stds**2 + counts*means**2).sum(axis=0) - count*mean**2) / (count - 1))
+            standardizations.loc[(date, "mean")] = mean.values
+            standardizations.loc[(date, "std")] = std.values
+            standardizations.loc[(date, "count")] = count.values
+
     # create combined dataset
     tf_datasets = []
     for file in files:
-        dataset = np.load(file)
-        features = dataset[feature_type]
+        with np.load(file) as data:
+            features = data[feature_type]
+            responses = data['mid_returns'][(T-1):, horizon]
+
         if model_inputs == "volumes":
             features = np.sum(features, axis = 2)
         mid = features.shape[1]
@@ -75,8 +102,6 @@ def CustomtfDataset(files, NF, horizon, n_horizons, model_inputs, task, alphas, 
             features = features[:, :NF]
         features = np.expand_dims(features, axis=-1)
         features = tf.convert_to_tensor(features, dtype=tf.float32)
-        
-        responses = dataset['responses'][(T-1):, horizon]
 
         if task == "classification":
             if multihorizon:
@@ -90,12 +115,21 @@ def CustomtfDataset(files, NF, horizon, n_horizons, model_inputs, task, alphas, 
             else:
                 y = (+1)*(responses>=-alphas[horizon]) + (+1)*(responses>alphas[horizon])
                 y = tf.keras.utils.to_categorical(y, 3)
+        elif task == "regression":
+            y = responses
 
+        if data_transform[:11] == "standardize":
+            # apply std
+            date = re.search(r'\d{4}-\d{2}-\d{2}', file).group(0)
+            mean = standardizations.loc[(date, "mean")].to_numpy()[:NF]
+            std = standardizations.loc[(date, "std")].to_numpy()[:NF]
+            features = (features - mean.reshape(-1, 1)) / std.reshape(-1, 1)         
+        
         tf_datasets.append(tf.keras.preprocessing.timeseries_dataset_from_array(features, y, T, batch_size=None, sequence_stride=roll_window, shuffle=False))
     
     tf_dataset = tf.data.Dataset.from_tensor_slices(tf_datasets).flat_map(lambda x: x)
     
-    if normalise:
+    if data_transform == "normalize":
         tf_dataset = tf_dataset.map(scale_fn)
 
     if multihorizon:
@@ -110,7 +144,7 @@ def CustomtfDataset(files, NF, horizon, n_horizons, model_inputs, task, alphas, 
 
     return tf_dataset
 
-def CustomtfDatasetUniv(dict_of_files, NF, horizon, n_horizons, model_inputs, task, dict_of_alphas, multihorizon, normalise, batch_size, T, roll_window, shuffle, teacher_forcing = False):
+def CustomtfDatasetUniv(dict_of_files, NF, horizon, n_horizons, model_inputs, task, dict_of_alphas, multihorizon, data_transform, batch_size, T, roll_window, shuffle, teacher_forcing = False):
     """
     Create custom tf.dataset object to be used by model, when using multiple TICKERs with different files and alphas.
     :param dict_of_files: the files with data for each TICKER, dict of lists of strs
@@ -121,7 +155,9 @@ def CustomtfDatasetUniv(dict_of_files, NF, horizon, n_horizons, model_inputs, ta
     :param task: ML task, "regression" or "classification", str
     :param alphas: alphas for classification (down, no change, up) = ((-infty, -alpha), [-alpha, +alpha] (+alpha, +infty)), (tot_horizons,) array
     :param multihorizon: whether the predictions are multihorizon, if True horizon = slice(0, n_horizons), bool
-    :param normalise: whether to normalise the data, bool
+    :param data_transform: transformation to apply to data, bool
+                if "normalize_auto": divide by the largest value to scale between 0 & 1
+                if "standardize_rolling_n": use the previous n days mean and std to standardize using data in aggregate stats
     :param T: length of lookback window for features, int
     :param batch_size: batch size for dataset, int
     :param roll_window: length of window to roll forward when extracting features/responses, int
@@ -141,7 +177,7 @@ def CustomtfDatasetUniv(dict_of_files, NF, horizon, n_horizons, model_inputs, ta
                                            task = task, 
                                            alphas = alphas, 
                                            multihorizon = multihorizon, 
-                                           normalise = normalise,
+                                           data_transform = data_transform,
                                            teacher_forcing = teacher_forcing, 
                                            T = T, 
                                            batch_size = batch_size, 
