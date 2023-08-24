@@ -35,7 +35,7 @@ def multiprocess_orderbooks(TICKER, input_path, output_path, log_path, stats_pat
              "orderbook_features" (:, 4*levels) 
              "orderflow_features" (:, 2*levels) 
              "volume_features" (:, NF_volume, queue_depth)
-             "responses" (:, h).
+             "mid_returns" (:, h).
     """
     csv_file_list = glob.glob(os.path.join(input_path, "*.{}".format("csv")))
 
@@ -449,3 +449,73 @@ def aggregate_stats(TICKER, stats_path, features=["orderbook", "orderflow"]):
         aggregated_feature_stats.index = aggregated_feature_stats.index.rename('stat', level=1)
 
         aggregated_feature_stats.to_csv(os.path.join(stats_path, TICKER + '_' + feature + '_stats.csv'))
+        
+        
+def percentiles_features(TICKER, processed_data_path, stats_path, percentiles, features=["orderbook", "orderflow", "volume"], levels = 10, NF_volume = 40):
+    """
+    Function for summarizing percentiles of features once data has been processed.
+    :param TICKER: the TICKER to be considered, str
+    :param processed_data_path: the path where the processed data is stored, str
+    :param stats_path: the path where stats are to be saved, str
+    :param percentiles: the percentiles to be computed, list or np.array
+    :param features: features for which to compute daily stats, list of str
+    :param levels: number of levels which are stored in the npz files, int
+    :param NF_volume: number of features for volume representation, only used if volume in features
+    """
+    npz_file_list = glob.glob(os.path.join(processed_data_path, "*.{}".format("npz")))
+    
+    for feature in features:
+        # add in feature names
+        feature_names = []
+        if feature == "orderbook":
+            feature_names_raw = ["ASKp", "ASKs", "BIDp", "BIDs"]
+            for i in range(1, levels + 1):
+                for j in range(4):
+                    feature_names += [feature_names_raw[j] + str(i)]
+        elif feature == "orderflow":
+            feature_names_raw = ["ASK_OF", "BID_OF"]
+            for feature_name in feature_names_raw:
+                for i in range(1, levels + 1):
+                    feature_names += [feature_name + str(i)]
+        elif feature == "volume":
+            queue_depths_names = []
+            for i in range(NF_volume//2, 0, -1):
+                feature_names += ["BIDv" + str(i)]
+                queue_depths_names += ["BIDq" + str(i)]
+            for i in range(1, NF_volume//2 + 1):
+                feature_names += ["ASKv" + str(i)]
+                queue_depths_names += ["ASKq" + str(i)]
+        
+        daily_stats_dfs = {}
+        if feature == "volume":
+            daily_queue_depths_stats_dfs = {}
+
+        for file in npz_file_list:
+            date = datetime.strptime(re.search(r'\d{4}-\d{2}-\d{2}', file).group(), '%Y-%m-%d').date()
+            with np.load(file) as data:
+                feature_matrix = data[feature + "_features"]
+            if feature == "volume":
+                # first compute stats related to queue depth
+                queue_depths = (feature_matrix > 0).sum(axis=-1)
+                percentiles_queue_depths = np.percentile(queue_depths, percentiles, axis=0)
+                daily_queue_depths_stats_dfs[date]= pd.DataFrame(percentiles_queue_depths, index = percentiles, columns = queue_depths_names)
+                # then aggregate volumes to apply quartile stats as for orderbook and orderflow
+                feature_matrix = feature_matrix.sum(axis=-1)
+            percentiles_features = np.percentile(feature_matrix, percentiles, axis=0)
+            daily_stats_dfs[date]= pd.DataFrame(percentiles_features, index = percentiles, columns = feature_names)
+        
+        stats_df = pd.concat(daily_stats_dfs, names = ['Date'])
+        stats_df.to_csv(os.path.join(stats_path, TICKER + '_' + feature + '_percentiles.csv'))
+        if feature == "volume":
+            queue_depths_stats_df = pd.concat(daily_queue_depths_stats_dfs, names = ['Date'])
+            queue_depths_stats_df.to_csv(os.path.join(stats_path, TICKER + '_queue_depth_percentiles.csv'))
+
+
+
+
+if __name__ == "__main__":
+    percentiles_features("LILAK", 
+                         "data/LILAK", 
+                         "data/stats", 
+                         percentiles = [0, 10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 100], 
+                         features=["orderbook", "orderflow", "volume"])
