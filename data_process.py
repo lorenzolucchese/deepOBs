@@ -492,17 +492,23 @@ def percentiles_features(TICKER, processed_data_path, stats_path, percentiles, f
 
         for file in npz_file_list:
             date = datetime.strptime(re.search(r'\d{4}-\d{2}-\d{2}', file).group(), '%Y-%m-%d').date()
+            print(date)
             with np.load(file) as data:
                 feature_matrix = data[feature + "_features"]
-            if feature == "volume":
-                # first compute stats related to queue depth
-                queue_depths = (feature_matrix > 0).sum(axis=-1)
-                percentiles_queue_depths = np.percentile(queue_depths, percentiles, axis=0)
-                daily_queue_depths_stats_dfs[date]= pd.DataFrame(percentiles_queue_depths, index = percentiles, columns = queue_depths_names)
-                # then aggregate volumes to apply quartile stats as for orderbook and orderflow
-                feature_matrix = feature_matrix.sum(axis=-1)
-            percentiles_features = np.percentile(feature_matrix, percentiles, axis=0)
-            daily_stats_dfs[date]= pd.DataFrame(percentiles_features, index = percentiles, columns = feature_names)
+            try:
+                if feature == "volume":
+                    # first compute stats related to queue depth
+                    queue_depths = (feature_matrix > 0).sum(axis=-1)
+                    percentiles_queue_depths = np.percentile(queue_depths, percentiles, axis=0)
+                    print(percentiles_queue_depths.shape)
+                    daily_queue_depths_stats_dfs[date]= pd.DataFrame(percentiles_queue_depths, index = percentiles, columns = queue_depths_names)
+                    # then aggregate volumes to apply quartile stats as for orderbook and orderflow
+                    feature_matrix = feature_matrix.sum(axis=-1)
+                percentiles_features = np.percentile(feature_matrix, percentiles, axis=0)
+                daily_stats_dfs[date]= pd.DataFrame(percentiles_features, index = percentiles, columns = feature_names)
+            except:
+                print('This date was skipped' + date.strftime("%d-%m-/%Y"))
+                continue
         
         stats_df = pd.concat(daily_stats_dfs, names = ['Date'])
         stats_df.to_csv(os.path.join(stats_path, TICKER + '_' + feature + '_percentiles.csv'))
