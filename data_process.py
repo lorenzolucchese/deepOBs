@@ -462,7 +462,7 @@ def percentiles_features(TICKER, processed_data_path, stats_path, percentiles, f
     :param levels: number of levels which are stored in the npz files, int
     :param NF_volume: number of features for volume representation, only used if volume in features
     """
-    npz_file_list = glob.glob(os.path.join(processed_data_path, "*.{}".format("npz")))
+    npz_file_list = sorted(glob.glob(os.path.join(processed_data_path, "*.{}".format("npz"))))
     
     for feature in features:
         # add in feature names
@@ -487,7 +487,9 @@ def percentiles_features(TICKER, processed_data_path, stats_path, percentiles, f
                 queue_depths_names += ["ASKq" + str(i)]
         
         daily_stats_dfs = {}
+        feature_matrix_all = np.array([]).reshape(0, len(feature_names))
         if feature == "volume":
+            queue_depths_all = np.array([]).reshape(0, len(queue_depths_names))
             daily_queue_depths_stats_dfs = {}
 
         for file in npz_file_list:
@@ -495,27 +497,33 @@ def percentiles_features(TICKER, processed_data_path, stats_path, percentiles, f
             print(date)
             with np.load(file) as data:
                 feature_matrix = data[feature + "_features"]
+                print(feature_matrix.shape)
             try:
                 if feature == "volume":
                     # first compute stats related to queue depth
                     queue_depths = (feature_matrix > 0).sum(axis=-1)
                     percentiles_queue_depths = np.percentile(queue_depths, percentiles, axis=0)
-                    print(percentiles_queue_depths.shape)
                     daily_queue_depths_stats_dfs[date]= pd.DataFrame(percentiles_queue_depths, index = percentiles, columns = queue_depths_names)
+                    queue_depths_all = np.concatenate([queue_depths_all, queue_depths], axis=0)
                     # then aggregate volumes to apply quartile stats as for orderbook and orderflow
                     feature_matrix = feature_matrix.sum(axis=-1)
                 percentiles_features = np.percentile(feature_matrix, percentiles, axis=0)
+                print(percentiles_features.shape)
                 daily_stats_dfs[date]= pd.DataFrame(percentiles_features, index = percentiles, columns = feature_names)
+                feature_matrix_all = np.concatenate([feature_matrix_all, feature_matrix], axis=0)
             except:
-                print('This date was skipped' + date.strftime("%d-%m-/%Y"))
+                print('This date was skipped: ' + date.strftime("%d-%m-/%Y"))
                 continue
         
+        percentiles_features_all = np.percentile(feature_matrix_all, percentiles, axis=0)
+        daily_stats_dfs["all"] = pd.DataFrame(percentiles_features_all, index = percentiles, columns = feature_names)
         stats_df = pd.concat(daily_stats_dfs, names = ['Date'])
         stats_df.to_csv(os.path.join(stats_path, TICKER + '_' + feature + '_percentiles.csv'))
         if feature == "volume":
+            percentiles_queue_depths_all = np.percentile(queue_depths_all, percentiles, axis=0)
+            daily_stats_dfs["all"] = pd.DataFrame(percentiles_queue_depths_all, index = percentiles, columns = feature_names)
             queue_depths_stats_df = pd.concat(daily_queue_depths_stats_dfs, names = ['Date'])
             queue_depths_stats_df.to_csv(os.path.join(stats_path, TICKER + '_queue_depth_percentiles.csv'))
-
 
 
 
