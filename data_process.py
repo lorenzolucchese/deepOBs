@@ -507,6 +507,7 @@ def percentiles_features(TICKER, processed_data_path, stats_path, percentiles, f
                 # then aggregate volumes to apply quartile stats as for orderbook and orderflow
                 feature_matrix = feature_matrix.sum(axis=-1)
             percentiles_features = np.squeeze(np.percentile(feature_matrix, percentiles, axis=0))
+            print(np.percentile(feature_matrix, percentiles, axis=0).shape)
             print(percentiles_features.shape)
             daily_stats_dfs[date]= pd.DataFrame(percentiles_features, index = percentiles, columns = feature_names)
             feature_matrix_all = np.concatenate([feature_matrix_all, feature_matrix], axis=0)
