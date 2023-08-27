@@ -497,18 +497,21 @@ def percentiles_features(TICKER, processed_data_path, stats_path, percentiles, f
             print(date)
             with np.load(file) as data:
                 feature_matrix = data[feature + "_features"]
-            if feature == "volume":
-                # first compute stats related to queue depth
-                queue_depths = (feature_matrix > 0).sum(axis=-1)
-                percentiles_queue_depths = np.percentile(queue_depths, percentiles, axis=0)
-                daily_queue_depths_stats_dfs[date]= pd.DataFrame(percentiles_queue_depths, index = percentiles, columns = queue_depths_names)
-                queue_depths_all = np.concatenate([queue_depths_all, queue_depths], axis=0)
-                # then aggregate volumes to apply quartile stats as for orderbook and orderflow
-                feature_matrix = feature_matrix.sum(axis=-1)
-            percentiles_features = np.percentile(feature_matrix, percentiles, axis=0)
-            daily_stats_dfs[date]= pd.DataFrame(percentiles_features, index = percentiles, columns = feature_names)
-            feature_matrix_all = np.concatenate([feature_matrix_all, feature_matrix], axis=0)
-        
+            try:
+                if feature == "volume":
+                    # first compute stats related to queue depth
+                    queue_depths = (feature_matrix > 0).sum(axis=-1)
+                    percentiles_queue_depths = np.percentile(queue_depths, percentiles, axis=0)
+                    daily_queue_depths_stats_dfs[date]= pd.DataFrame(percentiles_queue_depths, index = percentiles, columns = queue_depths_names)
+                    queue_depths_all = np.concatenate([queue_depths_all, queue_depths], axis=0)
+                    # then aggregate volumes to apply quartile stats as for orderbook and orderflow
+                    feature_matrix = feature_matrix.sum(axis=-1)
+                percentiles_features = np.percentile(feature_matrix, percentiles, axis=0)
+                daily_stats_dfs[date]= pd.DataFrame(percentiles_features, index = percentiles, columns = feature_names)
+                feature_matrix_all = np.concatenate([feature_matrix_all, feature_matrix], axis=0)
+            except:
+                print('The following date was skipped: ' + date.strftime("%d-%m-%Y"))
+                continue
         percentiles_features_all = np.percentile(feature_matrix_all, percentiles, axis=0)
         daily_stats_dfs["all"] = pd.DataFrame(percentiles_features_all, index = percentiles, columns = feature_names)
         stats_df = pd.concat(daily_stats_dfs, names = ['Date'])
