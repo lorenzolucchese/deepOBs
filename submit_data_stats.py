@@ -12,7 +12,7 @@ if __name__ == "__main__":
     processed_data_path = os.path.join(ROOT_DIR, "data", TICKER)
     stats_path = os.path.join(ROOT_DIR, "data", "stats")
     percentiles = [0, 10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 100]
-    features = ["orderbook", "orderflow", "volume"]
+    features = ["volume"]
 
     os.makedirs(stats_path, exist_ok=True)
 

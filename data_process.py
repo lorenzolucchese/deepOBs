@@ -3,10 +3,11 @@ import glob
 import pandas as pd
 import re
 from datetime import datetime
-import time
+import pickle
 import numpy as np
 import re
 from multiprocessing import Pool
+from sklearn.metrics import confusion_matrix
 
 def multiprocess_orderbooks(TICKER, input_path, output_path, log_path, stats_path, horizons=np.array([10, 20, 30, 50, 100]), NF_volume=40, queue_depth=10, smoothing="uniform", k=10):
     """
@@ -41,6 +42,11 @@ def multiprocess_orderbooks(TICKER, input_path, output_path, log_path, stats_pat
 
     csv_orderbook = [name for name in csv_file_list if "orderbook" in name]
     csv_message = [name for name in csv_file_list if "message" in name]
+
+    #TODO: REMOVE THIS AFTER PROCESSED AAPL
+    dates = ['2020-01-08', '2020-01-09'] + ['2020-01-' + str(i) for i in range(10, 32)]
+    csv_orderbook = [name for name in csv_orderbook if re.search(r'\d{4}-\d{2}-\d{2}', name).group() in dates]
+    csv_message = [name for name in csv_message if re.search(r'\d{4}-\d{2}-\d{2}', name).group() in dates]
 
     csv_orderbook.sort()
     csv_message.sort()
@@ -518,15 +524,45 @@ def percentiles_features(TICKER, processed_data_path, stats_path, percentiles, f
         stats_df.to_csv(os.path.join(stats_path, TICKER + '_' + feature + '_percentiles.csv'))
         if feature == "volume":
             percentiles_queue_depths_all = np.percentile(queue_depths_all, percentiles, axis=0)
-            daily_stats_dfs["all"] = pd.DataFrame(percentiles_queue_depths_all, index = percentiles, columns = feature_names)
+            daily_queue_depths_stats_dfs["all"] = pd.DataFrame(percentiles_queue_depths_all, index = percentiles, columns = feature_names)
             queue_depths_stats_df = pd.concat(daily_queue_depths_stats_dfs, names = ['Date'])
             queue_depths_stats_df.to_csv(os.path.join(stats_path, TICKER + '_queue_depth_percentiles.csv'))
 
+def dependence_responses(TICKER, processed_data_path, results_path, stats_path, horizons=[10, 20, 30, 50, 100, 200, 300, 500, 1000], k=5):
+    """
+    Function for summarizing dependence of responses.
+    :param TICKER: the TICKER to be considered, str
+    :param processed_data_path: the path where the processed data is stored, str
+    :param results_path: the path where the results are stored, str
+    :param stats_path: the path where stats are to be saved, str
+    :param horizons: the horizons at which the responses are defined, list/np.array
+    :param k: smoothing lag for averaging prices in return definition, int
+    """
+    npz_file_list = sorted(glob.glob(os.path.join(processed_data_path, "*.{}".format("npz"))))
 
+    daily_dfs = {}
+    for w in range(11):
+        with open(os.path.join(results_path, TICKER, "W" + str(w), "alphas.pkl"), 'rb') as f:
+            alphas = pickle.load(f)
+        with open(os.path.join(results_path, TICKER, "W" + str(w), "val_train_test_dates.pkl"), 'rb') as f:
+            dates = pickle.load(f)
+        npz_file_list_window = [file for file in npz_file_list if re.search(r'\d{4}-\d{2}-\d{2}', file).group() in dates[0] + dates[1] + dates[2]]
+        for file in npz_file_list_window:
+            date = datetime.strptime(re.search(r'\d{4}-\d{2}-\d{2}', file).group(), '%Y-%m-%d').date()
+            print(date)
+            with np.load(file) as data:
+                responses = data['mid_returns']
+            horizon_dfs = {}
+            for h, horizon in enumerate(horizons):
+                labels = (+1)*(responses[:, h]>=-alphas[h]) + (+1)*(responses[:, h]>alphas[h]) - 1
+                horizon_dfs[horizon] = pd.DataFrame(confusion_matrix(labels[:-horizon-k], labels[horizon+k:]), index = ["down", "stationary", "up"], columns = ["down", "stationary", "up"])
+            daily_dfs[date] = pd.concat(horizon_dfs, names = ['horizon'])
+    full_df = pd.concat(daily_dfs, names = ['Date'])
+    full_df.to_csv(os.path.join(stats_path, TICKER + '_dependence_responses.csv'))
+    
 
 if __name__ == "__main__":
-    percentiles_features("LILAK", 
+    dependence_responses("LILAK", 
                          "data/LILAK", 
-                         "data/stats", 
-                         percentiles = [0, 10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 100], 
-                         features=["orderbook", "orderflow", "volume"])
+                         "results",
+                         "data/stats")
