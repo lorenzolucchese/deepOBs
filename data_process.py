@@ -43,11 +43,6 @@ def multiprocess_orderbooks(TICKER, input_path, output_path, log_path, stats_pat
     csv_orderbook = [name for name in csv_file_list if "orderbook" in name]
     csv_message = [name for name in csv_file_list if "message" in name]
 
-    #TODO: REMOVE THIS AFTER PROCESSED AAPL
-    dates = ['2020-01-08', '2020-01-09'] + ['2020-01-' + str(i) for i in range(10, 32)]
-    csv_orderbook = [name for name in csv_orderbook if re.search(r'\d{4}-\d{2}-\d{2}', name).group() in dates]
-    csv_message = [name for name in csv_message if re.search(r'\d{4}-\d{2}-\d{2}', name).group() in dates]
-
     csv_orderbook.sort()
     csv_message.sort()
 
@@ -524,7 +519,7 @@ def percentiles_features(TICKER, processed_data_path, stats_path, percentiles, f
         stats_df.to_csv(os.path.join(stats_path, TICKER + '_' + feature + '_percentiles.csv'))
         if feature == "volume":
             percentiles_queue_depths_all = np.percentile(queue_depths_all, percentiles, axis=0)
-            daily_queue_depths_stats_dfs["all"] = pd.DataFrame(percentiles_queue_depths_all, index = percentiles, columns = feature_names)
+            daily_queue_depths_stats_dfs["all"] = pd.DataFrame(percentiles_queue_depths_all, index = percentiles, columns = queue_depths_names)
             queue_depths_stats_df = pd.concat(daily_queue_depths_stats_dfs, names = ['Date'])
             queue_depths_stats_df.to_csv(os.path.join(stats_path, TICKER + '_queue_depth_percentiles.csv'))
 
