@@ -1,5 +1,6 @@
 #PBS -l walltime=02:00:00
-#PBS -l select=1:ncpus=4:mem=256gb
+#PBS -l select=1:ncpus=4:mem=16gb
+#PBS -J 0-9
 
 cd $PBS_O_WORKDIR
 
@@ -8,4 +9,4 @@ source activate deepLOBs_env
 
 # TICKERS = ["LILAK", "QRTEA", "XRAY", "CHTR", "PCAR", "EXC", "AAL", "WBA", "ATVI", "AAPL"]
 
-python submit_data_stats.py 9
+python submit_data_stats.py $PBS_ARRAY_INDEX

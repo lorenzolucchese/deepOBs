@@ -523,7 +523,7 @@ def percentiles_features(TICKER, processed_data_path, stats_path, percentiles, f
             queue_depths_stats_df = pd.concat(daily_queue_depths_stats_dfs, names = ['Date'])
             queue_depths_stats_df.to_csv(os.path.join(stats_path, TICKER + '_queue_depth_percentiles.csv'))
 
-def dependence_responses(TICKER, processed_data_path, results_path, stats_path, horizons=[10, 20, 30, 50, 100, 200, 300, 500, 1000], k=5):
+def dependence_responses(TICKER, processed_data_path, results_path, stats_path, horizons=[10, 20, 30, 50, 100, 200, 300, 500, 1000], k=10):
     """
     Function for summarizing dependence of responses.
     :param TICKER: the TICKER to be considered, str
@@ -531,7 +531,7 @@ def dependence_responses(TICKER, processed_data_path, results_path, stats_path, 
     :param results_path: the path where the results are stored, str
     :param stats_path: the path where stats are to be saved, str
     :param horizons: the horizons at which the responses are defined, list/np.array
-    :param k: smoothing lag for averaging prices in return definition, int
+    :param k: smoothing window for averaging prices in return definition, int
     """
     npz_file_list = sorted(glob.glob(os.path.join(processed_data_path, "*.{}".format("npz"))))
 
@@ -550,7 +550,7 @@ def dependence_responses(TICKER, processed_data_path, results_path, stats_path, 
             horizon_dfs = {}
             for h, horizon in enumerate(horizons):
                 labels = (+1)*(responses[:, h]>=-alphas[h]) + (+1)*(responses[:, h]>alphas[h]) - 1
-                horizon_dfs[horizon] = pd.DataFrame(confusion_matrix(labels[:-horizon-k], labels[horizon+k:]), index = ["down", "stationary", "up"], columns = ["down", "stationary", "up"])
+                horizon_dfs[horizon] = pd.DataFrame(confusion_matrix(labels[:-horizon-k//2], labels[horizon+k//2:]), index = ["down", "stationary", "up"], columns = ["down", "stationary", "up"])
             daily_dfs[date] = pd.concat(horizon_dfs, names = ['horizon'])
     full_df = pd.concat(daily_dfs, names = ['Date'])
     full_df.to_csv(os.path.join(stats_path, TICKER + '_dependence_responses.csv'))
