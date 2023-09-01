@@ -46,9 +46,19 @@ def multiprocess_orderbooks(TICKER, input_path, output_path, log_path, stats_pat
     csv_orderbook.sort()
     csv_message.sort()
 
+    #TODO: remove after fixed AAPL
+    npz_file_list = sorted(glob.glob(os.path.join(output_path, "*.{}".format("npz"))))
+    processed_dates = [re.search(r'\d{4}-\d{2}-\d{2}', file).group() for file in npz_file_list]
+    print(processed_dates)
+    csv_orderbook = [file for file in csv_orderbook if re.search(r'\d{4}-\d{2}-\d{2}', file).group() not in processed_dates]
+    csv_message = [file for file in csv_message if re.search(r'\d{4}-\d{2}-\d{2}', file).group() not in processed_dates]
+
+    print(csv_orderbook)
+    print(csv_message)
+
     # check if exactly half of the files are order book and exactly half are messages
     assert (len(csv_message) == len(csv_orderbook))
-    assert (len(csv_file_list) == len(csv_message) + len(csv_orderbook))
+    # assert (len(csv_file_list) == len(csv_message) + len(csv_orderbook))
 
     print("started multiprocessing")
     
