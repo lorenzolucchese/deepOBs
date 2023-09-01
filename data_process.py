@@ -475,8 +475,8 @@ def percentiles_features(TICKER, processed_data_path, stats_path, percentiles, f
                     feature_names += [feature_names_raw[j] + str(i)]
         elif feature == "orderflow":
             feature_names_raw = ["ASK_OF", "BID_OF"]
-            for feature_name in feature_names_raw:
-                for i in range(1, levels + 1):
+            for i in range(1, levels + 1):
+                for feature_name in feature_names_raw:
                     feature_names += [feature_name + str(i)]
         elif feature == "volume":
             queue_depths_names = []
