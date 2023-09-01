@@ -5,9 +5,9 @@ import time
 
 if __name__ == "__main__":
     # set global parameters
-    tickers = ['LILAK', 'QRTEA', 'XRAY', 'CHTR', 'PCAR', 'EXC', 'AAL', 'WBA', 'ATVI', 'AAPL']
+    tickers = ['AAPL']
     horizons = [10, 20, 30, 50, 100, 200, 300, 500, 1000]
-    periods = ['W' + str(i) for i in range(11)]
+    periods = ['W' + str(i) for i in range(5, 11)]
     processed_data_path = os.path.join(ROOT_DIR, "data")
     stats_path = os.path.join(ROOT_DIR, "data", "stats")
     results_path = os.path.join(ROOT_DIR, "results")

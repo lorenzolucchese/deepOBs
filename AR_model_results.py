@@ -41,6 +41,8 @@ def make_empirical_AR_model(tickers, periods, horizons, processed_data_path, res
                         dependence_matrix += dependence_responses.loc[(date, horizon), :].values
                 train_val_conditional_distributions = dependence_matrix / dependence_matrix.sum(axis=1, keepdims=True)
                 npz_file_list_window = [file for file in npz_file_list if re.search(r'\d{4}-\d{2}-\d{2}', file).group() in dates[2]]
+                print(horizon)
+                print(npz_file_list_window)
                 past_labels = np.array([])
                 target_labels = np.array([])
                 for file in npz_file_list_window:
