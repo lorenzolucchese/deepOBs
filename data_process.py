@@ -9,7 +9,7 @@ import re
 from multiprocessing import Pool
 from sklearn.metrics import confusion_matrix
 
-def multiprocess_orderbooks(TICKER, input_path, output_path, log_path, stats_path, horizons=np.array([10, 20, 30, 50, 100]), NF_volume=40, queue_depth=10, smoothing="uniform", k=10):
+def multiprocess_orderbooks(TICKER, input_path, output_path, log_path, stats_path, horizons=np.array([10, 20, 30, 50, 100]), NF_volume=40, queue_depth=10, smoothing="uniform", k=10, check_for_processed_data=True):
     """
     Pre-process LOBSTER data into feature-response pairs parallely. The data must be stored in the input_path
     directory as daily message book and order book files. For details of processing steps see description of process_orderbook function.
@@ -32,6 +32,7 @@ def multiprocess_orderbooks(TICKER, input_path, output_path, log_path, stats_pat
     :param queue_depth: the depth beyond which to aggregate the queue for volume features, int
     :param smoothing: whether to use "uniform" or "horizon" smoothing, bool
     :param k: smoothing window for returns when smoothing = "uniform", int
+    :param check_for_processed_data: if True check if processed .npz files already exist in output_path and skip these dates for processing, bool 
     :return: saves the processed features in output_path, as .npz files with numpy attributes 
              "orderbook_features" (:, 4*levels) 
              "orderflow_features" (:, 2*levels) 
@@ -46,19 +47,15 @@ def multiprocess_orderbooks(TICKER, input_path, output_path, log_path, stats_pat
     csv_orderbook.sort()
     csv_message.sort()
 
-    #TODO: remove after fixed AAPL
-    npz_file_list = sorted(glob.glob(os.path.join(output_path, "*.{}".format("npz"))))
-    processed_dates = [re.search(r'\d{4}-\d{2}-\d{2}', file).group() for file in npz_file_list]
-    print(processed_dates)
-    csv_orderbook = [file for file in csv_orderbook if re.search(r'\d{4}-\d{2}-\d{2}', file).group() not in processed_dates]
-    csv_message = [file for file in csv_message if re.search(r'\d{4}-\d{2}-\d{2}', file).group() not in processed_dates]
-
-    print(csv_orderbook)
-    print(csv_message)
+    # do not process already processed data
+    if check_for_processed_data:
+        npz_file_list = sorted(glob.glob(os.path.join(output_path, "*.{}".format("npz"))))
+        processed_dates = [re.search(r'\d{4}-\d{2}-\d{2}', file).group() for file in npz_file_list]
+        csv_orderbook = [file for file in csv_orderbook if re.search(r'\d{4}-\d{2}-\d{2}', file).group() not in processed_dates]
+        csv_message = [file for file in csv_message if re.search(r'\d{4}-\d{2}-\d{2}', file).group() not in processed_dates]
 
     # check if exactly half of the files are order book and exactly half are messages
     assert (len(csv_message) == len(csv_orderbook))
-    # assert (len(csv_file_list) == len(csv_message) + len(csv_orderbook))
 
     print("started multiprocessing")
     

@@ -34,7 +34,8 @@ if __name__ == "__main__":
                             NF_volume=40, 
                             queue_depth=10, 
                             smoothing="uniform", 
-                            k=10)
+                            k=10,
+                            check_for_processed_data=True)
     executionTime = (time.time() - startTime)
 
     print("Execution time in minutes: " + str(executionTime/60))
