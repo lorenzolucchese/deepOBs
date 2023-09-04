@@ -311,6 +311,7 @@ if __name__ == '__main__':
     tickers = ['LILAK', 'QRTEA', 'XRAY', 'CHTR', 'PCAR', 'EXC', 'AAL', 'WBA', 'ATVI', 'AAPL']
     periods = ['W0', 'W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7', 'W8', 'W9', 'W10']
     models = ['deepLOB_L1', 'deepOF_L1', 'deepLOB_L2', 'deepOF_L2', 'deepVOL_L2', 'deepVOL_L3']
+    benchmarks = ['benchmark', 'empirical_AR_model']
     horizons = ['h10', 'h20', 'h30', 'h50', 'h100', 'h200', 'h300', 'h500', 'h1000']
     orderbook_updates = [10, 20, 30, 50, 100, 200, 300, 500, 1000]
     
@@ -319,17 +320,17 @@ if __name__ == '__main__':
     # make_benchmark(tickers, periods, horizons)
 
     # general results
-    summarize_MCS_results(tickers, horizons, 'cce', ['benchmark'] + models, periods, 'test', 
+    summarize_MCS_results(tickers, horizons, 'cce', benchmarks + models, periods, 'test', 
                           save_path='MCS_results/MCS_results_general_experiment_cce_test.xlsx')
 
     # multihorizon results
     horizons = ['h10', 'h20', 'h30', 'h50']
-    multihorizon_models = ['benchmark'] + models + [model + '_seq2seq' for model in models]
+    multihorizon_models = benchmarks + models + [model + '_seq2seq' for model in models]
     summarize_MCS_results(tickers, horizons, 'cce', multihorizon_models, periods, 'test', 
                           save_path='MCS_results/MCS_results_multihorizon_experiment_cce_test.xlsx')
 
     # universal results
     horizons = ['h10', 'h20', 'h30', 'h50', 'h100', 'h200', 'h300', 'h500', 'h1000']
-    universal_models = ['benchmark'] + [model + '_universal' for model in models]
+    universal_models = benchmarks + [model + '_universal' for model in models]
     summarize_MCS_results(tickers, horizons, 'cce', universal_models, periods, 'test', 
                           save_path='MCS_results/MCS_results_universal_experiment_cce_test.xlsx')
